@@ -1,2 +1,1 @@
-# ovbox
-ORLANDOviols consort box
+# ORLANDOviols Consort box (ovbox)

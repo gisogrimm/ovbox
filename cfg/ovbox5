@@ -1,0 +1,15 @@
+# jack command
+#JACKCMD="jackd -d alsa -d hw:sunxicodec -r 32000 -p 1024 -n 2"
+#JACKCMD="jackd  -d alsa -d hw:US2x2 -r 48000 -p 240 -n 2"
+JACKCMD="jackd  -d alsa -d hw:sunxisndhdmi -r 48000 -p 144 -n 2"
+
+# command and options for sending audio:
+ZITAJ2N="echo zita-j2n --16bit --chan 2"
+
+# command and options for receiving audio:
+ZITAN2J="zita-n2j --buff 10"
+
+# use locally compiled versions:
+LD_LIBRARY_PATH=/usr/local/lib/
+
+export LD_LIBRARY_PATH

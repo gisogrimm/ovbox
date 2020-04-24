@@ -1,0 +1,20 @@
+BasedOnStyle: LLVM
+IndentWidth: 2
+Language: Cpp
+PointerAlignment: Left
+BraceWrapping:
+  AfterFunction: true
+  BeforeCatch: true
+  BeforeElse: false
+  AfterExternBlock: false
+  AfterNamespace: false
+  AfterControlStatement: false
+BreakBeforeBraces: Custom
+SpaceBeforeParens: Never
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+NamespaceIndentation: All
+UseTab: Never
+SpaceAfterCStyleCast: false
+AllowShortFunctionsOnASingleLine: Inline

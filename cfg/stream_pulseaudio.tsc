@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<session license="CC0">
+  <modules>
+    <system command="tascar_cpufreq"/>
+    <system command="pactl unload-module module-jack-sink"/>
+    <system command="pactl unload-module module-jack-source"/>
+    <system command="pactl load-module module-jack-source channels=2"/>
+    <system command="pactl load-module module-jack-sink channels=2"/>
+    <system command="pacmd set-default-sink jack_out"/>
+    <system command="pacmd set-default-source jack_in"/>
+    <system command="(../udpmirror/mplx_client -c 7 -d mplx.yourdomain.com -p 4464 -l 4468 -o 2000)"/>
+    <system command="(../udpmirror/mplx_client -c 8 -d mplx.yourdomain.com -p 4464 -l 4472 -o 2000)"/>
+    <system command="zita-j2n --16bit --chan 1 --jname l localhost 4466"/>
+    <system command="zita-j2n --16bit --chan 1 --jname r localhost 4472"/>
+    <system command="sleep 1;sleep 1"/>
+  </modules>
+  <connect src=".*Sink:front-left" dest="l:in_1"/>
+  <connect src=".*Sink:front-right" dest="r:in_1"/>
+</session>

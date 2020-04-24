@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd -P 40 -d alsa -d hw:US2x2 -r 48000 -p 144 -n 2" initcmdsleep="5.0">
+  <!-- Giso/4474 -->
+  <scene>
+    <source name="JuliaGiso"><sound maxdist="50" r="4" az="4" layers="1"/></source>
+    <include name="base_scene.itsc"/>
+  </scene>
+  <modules>
+    <system command="make -C ../udpmirror;../udpmirror/mplx_client -d mplx.yourdomain.com -p 4464 -l 4474 -c 5 -o 1000" onunload="killall mplx_client"/>
+    <system command="zita-n2j --chan 1 --jname JuliaGiso --buff 14 0.0.0.0 5464" onunload="killall zita-n2j"/>
+    <system command="make -C ../headtracker;../headtracker/headtracker" onunload="killall headtracker"/>
+    <system command="zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 4474" onunload="killall zita-j2n"/>
+    <system command="sleep 2;sleep 2"/>
+    <savegains/>
+    <touchosc/>
+    <system command="node bridge.js"/>
+  </modules>
+  <connect src="render.scene:master_l" dest="system:playback_1"/>
+  <connect src="render.scene:master_r" dest="system:playback_2"/>
+  <connect src="JuliaGiso:out_1" dest="render.scene:JuliaGiso.0.0"/>
+  <connect src="system:capture_1" dest="sender:in_1"/>
+</session>

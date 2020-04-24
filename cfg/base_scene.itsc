@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<scene license="CC BY-SA 4.0" attribution="Giso Grimm">
+  <source name="ego">
+    <sound maxdist="50" x="0.3" z="-0.7" layers="1" connect="system:capture_1" gain="-10">
+      <plugins>
+	<sndfile name="akkord_up_48.wav" level="60" triggered="true" transport="false"/>
+	<sndfile name="akkord_down_48.wav" level="60" triggered="true" transport="false"/>
+      </plugins>
+    </sound>
+  </source>
+  <receiver type="ortf" name="master" delaycomp="0.05"/>
+</scene>

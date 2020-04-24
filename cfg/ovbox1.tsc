@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2" initcmdsleep="5.0">
+  <!-- Marthe/4466 -->
+  <scene>
+    <source name="JuliaGiso"><sound maxdist="50" r="4" az="-56" layers="1"/></source>
+    <source name="Frauke"><sound maxdist="50" r="4" az="-16" layers="1"/></source>
+    <source name="Hille"><sound maxdist="50" r="4" az="24" layers="1"/></source>
+    <source name="Claas"><sound maxdist="50" r="4" az="64" layers="1"/></source>
+    <include name="base_scene.itsc"/>
+  </scene>
+  <modules>
+    <system command="../udpmirror/mplx_client -d mplx.yourdomain.com -p 4464 -l 4466 -c 1 -o 0" onunload="killall mplx_client"/>
+    <system command="zita-n2j --chan 1 --jname JuliaGiso --buff 20 0.0.0.0 4464" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Frauke --buff 20 0.0.0.0 4468" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Hille --buff 21 0.0.0.0 4470" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Claas --buff 20 0.0.0.0 4472" onunload="killall zita-n2j"/>
+    <system command="zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 4466" onunload="killall zita-j2n"/>
+    <system command="sleep 2;sleep 2"/>
+    <savegains/>
+    <touchosc/>
+    <system command="node bridge.js"/>
+  </modules>
+  <connect src="render.scene:master_l" dest="system:playback_1"/>
+  <connect src="render.scene:master_r" dest="system:playback_2"/>
+  <connect src="JuliaGiso:out_1" dest="render.scene:JuliaGiso.0.0"/>
+  <connect src="Frauke:out_1" dest="render.scene:Frauke.0.0"/>
+  <connect src="Hille:out_1" dest="render.scene:Hille.0.0"/>
+  <connect src="Claas:out_1" dest="render.scene:Claas.0.0"/>
+  <connect src="system:capture_1" dest="sender:in_1"/>
+</session>
