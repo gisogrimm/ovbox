@@ -43,7 +43,7 @@ for k in $mus; do
 	let oport=$k2+4464
 	name=${names[$k]}
 	echo '<?xml version="1.0"?>'
-	echo '<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2" initcmdsleep="5.0">'
+	echo '<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2" initcmdsleep="5.0" levelmeter_tc="0.5">'
 	echo "  <!-- $name/$oport -->"
 	echo "  <scene>"
 	az=-96

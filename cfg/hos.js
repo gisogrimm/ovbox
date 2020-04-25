@@ -24,6 +24,7 @@ socket.on("scene", function(scene){
 });
 socket.on("newfader", function(faderno,val){
     fader="/touchosc/fader"+faderno;
+    levelid="/touchosc/level"+faderno;
     let el=document.getElementById("mixer");
     let elp=document.createElement("p");
     elp.setAttribute("class","mixerstrip");
@@ -38,8 +39,19 @@ socket.on("newfader", function(faderno,val){
     els.setAttribute("value",val);
     els.setAttribute("step","0.1");
     els.setAttribute("id",fader);
+    let elsl=document.createElement("meter");
+    elsl.setAttribute("class","level");
+    //elsl.setAttribute("type","range");
+    elsl.setAttribute("min","0");
+    elsl.setAttribute("max","94");
+    elsl.setAttribute("low","64");
+    elsl.setAttribute("high","94");
+    elsl.setAttribute("optimum","54");
+    elsl.setAttribute("value",val);
+    elsl.setAttribute("id",levelid);
     el.appendChild(elp);
     elp.appendChild(els);
+    elp.appendChild(elsl);
     elp.appendChild(ell);
 });
 socket.on("updatefader", function(fader,val){

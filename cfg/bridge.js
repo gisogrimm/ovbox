@@ -35,9 +35,11 @@ io.on('connection', function (socket) {
 	    }
 	    if( msg[0].startsWith('/touchosc/label') && (!msg[0].endsWith('/color')) && (msg[1].length>1)){
 		socket.emit('newfader', msg[0].substr(15), msg[1] );
-		await new Promise(r => setTimeout(r, 100));
 	    }
 	    if( msg[0].startsWith('/touchosc/fader') && (!msg[0].endsWith('/color')) ){
+		socket.emit('updatefader', msg[0], msg[1] );
+	    }
+	    if( msg[0].startsWith('/touchosc/level') ){
 		socket.emit('updatefader', msg[0], msg[1] );
 	    }
 	});
