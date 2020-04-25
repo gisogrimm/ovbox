@@ -70,3 +70,11 @@ su -l ov -c /home/ov/autostart &
 ````
 
 In the script `/home/pi/autostart` we configure system settings which require superuser priviledges. In `/home/ov/autostart` we start  the script `start_all.sh` from this repository.
+
+## Add shutdown button to the device
+
+Since the Raspberry 3 B+ does not have a power button, it is required to add a button for soft shutdown to avoid damage of the SD card file system. We added a button as described here:
+
+[https://www.makeuseof.com/tag/add-power-button-raspberry-pi/](https://www.makeuseof.com/tag/add-power-button-raspberry-pi/)
+
+The python script crashes sometimes, thus we execute it in an endless loop. This script is run from the user `pi` for correct priviledges.
