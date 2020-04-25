@@ -44,8 +44,8 @@ socket.on("newfader", function(faderno,val){
     //elsl.setAttribute("type","range");
     elsl.setAttribute("min","0");
     elsl.setAttribute("max","94");
-    elsl.setAttribute("low","64");
-    elsl.setAttribute("high","94");
+    elsl.setAttribute("low","71");
+    elsl.setAttribute("high","84");
     elsl.setAttribute("optimum","54");
     elsl.setAttribute("value",val);
     elsl.setAttribute("id",levelid);
