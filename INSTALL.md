@@ -60,21 +60,64 @@ sudo adduser ov
 usermod -a audio ov
 ````
 
-## Setup autostart
-
-We added entries to /etc/rc.local to autostart the processes, by adding these lines:
-
-````
-su -l pi -c /home/pi/autostart &
-su -l ov -c /home/ov/autostart &
-````
-
-In the script `/home/pi/autostart` we configure system settings which require superuser priviledges. In `/home/ov/autostart` we start  the script `start_all.sh` from this repository.
-
 ## Add shutdown button to the device
 
 Since the Raspberry 3 B+ does not have a power button, it is required to add a button for soft shutdown to avoid damage of the SD card file system. We added a button as described here:
 
 [https://www.makeuseof.com/tag/add-power-button-raspberry-pi/](https://www.makeuseof.com/tag/add-power-button-raspberry-pi/)
 
-The python script crashes sometimes, thus we execute it in an endless loop. This script is run from the user `pi` for correct priviledges.
+The python script crashes sometimes, thus we execute it in an endless loop (see below, section autostart). This script is run from the user `pi` for correct priviledges.
+
+
+## Setup autostart
+
+We added entries to /etc/rc.local to autostart the processes, by adding these lines:
+
+````
+test -x /home/pi/autorun && su -l pi /home/pi/autorun &
+test -x /home/ov/autorun && su -l ov /home/ov/autorun &
+````
+
+In the script `/home/pi/autostart` we configure system settings which require superuser priviledges. In `/home/ov/autostart` we start  the script `start_all.sh` from this repository.
+
+The autostart script for the system setup `/home/pi/autorun` looks like this:
+
+````
+# deactivate power saving:
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do echo -n performance \
+| sudo tee $cpu/cpufreq/scaling_governor; done
+
+## Stop the ntp service
+sudo service ntp stop
+
+## Stop the triggerhappy service
+sudo service triggerhappy stop
+
+## Stop the dbus service. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+sudo service dbus stop
+
+## Stop the console-kit-daemon service. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+sudo killall console-kit-daemon
+
+## Stop the polkitd service. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+sudo killall polkitd
+
+## Kill the usespace gnome virtual filesystem daemon. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+killall gvfsd
+
+## Kill the userspace D-Bus daemon. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+killall dbus-daemon
+
+## Kill the userspace dbus-launch daemon. Warning: this can cause unpredictable behaviour when running a desktop environment on the RPi
+killall dbus-launch
+
+## Stop	all wifi/bluetooth devices
+rfkill block all
+
+## shutdown button:
+while true; do
+~/shutdown-press-simple.py
+sleep 1
+done
+````
+

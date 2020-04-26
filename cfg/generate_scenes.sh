@@ -16,18 +16,18 @@ dup[2]="0"
 dup[3]="0"
 dup[4]="0"
 dup[5]="1000"
-#dhost[0]="mplx.yourdomain.com"
-#dhost[1]="mplx.yourdomain.com"
-#dhost[2]="mplx.yourdomain.com"
-#dhost[3]="mplx.yourdomain.com"
-#dhost[4]="mplx.yourdomain.com"
-#dhost[5]="mplx.yourdomain.com"
 dhost[0]="mplx.yourdomain.com"
 dhost[1]="mplx.yourdomain.com"
 dhost[2]="mplx.yourdomain.com"
 dhost[3]="mplx.yourdomain.com"
 dhost[4]="mplx.yourdomain.com"
 dhost[5]="mplx.yourdomain.com"
+#dhost[0]="mplx.yourdomain.com"
+#dhost[1]="mplx.yourdomain.com"
+#dhost[2]="mplx.yourdomain.com"
+#dhost[3]="mplx.yourdomain.com"
+#dhost[4]="mplx.yourdomain.com"
+#dhost[5]="mplx.yourdomain.com"
 buff[0]=10
 buff[1]=10
 buff[2]=10
@@ -36,6 +36,7 @@ buff[4]=10
 buff[5]=10
 numel=$(echo $mus|wc -w)
 let daz=200/$numel
+# participant settings:
 for k in $mus; do
     echo ${names[$k]}
     (
@@ -83,3 +84,36 @@ for k in $mus; do
 	echo "</session>"
     ) > ovbox${k}.tsc
 done
+let daz=200/$numel
+# playback settings:
+(
+    echo '<?xml version="1.0"?>'
+    echo '<session license="CC BY-SA 4.0" attribution="Giso Grimm" levelmeter_tc="0.5">'
+    echo "  <scene>"
+    az=-96
+    for j in $mus; do
+	let az=$az+$daz
+	echo "    <source name=\"${names[$j]}\"><sound maxdist=\"50\" r=\"4\" az=\"${az}\" layers=\"1\"/></source>"
+    done
+    echo "    <receiver type=\"ortf\" name=\"master\" delaycomp=\"0.05\"/>"
+    echo "  </scene>"
+    echo "  <modules>"
+    echo "    <system command=\"../udpmirror/mplx_client -d ${dhost[5]} -p 4464 -l 3456 -c ${k} -o ${dup[5]}\" onunload=\"killall mplx_client\"/>"
+    for j in $mus; do
+	let j2=$j+$j
+	let iport=$j2+4464+${dup[5]}
+	echo "    <system command=\"zita-n2j --chan 1 --jname ${names[$j]} --buff 50 0.0.0.0 ${iport}\" onunload=\"killall zita-n2j\"/>"
+    done
+    #echo "    <system command=\"../headtracker/headtracker\" onunload=\"killall headtracker\"/>"
+    echo "    <system command=\"sleep 2;sleep 2\"/>"
+    echo "    <savegains/>"
+    echo "    <touchosc/>"
+    echo "    <system command=\"node bridge.js\"/>"
+    echo "  </modules>"
+    echo "  <connect src=\"render.scene:master_l\" dest=\"system:playback_1\"/>"
+    echo "  <connect src=\"render.scene:master_r\" dest=\"system:playback_2\"/>"
+    for j in $mus; do
+	echo "  <connect src=\"${names[$j]}:out_1\" dest=\"render.scene:${names[$j]}.0.0\"/>"
+    done
+    echo "</session>"
+) > playback.tsc

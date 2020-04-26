@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2" initcmdsleep="5.0">
+<session license="CC BY-SA 4.0" attribution="Giso Grimm" initcmd="jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2" initcmdsleep="5.0" levelmeter_tc="0.5">
   <!-- Marthe/4466 -->
   <scene>
     <source name="JuliaGiso"><sound maxdist="50" r="4" az="-56" layers="1"/></source>
