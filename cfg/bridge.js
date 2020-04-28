@@ -1,8 +1,9 @@
 var http = require('http');
 var os = require('os');
 var fs = require('fs');
+var iolib = require('socket.io');
 
-http.createServer(function (req, res) {
+httpserver = http.createServer(function (req, res) {
     var hosjs = fs.readFileSync('hos.js');
     var hoscss = fs.readFileSync('hos.css');
     res.writeHead(200, {'Content-Type': 'text/html'});
@@ -11,15 +12,17 @@ http.createServer(function (req, res) {
     res.write(hoscss);
     res.write('</style><title>ORLANDOviols consort box</title>\n</head><body>\n');
     res.write('<h1>ORLANDOviols consort box ('+os.hostname()+')</h1>\n<div id="mixer">mixer</div>\n');
-    res.write('<script src="http://'+os.hostname()+':8081/socket.io/socket.io.js"></script>\n');
+    res.write('<script src="http://'+os.hostname()+':8080/socket.io/socket.io.js"></script>\n');
     res.write('<script>\n');
-    res.write('var socket = io("http://'+os.hostname()+':8081");\n');
+    res.write('var socket = io("http://'+os.hostname()+':8080");\n');
     res.write(hosjs);
     res.end('</script>\n</body></html>');
-}).listen(8080);
+});
 
 var osc = require('node-osc');
-var io = require('socket.io').listen(8081);
+
+httpserver.listen(8080);
+io = iolib(httpserver);
 
 var oscServer, oscClient;
 
