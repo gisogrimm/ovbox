@@ -18,18 +18,21 @@ function plotstat(fname)
     idxcaller = find(callers==mcaller(k));
     mdata(idxdate,idxcaller,:) = [mmin(k),mmean(k),mmax(k)];
   end
+  idx = find(~isnan(sum(mdata(:,:,2),2)));
+  mdata = mdata(idx,:,:);
   idx = find(callers<=4);
   map = lines(numel(csLabels));
   srv = mdata(:,idx,3)-mdata(:,idx,2);
   %srv = prod(srv,2).^(1/size(srv,2));
   srv = min(srv,[],2);
+  figure
   phserv = plot(srv,'k-','linewidth',5,'Color',ones(1,3)*0.8);
   hold on
-  ph2 = plot(0.5*squeeze(mdata(:,idx,2)),'-','linewidth',2);
+  ph2 = plot(squeeze(mdata(:,idx,2)),'-','linewidth',2);
   for k=1:numel(ph2)
     set(ph2(k),'Color',map(callers(idx(k))+1,:));
   end
-  ph = plot(0.5*squeeze(mdata(:,idx,3)),'-');
+  ph = plot(squeeze(mdata(:,idx,3)),'-');
   for k=1:numel(ph)
     set(ph(k),'Color',map(callers(idx(k))+1,:));
   end
@@ -41,8 +44,8 @@ function plotstat(fname)
     imax = min(imax,max(tmp));
   end
   xlim([imin,imax]);
-  ylim([0,90]);
-  csLeg = {'server'};
+  ylim([0,140]);
+  csLeg = {'server jitter'};
   csLeg = [csLeg,csLabels(callers(idx)+1)];
   legend([phserv;ph2],csLeg);
   pinglat = [];
@@ -55,7 +58,7 @@ function plotstat(fname)
   end
   mlat = (lat+lat');
   %.* (1-eye(numel(lat)))
-  ylabel('network latency / ms');
+  ylabel('ping network latency / ms');
   xlabel('time / minutes');
   saveas(gcf,[fname,'_latency.png'],'png');
   figure
