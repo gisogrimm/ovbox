@@ -45,4 +45,6 @@ On a central server (or one endpoint reachable from outside) the multiplexer/tun
 
 At each endpoint, one intance of zita-n2j is started for each potential participant. One instance of zita-j2n is started on each box to stream the local audio to the other participants. The session management and audio mixing is performed in TASCAR.
 
+The underlying adaptive resampling of zita-njbridge is described in [https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf](https://kokkinizita.linuxaudio.org/papers/adapt-resamp.pdf).
+
 A simple mixing interface is provided with `node-js` and some TASCAR extensions. This mixer interface can be opened from any html5-compatible browser in the same network as the ovbox, and is optimized for smartphone/touch use.
