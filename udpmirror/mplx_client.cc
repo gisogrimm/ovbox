@@ -40,9 +40,11 @@ private:
 
 udpreceiver_t::udpreceiver_t(const std::string& desthost, uint32_t destport,
                              uint32_t recport, int32_t portoffset, int prio,
-                             secret_t secret, callerid_t callerid, bool peer2peer)
+                             secret_t secret, callerid_t callerid,
+                             bool peer2peer)
     : prio(prio), secret(secret), toport(destport), recport(recport),
-      portoffset(portoffset), callerid(callerid), runsession(true), peer2peer(peer2peer)
+      portoffset(portoffset), callerid(callerid), runsession(true),
+      peer2peer(peer2peer)
 
 {
   remote_server.destination(desthost.c_str());
@@ -76,6 +78,15 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
   sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
           lmean, lmax);
   log(recport, ctmp);
+  double data[4];
+  data[0] = cid;
+  data[1] = lmin;
+  data[2] = lmean;
+  data[3] = lmax;
+  char buffer[BUFSIZE];
+  size_t n = packmsg(buffer, BUFSIZE, secret, callerid, PORT_PEERLATREP,
+                     (const char*)data, 4 * sizeof(double));
+  remote_server.send(buffer, n, toport);
 }
 
 void udpreceiver_t::handle_endpoint_list_update(callerid_t cid,
@@ -91,14 +102,15 @@ void udpreceiver_t::pingservice()
   char buffer[BUFSIZE];
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    if( peer2peer ){
-      for( auto ep : endpoints ){
-	if( ep.timeout ){
-	  std::chrono::high_resolution_clock::time_point t1(std::chrono::high_resolution_clock::now());
-	  size_t n = packmsg(buffer, BUFSIZE, secret, callerid, 2, (const char*)(&t1),
-			     sizeof(t1));
-	  remote_server.send(buffer, n, ep.ep);
-	}
+    if(peer2peer) {
+      for(auto ep : endpoints) {
+        if(ep.timeout) {
+          std::chrono::high_resolution_clock::time_point t1(
+              std::chrono::high_resolution_clock::now());
+          size_t n = packmsg(buffer, BUFSIZE, secret, callerid, PORT_PEERPING,
+                             (const char*)(&t1), sizeof(t1));
+          remote_server.send(buffer, n, ep.ep);
+        }
       }
     }
   }
@@ -125,12 +137,25 @@ void udpreceiver_t::sendsrv()
           local_server.send(msg, un, destport + portoffset);
         } else {
           switch(destport) {
-          case 0:
+          case PORT_SRVPING:
             remote_server.send(buffer, n, toport);
             break;
-          case 1:
+          case PORT_LISTCID:
             if((un == sizeof(endpoint_t)) && (rcallerid != callerid))
-	      cid_isalive( rcallerid, *((endpoint_t*)msg));
+              cid_isalive(rcallerid, *((endpoint_t*)msg));
+            break;
+          case PORT_PEERPING:
+            if(un == sizeof(std::chrono::high_resolution_clock::time_point)) {
+              std::chrono::high_resolution_clock::time_point t1(
+                  *(std::chrono::high_resolution_clock::time_point*)msg);
+              std::chrono::high_resolution_clock::time_point t2(
+                  std::chrono::high_resolution_clock::now());
+              std::chrono::duration<double> time_span =
+                  std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
+                                                                            t1);
+              double tms(1000.0 * time_span.count());
+              cid_isalive(rcallerid, sender_endpoint, tms);
+            }
             break;
           }
         }
@@ -156,12 +181,12 @@ void udpreceiver_t::recsrv()
     while(runsession) {
       ssize_t n = local_server.recvfrom(buffer, BUFSIZE, sender_endpoint);
       size_t un = packmsg(msg, BUFSIZE, secret, callerid, recport, buffer, n);
-      if( peer2peer ){
-	for( auto ep : endpoints )
-	  if( ep.timeout )
-	    remote_server.send( msg, un, ep.ep );
-      }else{
-	remote_server.send(msg, un, toport);
+      if(peer2peer) {
+        for(auto ep : endpoints)
+          if(ep.timeout)
+            remote_server.send(msg, un, ep.ep);
+      } else {
+        remote_server.send(msg, un, toport);
       }
     }
   }
@@ -193,18 +218,13 @@ int main(int argc, char** argv)
     bool peer2peer(false);
     std::string desthost("localhost");
     const char* options = "c:d:p:o:qr:hvl:2";
-    struct option long_options[] = {{"callerid", 1, 0, 'c'},
-                                    {"dest", 1, 0, 'd'},
-                                    {"rtprio", 1, 0, 'r'},
-                                    {"secret", 1, 0, 's'},
-                                    {"quiet", 0, 0, 'q'},
-                                    {"port", 1, 0, 'p'},
-                                    {"peer2peer", 1, 0, '2'},
-                                    {"portoffset", 1, 0, 'o'},
-                                    {"listenport", 1, 0, 'l'},
-                                    {"verbose", 0, 0, 'v'},
-                                    {"help", 0, 0, 'h'},
-                                    {0, 0, 0, 0}};
+    struct option long_options[] = {
+        {"callerid", 1, 0, 'c'},   {"dest", 1, 0, 'd'},
+        {"rtprio", 1, 0, 'r'},     {"secret", 1, 0, 's'},
+        {"quiet", 0, 0, 'q'},      {"port", 1, 0, 'p'},
+        {"peer2peer", 1, 0, '2'},  {"portoffset", 1, 0, 'o'},
+        {"listenport", 1, 0, 'l'}, {"verbose", 0, 0, 'v'},
+        {"help", 0, 0, 'h'},       {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
     while((opt = getopt_long(argc, argv, options, long_options,

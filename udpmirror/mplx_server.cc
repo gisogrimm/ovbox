@@ -95,8 +95,8 @@ void udpreceiver_t::logsrv()
         char buffer[BUFSIZE];
         std::chrono::high_resolution_clock::time_point t1(
             std::chrono::high_resolution_clock::now());
-        size_t n = packmsg(buffer, BUFSIZE, secret, ep, 0, (const char*)(&t1),
-                           sizeof(t1));
+        size_t n = packmsg(buffer, BUFSIZE, secret, ep, PORT_SRVPING,
+                           (const char*)(&t1), sizeof(t1));
         socket.send(buffer, n, endpoints[ep].ep);
       }
     }
@@ -109,7 +109,7 @@ void udpreceiver_t::logsrv()
             if(endpoints[epl].timeout) {
               // endpoint is alive, send info of epl to ep:
               char buffer[BUFSIZE];
-              size_t n = packmsg(buffer, BUFSIZE, secret, epl, 1,
+              size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID,
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
               socket.send(buffer, n, endpoints[ep].ep);
@@ -149,7 +149,7 @@ void udpreceiver_t::srv()
       } else {
         // this is a control message:
         switch(destport) {
-        case 0:
+        case PORT_SRVPING:
           if(un == sizeof(std::chrono::high_resolution_clock::time_point)) {
             std::chrono::high_resolution_clock::time_point t1(
                 *(std::chrono::high_resolution_clock::time_point*)msg);
@@ -162,7 +162,15 @@ void udpreceiver_t::srv()
             cid_isalive(callerid, sender_endpoint, tms);
           }
           break;
-        }
+	case PORT_PEERLATREP:
+	  if( un == 4*sizeof(double) ){
+	    double* data((double*)msg);
+	    char ctmp[1024];
+	    sprintf(ctmp, "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms", callerid, data[0], data[1],
+		    data[2], data[3]);
+	    log(portno, ctmp);
+	  }
+	}
       }
     }
   }
