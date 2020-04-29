@@ -1,118 +1,124 @@
+#include "callerlist.h"
 #include "common.h"
 #include "udpsocket.h"
 #include <condition_variable>
-#include <vector>
-#include <thread>
+#include <signal.h>
 #include <string.h>
-
+#include <thread>
+#include <vector>
 
 #define BUFSIZE 4096
-#define TIMEOUT 20
-#define MAXEP 32
 
-class ep_t {
+// period time of participant list announcement, in ping periods:
+#define PARTICIPANTANNOUNCEPERIOD 20
+
+static bool quit_app(false);
+
+class udpreceiver_t : public endpoint_list_t {
 public:
-  ep_t();
-  endpoint_t ep;
-  uint32_t timeout;
-  bool announced;
-  double pingt_min;
-  double pingt_max;
-  double pingt_sum;
-  uint32_t pingt_n;
-};
-
-ep_t::ep_t()
-{
-  memset(&ep,0,sizeof(ep));
-  timeout = 0;
-  announced = false;
-  pingt_min = 10000;
-  pingt_max = 0;
-  pingt_sum = 0;
-  pingt_n = 0;
-}
-
-class udpreceiver_t {
-public:
-  udpreceiver_t(int portno, int prio, uint64_t secret);
+  udpreceiver_t(int portno, int prio, secret_t secret);
   ~udpreceiver_t();
   const int portno;
   void srv();
+  void announce_new_connection(callerid_t cid, const endpoint_t& ep);
+  void announce_connection_lost(callerid_t cid);
+  void announce_latency(callerid_t cid, double lmin, double lmean, double lmax);
 
 private:
   void logsrv();
   std::thread logthread;
+  void quitwatch();
+  std::thread quitthread;
   const int prio;
 
   udpsocket_t socket;
   bool runsession;
   struct sockaddr_in serv_addr;
-  uint64_t secret;
-  std::vector<ep_t> endpoints;
-  std::mutex mstat;
+  secret_t secret;
 };
 
-udpreceiver_t::udpreceiver_t(int portno, int prio, uint64_t secret)
+udpreceiver_t::udpreceiver_t(int portno, int prio, secret_t secret)
     : portno(portno), prio(prio), runsession(true), secret(secret)
 {
   endpoints.resize(255);
   socket.bind(portno);
   logthread = std::thread(&udpreceiver_t::logsrv, this);
-
+  quitthread = std::thread(&udpreceiver_t::quitwatch, this);
 }
 
 udpreceiver_t::~udpreceiver_t()
 {
   runsession = false;
+  logthread.join();
+  quitthread.join();
 }
 
+void udpreceiver_t::quitwatch()
+{
+  while(!quit_app)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  runsession = false;
+  socket.close();
+}
+
+void udpreceiver_t::announce_new_connection(callerid_t cid,
+                                            const endpoint_t& ep)
+{
+  log(portno,
+      "new connection for " + std::to_string(cid) + " from " + ep2str(ep));
+}
+
+void udpreceiver_t::announce_connection_lost(callerid_t cid)
+{
+  log(portno, "connection for " + std::to_string(cid) + " lost.");
+}
+
+void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
+                                     double lmax)
+{
+  char ctmp[1024];
+  sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
+          lmean, lmax);
+  log(portno, ctmp);
+}
+
+// this thread sends ping and participant messages
 void udpreceiver_t::logsrv()
 {
-  uint32_t cnt(6000);
+  // participand announcement counter:
+  uint32_t participantannouncementcnt(PARTICIPANTANNOUNCEPERIOD);
   while(runsession) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    for( callerid_t ep=0; ep!=MAXEP;++ep ){
-      if( endpoints[ep].timeout ){
-	char buffer[BUFSIZE];
-	std::chrono::high_resolution_clock::time_point t1(std::chrono::high_resolution_clock::now());
-	size_t n = packmsg(buffer, BUFSIZE, secret, ep, 0, (const char*)(&t1), sizeof(t1) );
-	socket.send( buffer, n, endpoints[ep].ep );
-	if( !endpoints[ep].announced ){
-	  log( portno, "new connection for "+std::to_string(ep)+" from "+ep2str(endpoints[ep].ep));
-	  endpoints[ep].announced = true;
-	}
-	--endpoints[ep].timeout;
-      }else{
-	if( endpoints[ep].announced ){
-	  log( portno, "connection for "+std::to_string(ep)+" lost.");
-	  endpoints[ep].announced = false;
-	  endpoints[ep].pingt_n = 0;
-	  endpoints[ep].pingt_min = 1000;
-	  endpoints[ep].pingt_max = 0;
-	  endpoints[ep].pingt_sum = 0.0;
-	}
+    std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
+    for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+      if(endpoints[ep].timeout) {
+        // send ping message:
+        char buffer[BUFSIZE];
+        std::chrono::high_resolution_clock::time_point t1(
+            std::chrono::high_resolution_clock::now());
+        size_t n = packmsg(buffer, BUFSIZE, secret, ep, 0, (const char*)(&t1),
+                           sizeof(t1));
+        socket.send(buffer, n, endpoints[ep].ep);
       }
     }
-    if( !cnt ){
-      cnt = 6000;
-      std::lock_guard<std::mutex> lk(mstat);
-      for( callerid_t ep=0; ep!=MAXEP;++ep ){
-	if( endpoints[ep].pingt_n ){
-	  char ctmp[1024];
-	  sprintf(ctmp,"latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms",
-		  ep,endpoints[ep].pingt_min,
-		  endpoints[ep].pingt_sum/endpoints[ep].pingt_n,
-		  endpoints[ep].pingt_max);
-	  endpoints[ep].pingt_n = 0;
-	  endpoints[ep].pingt_min = 1000;
-	  endpoints[ep].pingt_max = 0;
-	  endpoints[ep].pingt_sum = 0.0;
-	  log( portno, ctmp);
-	}
+    if(!participantannouncementcnt) {
+      // announcement of connected participants to all clients:
+      participantannouncementcnt = PARTICIPANTANNOUNCEPERIOD;
+      for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+        if(endpoints[ep].timeout) {
+          for(callerid_t epl = 0; epl != MAXEP; ++epl) {
+            if(endpoints[epl].timeout) {
+              // endpoint is alive, send info of epl to ep:
+              char buffer[BUFSIZE];
+              size_t n = packmsg(buffer, BUFSIZE, secret, epl, 1,
+                                 (const char*)(&(endpoints[epl].ep)),
+                                 sizeof(endpoints[epl].ep));
+              socket.send(buffer, n, endpoints[ep].ep);
+            }
+          }
+        }
       }
     }
-    --cnt;
+    --participantannouncementcnt;
   }
 }
 
@@ -132,38 +138,47 @@ void udpreceiver_t::srv()
       log(portno, "received " + std::to_string(n) + " bytes");
     size_t un = unpackmsg(buffer, n, ssecret, callerid, destport, msg, BUFSIZE);
     if((ssecret == secret) && (callerid < MAXEP)) {
-      endpoints[callerid].ep = sender_endpoint;
-      endpoints[callerid].timeout = TIMEOUT;
-      if( destport != 0 ){
-	for( callerid_t ep=0; ep!=MAXEP;++ep ){
-	  if( (ep != callerid) && (endpoints[ep].timeout > 0) ){
-	    socket.send( buffer, n, endpoints[ep].ep );
-	  }
-	}
-      }else{
-	if( un == sizeof(std::chrono::high_resolution_clock::time_point) ){
-	  std::chrono::high_resolution_clock::time_point t1(*(std::chrono::high_resolution_clock::time_point*)msg);
-	  std::chrono::high_resolution_clock::time_point t2(std::chrono::high_resolution_clock::now());
-	  std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-	  double tms(1000.0*time_span.count());
-	  if( tms > 0 ){
-	    if( mstat.try_lock() ){
-	      ++endpoints[callerid].pingt_n;
-	      endpoints[callerid].pingt_sum += tms;
-	      endpoints[callerid].pingt_max = std::max(tms,endpoints[callerid].pingt_max);
-	      endpoints[callerid].pingt_min = std::min(tms,endpoints[callerid].pingt_min);
-	      mstat.unlock();
-	    }
-	  }
-	}
+      cid_isalive(callerid, sender_endpoint);
+      // retransmit data:
+      if(destport > MAXSPECIALPORT) {
+        for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+          if((ep != callerid) && (endpoints[ep].timeout > 0)) {
+            socket.send(buffer, n, endpoints[ep].ep);
+          }
+        }
+      } else {
+        // this is a control message:
+        switch(destport) {
+        case 0:
+          if(un == sizeof(std::chrono::high_resolution_clock::time_point)) {
+            std::chrono::high_resolution_clock::time_point t1(
+                *(std::chrono::high_resolution_clock::time_point*)msg);
+            std::chrono::high_resolution_clock::time_point t2(
+                std::chrono::high_resolution_clock::now());
+            std::chrono::duration<double> time_span =
+                std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
+                                                                          t1);
+            double tms(1000.0 * time_span.count());
+            cid_isalive(callerid, sender_endpoint, tms);
+          }
+          break;
+        }
       }
     }
   }
   log(portno, "Multiplex service stopped");
 }
 
+static void sighandler(int sig)
+{
+  quit_app = true;
+}
+
 int main(int argc, char** argv)
 {
+  signal(SIGABRT, &sighandler);
+  signal(SIGTERM, &sighandler);
+  signal(SIGINT, &sighandler);
   try {
     int portno(4464);
     int prio(55);

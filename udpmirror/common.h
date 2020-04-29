@@ -1,10 +1,14 @@
-#ifndef DUPTUNNEL_COMMON_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <mutex>
 #include <iostream>
 #include <getopt.h>
 
 #define DEBUG(x) std::cerr << __FILE__ << ":" << __LINE__ << ": " << #x << "=" << x << std::endl
+
+// the first few ports are reserved for control packages:
+#define MAXSPECIALPORT 10
 
 extern int verbose;
 

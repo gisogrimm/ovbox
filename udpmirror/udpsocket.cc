@@ -14,11 +14,19 @@ udpsocket_t::udpsocket_t()
   sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if(sockfd < 0)
     throw ErrMsg("Opening socket failed: ", errno);
+  isopen = true;
 }
 
 udpsocket_t::~udpsocket_t()
 {
-  close(sockfd);
+  close();
+}
+
+void udpsocket_t::close()
+{
+  if( isopen )
+    ::close(sockfd);
+  isopen = false;
 }
 
 void udpsocket_t::destination(const char* host)

@@ -18,9 +18,11 @@ public:
   size_t send( const char* buf, size_t len, int portno );
   size_t send( const char* buf, size_t len, const endpoint_t& ep );
   size_t recvfrom( char* buf, size_t len, endpoint_t& addr );
+  void close();
 private:
   int sockfd;
   endpoint_t serv_addr;
+  bool isopen;
 
 };
 
