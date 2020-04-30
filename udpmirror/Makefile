@@ -16,5 +16,7 @@ $(MPLX): LDLIBS+=-lpthread
 
 $(BINFILES): common.o udpsocket.o callerlist.o
 
+mplx_client: LDLIBS+=-llo
+
 clean:
 	rm -f *~ $(BINFILES) *.o

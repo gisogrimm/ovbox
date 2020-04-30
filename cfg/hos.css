@@ -61,3 +61,13 @@ button {
     outline: none;
     opacity: 0.7;
 }
+
+.checkbox {
+    width: 30px;
+}
+
+.netctl {
+    background-color: #383838;
+    padding: 20px;
+}
+

@@ -4,6 +4,8 @@
 #include <condition_variable>
 #include <map>
 #include <thread>
+#include <lo/lo.h>
+#include <lo/lo_cpp.h>
 
 #define BUFSIZE 4096
 
@@ -17,6 +19,7 @@ public:
   void announce_new_connection(callerid_t cid, const endpoint_t& ep);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax);
+  void set_p2p( bool p ){peer2peer = p;};
 
 private:
   void sendsrv();
@@ -36,17 +39,23 @@ private:
   std::thread recthread;
   std::thread pingthread;
   bool peer2peer;
+  lo::ServerThread lost;
+  lo::Address ctlif;
 };
 
 udpreceiver_t::udpreceiver_t(const std::string& desthost, uint32_t destport,
                              uint32_t recport, int32_t portoffset, int prio,
                              secret_t secret, callerid_t callerid,
-                             bool peer2peer)
+                             bool peer2peer_)
     : prio(prio), secret(secret), toport(destport), recport(recport),
       portoffset(portoffset), callerid(callerid), runsession(true),
-      peer2peer(peer2peer)
-
+      peer2peer(peer2peer_), lost(9876), ctlif("127.0.0.1", "9000")
 {
+  if(!lost.is_valid())
+    throw ErrMsg("Unable to create OSC server at port 9876.");
+  lost.add_method("/peer2peer", "i",
+                  [this](lo_arg** argv, int) { this->set_p2p(argv[0]->i); });
+  lost.start();
   remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
   sendthread = std::thread(&udpreceiver_t::sendsrv, this);
@@ -100,19 +109,23 @@ void udpreceiver_t::handle_endpoint_list_update(callerid_t cid,
 void udpreceiver_t::pingservice()
 {
   char buffer[BUFSIZE];
+  uint32_t ctlifcnt(10);
   while(runsession) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    if(peer2peer) {
-      for(auto ep : endpoints) {
-        if(ep.timeout) {
-          std::chrono::high_resolution_clock::time_point t1(
-              std::chrono::high_resolution_clock::now());
-          size_t n = packmsg(buffer, BUFSIZE, secret, callerid, PORT_PEERPING,
-                             (const char*)(&t1), sizeof(t1));
-          remote_server.send(buffer, n, ep.ep);
-        }
+    std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
+    for(auto ep : endpoints) {
+      if(ep.timeout) {
+        std::chrono::high_resolution_clock::time_point t1(
+            std::chrono::high_resolution_clock::now());
+        size_t n = packmsg(buffer, BUFSIZE, secret, callerid, PORT_PEERPING,
+                           (const char*)(&t1), sizeof(t1));
+        remote_server.send(buffer, n, ep.ep);
       }
     }
+    if( !ctlifcnt ){
+      ctlifcnt = 10;
+      ctlif.send("/peer2peer","i",peer2peer);
+    }
+    --ctlifcnt;
   }
 }
 

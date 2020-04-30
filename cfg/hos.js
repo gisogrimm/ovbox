@@ -4,23 +4,22 @@ socket.on("connect", function() {
 socket.on("scene", function(scene){
     let el=document.getElementById("mixer");
     while (el.firstChild) {el.removeChild(el.firstChild);}
-    let els=document.createElement("h2");
-    els.setAttribute("class","scene");
-    el.append(scene,els);
-    //<button onclick="socket.emit('loadpreset', 52);">[5/2]</button>
-    let elp=document.createElement("p");
-    elp.setAttribute("class","gainstore");
-    let el1=document.createElement("button");
-    el1.setAttribute("id","/savegains/save");
-    el1.setAttribute("onclick","socket.emit('msg',{path:'/savegains/save'});");
-    el1.append("save");
-    elp.appendChild(el1);
-    let el2=document.createElement("button");
-    el2.setAttribute("id","/savegains/restore");
-    el2.setAttribute("onclick","socket.emit('msg',{path:'/savegains/restore'});");
-    el2.append("restore");
-    elp.appendChild(el2);
-    el.appendChild(elp);
+    let elheader=document.createElement("h2");
+    elheader.setAttribute("class","scene");
+    el.append(scene,elheader);
+    let elgainstore=document.createElement("p");
+    elgainstore.setAttribute("class","gainstore");
+    let elbutsave=document.createElement("button");
+    elbutsave.setAttribute("id","/savegains/save");
+    elbutsave.setAttribute("onclick","socket.emit('msg',{path:'/savegains/save'});");
+    elbutsave.append("save");
+    elgainstore.appendChild(elbutsave);
+    let elbutrestore=document.createElement("button");
+    elbutrestore.setAttribute("id","/savegains/restore");
+    elbutrestore.setAttribute("onclick","socket.emit('msg',{path:'/savegains/restore'});");
+    elbutrestore.append("restore");
+    elgainstore.appendChild(elbutrestore);
+    el.appendChild(elgainstore);
 });
 socket.on("newfader", function(faderno,val){
     fader="/touchosc/fader"+faderno;
@@ -41,7 +40,6 @@ socket.on("newfader", function(faderno,val){
     els.setAttribute("id",fader);
     let elsl=document.createElement("meter");
     elsl.setAttribute("class","level");
-    //elsl.setAttribute("type","range");
     elsl.setAttribute("min","0");
     elsl.setAttribute("max","94");
     elsl.setAttribute("low","71");
@@ -65,3 +63,14 @@ form.oninput = handleChange;
 function handleChange(e) {
     socket.emit("msg", { path: e.target.id, value: e.target.valueAsNumber } );
 }
+let netcf=document.getElementById("netctl");
+netcf.oninput = handleNetChange;
+function handleNetChange(e) {
+    socket.emit("peer2peer", e.target.checked);
+}
+socket.on("updatep2p", function(val){
+    let fad=document.getElementById("peer2peer");
+    if( fad!=null ){
+	fad.checked=(val>0);
+    }
+});
