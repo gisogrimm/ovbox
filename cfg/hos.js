@@ -63,13 +63,21 @@ form.oninput = handleChange;
 function handleChange(e) {
     socket.emit("msg", { path: e.target.id, value: e.target.valueAsNumber } );
 }
-let netcf=document.getElementById("netctl");
+let netcf=document.getElementById("peer2peer");
 netcf.oninput = handleNetChange;
 function handleNetChange(e) {
     socket.emit("peer2peer", e.target.checked);
 }
+let netdup = document.getElementById("duplicates");
+netdup.oninput = (function (e) { socket.emit("duplicates", e.target.checked);});
 socket.on("updatep2p", function(val){
     let fad=document.getElementById("peer2peer");
+    if( fad!=null ){
+	fad.checked=(val>0);
+    }
+});
+socket.on("updateduplicates", function(val){
+    let fad=document.getElementById("duplicates");
     if( fad!=null ){
 	fad.checked=(val>0);
     }
