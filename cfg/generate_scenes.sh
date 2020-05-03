@@ -22,18 +22,12 @@ dhost[2]="mplx.yourdomain.com"
 dhost[3]="mplx.yourdomain.com"
 dhost[4]="mplx.yourdomain.com"
 dhost[5]="mplx.yourdomain.com"
-#dhost[0]="mplx.yourdomain.com"
-#dhost[1]="mplx.yourdomain.com"
-#dhost[2]="mplx.yourdomain.com"
-#dhost[3]="mplx.yourdomain.com"
-#dhost[4]="mplx.yourdomain.com"
-#dhost[5]="mplx.yourdomain.com"
-buff[0]=10
-buff[1]=10
+buff[0]=7
+buff[1]=8
 buff[2]=10
-buff[3]=11
-buff[4]=10
-buff[5]=10
+buff[3]=12
+buff[4]=7
+buff[5]=7
 numel=$(echo $mus|wc -w)
 let daz=200/$numel
 # participant settings:
@@ -98,11 +92,11 @@ let daz=200/$numel
     echo "    <receiver type=\"ortf\" name=\"master\" delaycomp=\"0.05\"/>"
     echo "  </scene>"
     echo "  <modules>"
-    echo "    <system command=\"../udpmirror/mplx_client -d ${dhost[5]} -p 4464 -l 3456 -c ${k} -o ${dup[5]}\" onunload=\"killall mplx_client\"/>"
+    echo "    <system command=\"../udpmirror/mplx_client -d ${dhost[5]} -p 4464 -l 3456 -c $numel -o ${dup[5]}\" onunload=\"killall mplx_client\"/>"
     for j in $mus; do
 	let j2=$j+$j
 	let iport=$j2+4464+${dup[5]}
-	echo "    <system command=\"zita-n2j --chan 1 --jname ${names[$j]} --buff 50 0.0.0.0 ${iport}\" onunload=\"killall zita-n2j\"/>"
+	echo "    <system command=\"zita-n2j --chan 1 --jname ${names[$j]} --buff 150 0.0.0.0 ${iport}\" onunload=\"killall zita-n2j\"/>"
     done
     #echo "    <system command=\"../headtracker/headtracker\" onunload=\"killall headtracker\"/>"
     echo "    <system command=\"sleep 2;sleep 2\"/>"
