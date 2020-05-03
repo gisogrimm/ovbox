@@ -54,37 +54,39 @@ const char* ErrMsg::what() const throw()
   return c_str();
 }
 
-size_t packmsg(char* destbuf, size_t maxlen, secret_t secret, callerid_t callerid,
-               uint32_t destport, const char* msg, size_t msglen)
+size_t packmsg(char* destbuf, size_t maxlen, secret_t secret,
+               callerid_t callerid, port_t destport, sequence_t seq,
+               const char* msg, size_t msglen)
 {
-  if(maxlen < sizeof(secret) + sizeof(callerid) + sizeof(destport) + msglen)
+  if(maxlen < HEADERLEN + msglen)
     return 0;
-  memcpy(destbuf, &secret, sizeof(secret));
-  memcpy(&(destbuf[sizeof(secret)]), &callerid, sizeof(callerid));
-  memcpy(&(destbuf[sizeof(secret) + sizeof(callerid)]), &destport,
-         sizeof(destport));
-  memcpy(&(destbuf[sizeof(secret) + sizeof(callerid) + sizeof(destport)]), msg,
-         msglen);
-  return sizeof(secret) + sizeof(callerid) + sizeof(destport) + msglen;
+  msg_secret(destbuf) = secret;
+  msg_callerid(destbuf) = callerid;
+  msg_port(destbuf) = destport;
+  msg_seq(destbuf) = seq;
+  memcpy(&(destbuf[HEADERLEN]), msg, msglen);
+  return HEADERLEN + msglen;
 }
 
-size_t unpackmsg(const char* srcbuf, size_t msglen, secret_t& secret,
-                 callerid_t& callerid, uint32_t& destport, char* msg,
-                 size_t maxlen)
+size_t addmsg(char* destbuf, size_t maxlen, size_t currentlen, const char* msg, size_t msglen)
 {
-  secret = 0;
-  callerid = 0;
-  destport = 0;
-  if(msglen < sizeof(secret) + sizeof(callerid) + sizeof(destport))
+  if( maxlen < currentlen + msglen )
     return 0;
-  size_t olen(msglen - (sizeof(secret) + sizeof(callerid) + sizeof(destport)));
-  if(maxlen < olen)
-    return 0;
-  memcpy(&secret, srcbuf, sizeof(secret));
-  memcpy(&callerid, &(srcbuf[sizeof(secret)]), sizeof(callerid));
-  memcpy(&destport, &(srcbuf[sizeof(secret) + sizeof(callerid)]),
-         sizeof(destport));
-  memcpy(msg, &(srcbuf[sizeof(secret) + sizeof(callerid) + sizeof(destport)]),
-         olen);
-  return olen;
+  memcpy(&(destbuf[currentlen]), msg, msglen);
+  return currentlen + msglen;
+}
+
+double get_pingtime(const char* msg, size_t msglen)
+{
+  if(msglen == sizeof(std::chrono::high_resolution_clock::time_point)) {
+    const std::chrono::high_resolution_clock::time_point t1(
+							    *(std::chrono::high_resolution_clock::time_point*)msg);
+    std::chrono::high_resolution_clock::time_point t2(
+						      std::chrono::high_resolution_clock::now());
+    std::chrono::duration<double> time_span =
+      std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
+								t1);
+    return (1000.0 * time_span.count());
+  }
+  return -1;
 }

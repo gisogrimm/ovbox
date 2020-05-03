@@ -10,6 +10,7 @@ ep_desc_t::ep_desc_t()
   pingt_max = 0;
   pingt_sum = 0;
   pingt_n = 0;
+  seq = 0;
 }
 
 endpoint_list_t::endpoint_list_t()

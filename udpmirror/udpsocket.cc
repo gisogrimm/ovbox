@@ -8,6 +8,10 @@
 
 #define LISTEN_BACKLOG 512
 
+const size_t
+    pingbufsize(HEADERLEN +
+                sizeof(std::chrono::high_resolution_clock::time_point) + 1);
+
 udpsocket_t::udpsocket_t()
 {
   bzero((char*)&serv_addr, sizeof(serv_addr));
@@ -24,7 +28,7 @@ udpsocket_t::~udpsocket_t()
 
 void udpsocket_t::close()
 {
-  if( isopen )
+  if(isopen)
     ::close(sockfd);
   isopen = false;
 }
@@ -41,7 +45,7 @@ void udpsocket_t::destination(const char* host)
         server->h_length);
 }
 
-void udpsocket_t::bind(uint32_t port)
+void udpsocket_t::bind(port_t port)
 {
   int optval = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval,
@@ -68,7 +72,7 @@ size_t udpsocket_t::send(const char* buf, size_t len, int portno)
                 sizeof(serv_addr));
 }
 
-size_t udpsocket_t::send(const char* buf, size_t len, const endpoint_t& ep )
+size_t udpsocket_t::send(const char* buf, size_t len, const endpoint_t& ep)
 {
   return sendto(sockfd, buf, len, MSG_CONFIRM, (struct sockaddr*)&ep,
                 sizeof(ep));
@@ -82,15 +86,44 @@ size_t udpsocket_t::recvfrom(char* buf, size_t len, endpoint_t& addr)
   return ::recvfrom(sockfd, buf, len, 0, (struct sockaddr*)&addr, &socklen);
 }
 
-std::string addr2str( const struct in_addr& addr )
+std::string addr2str(const struct in_addr& addr)
 {
   return std::to_string(addr.s_addr & 0xff) + "." +
-    std::to_string((addr.s_addr>>8) & 0xff) + "." +
-    std::to_string((addr.s_addr>>16) & 0xff) + "." +
-    std::to_string((addr.s_addr>>24) & 0xff);
+         std::to_string((addr.s_addr >> 8) & 0xff) + "." +
+         std::to_string((addr.s_addr >> 16) & 0xff) + "." +
+         std::to_string((addr.s_addr >> 24) & 0xff);
 }
 
-std::string ep2str( const endpoint_t& ep )
+std::string ep2str(const endpoint_t& ep)
 {
-  return addr2str( ep.sin_addr ) + "/" + std::to_string( ntohs( ep.sin_port) );
+  return addr2str(ep.sin_addr) + "/" + std::to_string(ntohs(ep.sin_port));
+}
+
+ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret) : secret(secret) {}
+
+void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
+{
+  char buffer[pingbufsize];
+  std::chrono::high_resolution_clock::time_point t1(
+      std::chrono::high_resolution_clock::now());
+  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PINGREQ, 0,
+                     (const char*)(&t1), sizeof(t1));
+  send(buffer, n, ep);
+}
+
+char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
+                                      callerid_t& cid, port_t& destport, sequence_t& seq,
+                                      endpoint_t& addr)
+{
+  ilen = recvfrom(inputbuf, ilen, addr);
+  if(ilen < HEADERLEN)
+    return NULL;
+  // check secret:
+  if( msg_secret(inputbuf) != secret)
+    return NULL;
+  cid = msg_callerid(inputbuf);
+  destport = msg_port(inputbuf);
+  seq = msg_seq(inputbuf);
+  len = ilen - HEADERLEN;
+  return &(inputbuf[HEADERLEN]);
 }

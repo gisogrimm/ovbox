@@ -6,7 +6,6 @@
 #include <vector>
 #include <thread>
 
-#define MAXEP 32
 // ping period time in milliseconds:
 #define PINGPERIODMS 100
 // period time of ping statistic loggin, in ping periods:
@@ -25,6 +24,7 @@ public:
   double pingt_max;
   double pingt_sum;
   uint32_t pingt_n;
+  sequence_t seq;
 };
 
 class endpoint_list_t {

@@ -7,8 +7,6 @@
 #include <thread>
 #include <vector>
 
-#define BUFSIZE 4096
-
 // period time of participant list announcement, in ping periods:
 #define PARTICIPANTANNOUNCEPERIOD 20
 
@@ -25,24 +23,24 @@ public:
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax);
 
 private:
-  void logsrv();
+  void ping_and_callerlist_service();
   std::thread logthread;
   void quitwatch();
   std::thread quitthread;
   const int prio;
 
-  udpsocket_t socket;
+  ovbox_udpsocket_t socket;
   bool runsession;
   struct sockaddr_in serv_addr;
   secret_t secret;
 };
 
 udpreceiver_t::udpreceiver_t(int portno, int prio, secret_t secret)
-    : portno(portno), prio(prio), runsession(true), secret(secret)
+  : portno(portno), prio(prio), socket( secret ), runsession(true), secret(secret)
 {
   endpoints.resize(255);
   socket.bind(portno);
-  logthread = std::thread(&udpreceiver_t::logsrv, this);
+  logthread = std::thread(&udpreceiver_t::ping_and_callerlist_service, this);
   quitthread = std::thread(&udpreceiver_t::quitwatch, this);
 }
 
@@ -82,37 +80,33 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
   log(portno, ctmp);
 }
 
-// this thread sends ping and participant messages
-void udpreceiver_t::logsrv()
+// this thread sends ping and participant list messages
+void udpreceiver_t::ping_and_callerlist_service()
 {
+  char buffer[BUFSIZE];
   // participand announcement counter:
   uint32_t participantannouncementcnt(PARTICIPANTANNOUNCEPERIOD);
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
-    for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-      if(endpoints[ep].timeout) {
-        // send ping message:
-        char buffer[BUFSIZE];
-        std::chrono::high_resolution_clock::time_point t1(
-            std::chrono::high_resolution_clock::now());
-        size_t n = packmsg(buffer, BUFSIZE, secret, ep, PORT_SRVPING,
-                           (const char*)(&t1), sizeof(t1));
-        socket.send(buffer, n, endpoints[ep].ep);
+    // send ping message to all connected endpoints:
+    for(callerid_t cid = 0; cid != MAXEP; ++cid) {
+      if(endpoints[cid].timeout) {
+	// endpoint is connected
+	socket.send_ping( cid, endpoints[cid].ep );
       }
     }
     if(!participantannouncementcnt) {
       // announcement of connected participants to all clients:
       participantannouncementcnt = PARTICIPANTANNOUNCEPERIOD;
-      for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-        if(endpoints[ep].timeout) {
+      for(callerid_t cid = 0; cid != MAXEP; ++cid) {
+        if(endpoints[cid].timeout) {
           for(callerid_t epl = 0; epl != MAXEP; ++epl) {
             if(endpoints[epl].timeout) {
-              // endpoint is alive, send info of epl to ep:
-              char buffer[BUFSIZE];
-              size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID,
+              // endpoint is alive, send info of epl to cid:
+              size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID, 0,
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
-              socket.send(buffer, n, endpoints[ep].ep);
+              socket.send(buffer, n, endpoints[cid].ep);
             }
           }
         }
@@ -126,50 +120,50 @@ void udpreceiver_t::srv()
 {
   set_thread_prio(prio);
   char buffer[BUFSIZE];
-  char msg[BUFSIZE];
   log(portno, "Multiplex service started");
   endpoint_t sender_endpoint;
-  callerid_t callerid;
-  secret_t ssecret;
-  uint32_t destport;
+  callerid_t rcallerid;
+  port_t destport;
   while(runsession) {
-    ssize_t n = socket.recvfrom(buffer, BUFSIZE, sender_endpoint);
-    if(verbose > 2)
-      log(portno, "received " + std::to_string(n) + " bytes");
-    size_t un = unpackmsg(buffer, n, ssecret, callerid, destport, msg, BUFSIZE);
-    if((ssecret == secret) && (callerid < MAXEP)) {
-      cid_isalive(callerid, sender_endpoint);
+    size_t n(BUFSIZE);
+    size_t un(BUFSIZE);
+    sequence_t seq(0);
+    char* msg(socket.recv_sec_msg( buffer, n, un, rcallerid, destport, seq, sender_endpoint));
+    if( msg ){
+      cid_isalive(rcallerid, sender_endpoint);
       // retransmit data:
       if(destport > MAXSPECIALPORT) {
         for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-          if((ep != callerid) && (endpoints[ep].timeout > 0)) {
+          if((ep != rcallerid) && (endpoints[ep].timeout > 0)) {
             socket.send(buffer, n, endpoints[ep].ep);
           }
         }
       } else {
         // this is a control message:
         switch(destport) {
-        case PORT_SRVPING:
-          if(un == sizeof(std::chrono::high_resolution_clock::time_point)) {
-            std::chrono::high_resolution_clock::time_point t1(
-                *(std::chrono::high_resolution_clock::time_point*)msg);
-            std::chrono::high_resolution_clock::time_point t2(
-                std::chrono::high_resolution_clock::now());
-            std::chrono::duration<double> time_span =
-                std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
-                                                                          t1);
-            double tms(1000.0 * time_span.count());
-            cid_isalive(callerid, sender_endpoint, tms);
-          }
-          break;
+	case PORT_SEQREP:
+	  if( un == sizeof(sequence_t)+sizeof(callerid_t) ){
+	    callerid_t sender_cid(*(sequence_t*)msg);
+	    sequence_t seq(*(sequence_t*)(&(msg[sizeof(callerid_t)])));
+	    char ctmp[1024];
+	    sprintf(ctmp, "sequence error %d sender %d %d", rcallerid, sender_cid, seq );
+	    log(portno, ctmp);
+	  }
+	  break;
 	case PORT_PEERLATREP:
 	  if( un == 4*sizeof(double) ){
 	    double* data((double*)msg);
 	    char ctmp[1024];
-	    sprintf(ctmp, "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms", callerid, data[0], data[1],
+	    sprintf(ctmp, "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms", rcallerid, data[0], data[1],
 		    data[2], data[3]);
 	    log(portno, ctmp);
 	  }
+	  break;
+        case PORT_PINGRESP:
+	  double tms(get_pingtime(msg,un));
+	  if( tms > 0 )
+            cid_isalive(rcallerid, sender_endpoint, tms);
+          break;
 	}
       }
     }
