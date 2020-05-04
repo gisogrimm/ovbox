@@ -78,9 +78,9 @@ test -x /home/pi/autorun && su -l pi /home/pi/autorun &
 test -x /home/ov/autorun && su -l ov /home/ov/autorun &
 ````
 
-In the script `/home/pi/autostart` we configure system settings which require superuser priviledges. In `/home/ov/autostart` we start  the script `start_all.sh` from this repository.
+In the script `/home/pi/autostart` we configure system settings which require superuser priviledges. In `/home/ov/autostart` we start  the script `start_all.sh` from this repository  (see also file [tools/ov/autorun](tools/ov/autorun).
 
-The autostart script for the system setup `/home/pi/autorun` looks like this:
+The autostart script for the system setup `/home/pi/autorun` looks like this (see also file [tools/pi/autorun](tools/pi/autorun):
 
 ````
 # deactivate power saving:

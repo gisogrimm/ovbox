@@ -90,6 +90,9 @@ jack_connect system:capture_1 sender:in_1
 ````
 Here, `render.scene` is the TASCAR scene, which could be replaced by another mixer or simply by using the hardware outputs directly. The last line connects the first hardware input channel with the sender.
 
+## mplx_tools
+
+The tools `mplx_server` and `mplx_client` form the main communication protocol. They are essentially a STUN server and a TURN server, and provide a minimalistic session management.
 
 ## peer-to-peer mode vs server mode
 
