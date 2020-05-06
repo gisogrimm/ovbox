@@ -28,18 +28,21 @@ endpoint_list_t::~endpoint_list_t()
   statusthread.join();
 }
 
-void endpoint_list_t::cid_set_peer2peer(callerid_t cid, bool peer2peer)
-{
-  if(cid < MAXEP) {
-    endpoints[cid].peer2peer = peer2peer;
-  }
-}
-
-void endpoint_list_t::cid_isalive(callerid_t cid, const endpoint_t& ep,
-                                  double pingtime)
+void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
+                                   bool peer2peer)
 {
   if(cid < MAXEP) {
     endpoints[cid].ep = ep;
+    if(peer2peer != endpoints[cid].peer2peer)
+      endpoints[cid].announced = false;
+    endpoints[cid].peer2peer = peer2peer;
+    endpoints[cid].timeout = TIMEOUT;
+  }
+}
+
+void endpoint_list_t::cid_setpingtime(callerid_t cid, double pingtime)
+{
+  if(cid < MAXEP) {
     endpoints[cid].timeout = TIMEOUT;
     if(pingtime > 0) {
       if(mstat.try_lock()) {
@@ -62,7 +65,8 @@ void endpoint_list_t::checkstatus()
       if(endpoints[ep].timeout) {
         // bookkeeping of connected endpoints:
         if(!endpoints[ep].announced) {
-          announce_new_connection(ep, endpoints[ep].ep);
+          announce_new_connection(ep, endpoints[ep].ep,
+                                  endpoints[ep].peer2peer);
           endpoints[ep].announced = true;
         }
         --endpoints[ep].timeout;

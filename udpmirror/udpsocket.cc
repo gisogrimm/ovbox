@@ -113,9 +113,11 @@ void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
 void ovbox_udpsocket_t::send_registration(callerid_t cid, bool peer2peer,
                                           port_t port)
 {
-  char buffer[HEADERLEN];
-  size_t n(
-      packmsg(buffer, HEADERLEN, secret, cid, PORT_REGISTER, peer2peer, "", 0));
+  int32_t pad(0);
+  size_t buflen(HEADERLEN+sizeof(pad)+1);
+  char buffer[buflen];
+  size_t n(packmsg(buffer, buflen, secret, cid, PORT_REGISTER, peer2peer,
+                   (char*)(&pad), sizeof(pad)));
   send(buffer, n, port);
 }
 

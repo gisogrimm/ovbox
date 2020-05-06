@@ -18,7 +18,8 @@ public:
   ~udpreceiver_t();
   const int portno;
   void srv();
-  void announce_new_connection(callerid_t cid, const endpoint_t& ep);
+  void announce_new_connection(callerid_t cid, const endpoint_t& ep,
+                               bool peer2peer);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
@@ -62,10 +63,12 @@ void udpreceiver_t::quitwatch()
 }
 
 void udpreceiver_t::announce_new_connection(callerid_t cid,
-                                            const endpoint_t& ep)
+                                            const endpoint_t& ep,
+                                            bool peer2peer)
 {
-  log(portno,
-      "new connection for " + std::to_string(cid) + " from " + ep2str(ep));
+  log(portno, "new connection for " + std::to_string(cid) + " from " +
+                  ep2str(ep) + " in " +
+                  (peer2peer ? "peer-to-peer" : "server") + "-mode");
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -165,22 +168,21 @@ void udpreceiver_t::srv()
                     "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms",
                     rcallerid, data[0], data[1], data[2], data[3]);
             log(portno, ctmp);
-            sprintf(ctmp,
-                    "packages %d-%g received=%g lost=%g (%1.2f%%)",
-                    rcallerid, data[0], data[4], data[5], 100.0*data[5]/(std::max(1.0,data[4]+data[5])));
+            sprintf(ctmp, "packages %d-%g received=%g lost=%g (%1.2f%%)",
+                    rcallerid, data[0], data[4], data[5],
+                    100.0 * data[5] / (std::max(1.0, data[4] + data[5])));
             log(portno, ctmp);
           }
           break;
         case PORT_PINGRESP: {
           double tms(get_pingtime(msg, un));
           if(tms > 0)
-            cid_isalive(rcallerid, sender_endpoint, tms);
+            cid_setpingtime(rcallerid, tms);
         } break;
         case PORT_REGISTER:
           // in the register packet the sequence is used to transmit
           // peer2peer flag:
-          cid_isalive(rcallerid, sender_endpoint);
-          cid_set_peer2peer(rcallerid, seq);
+          cid_register(rcallerid, sender_endpoint, seq);
           break;
         }
       }

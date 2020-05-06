@@ -58,8 +58,12 @@ size_t packmsg(char* destbuf, size_t maxlen, secret_t secret,
                callerid_t callerid, port_t destport, sequence_t seq,
                const char* msg, size_t msglen)
 {
-  if(maxlen < HEADERLEN + msglen)
+  if(maxlen < HEADERLEN + msglen){
+    DEBUG(maxlen);
+    DEBUG(HEADERLEN);
+    DEBUG(msglen);
     return 0;
+  }
   msg_secret(destbuf) = secret;
   msg_callerid(destbuf) = callerid;
   msg_port(destbuf) = destport;
@@ -68,9 +72,10 @@ size_t packmsg(char* destbuf, size_t maxlen, secret_t secret,
   return HEADERLEN + msglen;
 }
 
-size_t addmsg(char* destbuf, size_t maxlen, size_t currentlen, const char* msg, size_t msglen)
+size_t addmsg(char* destbuf, size_t maxlen, size_t currentlen, const char* msg,
+              size_t msglen)
 {
-  if( maxlen < currentlen + msglen )
+  if(maxlen < currentlen + msglen)
     return 0;
   memcpy(&(destbuf[currentlen]), msg, msglen);
   return currentlen + msglen;
@@ -80,12 +85,11 @@ double get_pingtime(const char* msg, size_t msglen)
 {
   if(msglen == sizeof(std::chrono::high_resolution_clock::time_point)) {
     const std::chrono::high_resolution_clock::time_point t1(
-							    *(std::chrono::high_resolution_clock::time_point*)msg);
+        *(std::chrono::high_resolution_clock::time_point*)msg);
     std::chrono::high_resolution_clock::time_point t2(
-						      std::chrono::high_resolution_clock::now());
+        std::chrono::high_resolution_clock::now());
     std::chrono::duration<double> time_span =
-      std::chrono::duration_cast<std::chrono::duration<double>>(t2 -
-								t1);
+        std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
     return (1000.0 * time_span.count());
   }
   return -1;

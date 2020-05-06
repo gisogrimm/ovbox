@@ -15,7 +15,8 @@ public:
                 port_t loport);
   ~udpreceiver_t();
   void run();
-  void announce_new_connection(callerid_t cid, const endpoint_t& ep);
+  void announce_new_connection(callerid_t cid, const endpoint_t& ep,
+                               bool peer2peer);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
@@ -78,10 +79,12 @@ udpreceiver_t::~udpreceiver_t()
 }
 
 void udpreceiver_t::announce_new_connection(callerid_t cid,
-                                            const endpoint_t& ep)
+                                            const endpoint_t& ep,
+                                            bool peer2peer)
 {
-  log(recport,
-      "new connection for " + std::to_string(cid) + " from " + ep2str(ep));
+  log(recport, "new connection for " + std::to_string(cid) + " from " +
+                   ep2str(ep) + " in " +
+                   (peer2peer ? "peer-to-peer" : "server") + "-mode");
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -97,8 +100,8 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
   sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
           lmean, lmax);
   log(recport, ctmp);
-  sprintf(ctmp, "packages from %d received=%d lost=%d (%1.2f%%)", cid,
-	  received, lost, 100.0 * (double)lost / (double)(std::max(1u,received+lost)));
+  sprintf(ctmp, "packages from %d received=%d lost=%d (%1.2f%%)", cid, received,
+          lost, 100.0 * (double)lost / (double)(std::max(1u, received + lost)));
   log(recport, ctmp);
   double data[6];
   data[0] = cid;
@@ -164,14 +167,14 @@ void udpreceiver_t::sendsrv()
             if(dseq != 0) {
               local_server.send(msg, un, destport + portoffset);
               ++endpoints[rcallerid].num_received;
-              if(dseq > 200) {
+              if(dseq < 0) {
                 size_t un =
                     packmsg(buffer, BUFSIZE, secret, callerid, PORT_SEQREP, 0,
                             (char*)(&rcallerid), sizeof(rcallerid));
                 un = addmsg(buffer, BUFSIZE, un, (char*)(&dseq), sizeof(dseq));
                 remote_server.send(buffer, un, toport);
               } else {
-                endpoints[rcallerid].num_lost += (dseq-1);
+                endpoints[rcallerid].num_lost += (dseq - 1);
               }
               endpoints[rcallerid].seq = seq;
             }
@@ -186,15 +189,14 @@ void udpreceiver_t::sendsrv()
           case PORT_LISTCID:
             if((un == sizeof(endpoint_t)) && (rcallerid != callerid)) {
               // seq is peer2peer flag:
-              cid_isalive(rcallerid, *((endpoint_t*)msg));
-              cid_set_peer2peer(rcallerid, seq);
+              cid_register(rcallerid, *((endpoint_t*)msg), seq);
             }
             break;
           case PORT_PINGRESP:
             if(rcallerid != callerid) {
               double tms(get_pingtime(msg, un));
               if(tms > 0)
-                cid_isalive(rcallerid, sender_endpoint, tms);
+                cid_setpingtime(rcallerid, tms);
             }
             break;
           }
@@ -252,10 +254,7 @@ void udpreceiver_t::recsrv()
 
 void udpreceiver_t::run()
 {
-  char buffer[BUFSIZE];
-  size_t msglen = packmsg(buffer, BUFSIZE, secret, callerid, 0, 0, "", 0);
   while(runsession) {
-    remote_server.send(buffer, msglen, toport);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 }

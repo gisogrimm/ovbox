@@ -46,7 +46,7 @@ public:
 typedef uint32_t secret_t;
 typedef uint8_t callerid_t;
 typedef uint16_t port_t;
-typedef uint8_t sequence_t;
+typedef int16_t sequence_t;
 #define POS_CALLERID sizeof(secret_t)
 #define POS_PORT (POS_CALLERID + sizeof(callerid_t))
 #define POS_SEQ (POS_PORT + sizeof(port_t))
@@ -73,7 +73,8 @@ size_t packmsg(char* destbuf, size_t maxlen, secret_t secret,
                callerid_t callerid, port_t destport, sequence_t seq,
                const char* msg, size_t msglen);
 
-size_t addmsg(char* destbuf, size_t maxlen, size_t currentlen, const char* msg, size_t msglen);
+size_t addmsg(char* destbuf, size_t maxlen, size_t currentlen, const char* msg,
+              size_t msglen);
 
 double get_pingtime(const char* msg, size_t msglen);
 
