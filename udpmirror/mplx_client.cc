@@ -9,14 +9,16 @@
 
 class udpreceiver_t : public endpoint_list_t {
 public:
-  udpreceiver_t(const std::string& desthost, port_t destport,
-                port_t recport, int32_t portoffset, int prio, secret_t secret,
-                callerid_t callerid, bool peer2peer, bool send_duplicates, port_t loport);
+  udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
+                int32_t portoffset, int prio, secret_t secret,
+                callerid_t callerid, bool peer2peer, bool send_duplicates,
+                port_t loport);
   ~udpreceiver_t();
   void run();
   void announce_new_connection(callerid_t cid, const endpoint_t& ep);
   void announce_connection_lost(callerid_t cid);
-  void announce_latency(callerid_t cid, double lmin, double lmean, double lmax);
+  void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
+                        uint32_t received, uint32_t lost);
   void set_p2p(bool p) { peer2peer = p; };
   void set_duplicates(bool p) { send_duplicates = p; };
 
@@ -46,18 +48,22 @@ private:
 udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
                              port_t recport, int32_t portoffset, int prio,
                              secret_t secret, callerid_t callerid,
-                             bool peer2peer_, bool send_duplicates_, port_t loport)
+                             bool peer2peer_, bool send_duplicates_,
+                             port_t loport)
     : prio(prio), secret(secret), remote_server(secret), toport(destport),
       recport(recport), portoffset(portoffset), callerid(callerid),
-      runsession(true), peer2peer(peer2peer_), send_duplicates(send_duplicates_), lost(loport),
+      runsession(true), peer2peer(peer2peer_),
+      send_duplicates(send_duplicates_), lost(loport),
       ctlif("127.0.0.1", "9000")
 {
   if(!lost.is_valid())
-    throw ErrMsg("Unable to create OSC server at port "+std::to_string(loport)+".");
+    throw ErrMsg("Unable to create OSC server at port " +
+                 std::to_string(loport) + ".");
   lost.add_method("/peer2peer", "i",
                   [this](lo_arg** argv, int) { this->set_p2p(argv[0]->i); });
-  lost.add_method("/duplicates", "i",
-                  [this](lo_arg** argv, int) { this->set_duplicates(argv[0]->i); });
+  lost.add_method("/duplicates", "i", [this](lo_arg** argv, int) {
+    this->set_duplicates(argv[0]->i);
+  });
   lost.start();
   remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
@@ -84,20 +90,26 @@ void udpreceiver_t::announce_connection_lost(callerid_t cid)
 }
 
 void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
-                                     double lmax)
+                                     double lmax, uint32_t received,
+                                     uint32_t lost)
 {
   char ctmp[1024];
   sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
           lmean, lmax);
   log(recport, ctmp);
-  double data[4];
+  sprintf(ctmp, "packages from %d received=%d lost=%d (%1.2f%%)", cid,
+	  received, lost, 100.0 * (double)lost / (double)(std::max(1u,received+lost)));
+  log(recport, ctmp);
+  double data[6];
   data[0] = cid;
   data[1] = lmin;
   data[2] = lmean;
   data[3] = lmax;
+  data[4] = received;
+  data[5] = lost;
   char buffer[BUFSIZE];
   size_t n = packmsg(buffer, BUFSIZE, secret, callerid, PORT_PEERLATREP, 0,
-                     (const char*)data, 4 * sizeof(double));
+                     (const char*)data, 6 * sizeof(double));
   remote_server.send(buffer, n, toport);
 }
 
@@ -113,11 +125,11 @@ void udpreceiver_t::pingservice()
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
     // send registration to server:
-    remote_server.send_registration( callerid, peer2peer, toport );
+    remote_server.send_registration(callerid, peer2peer, toport);
     // send ping to other peers:
     for(auto ep : endpoints) {
       if(ep.timeout) {
-	remote_server.send_ping( callerid, ep.ep );
+        remote_server.send_ping(callerid, ep.ep);
       }
     }
     if(!ctlifcnt) {
@@ -142,43 +154,48 @@ void udpreceiver_t::sendsrv()
       size_t n(BUFSIZE);
       size_t un(BUFSIZE);
       sequence_t seq(0);
-      char* msg(remote_server.recv_sec_msg( buffer, n, un, rcallerid, destport, seq, sender_endpoint));
-      if( msg ){
+      char* msg(remote_server.recv_sec_msg(buffer, n, un, rcallerid, destport,
+                                           seq, sender_endpoint));
+      if(msg) {
         // the first port numbers are reserved for the control infos:
-        if(destport > MAXSPECIALPORT){
-	  if(rcallerid!=callerid) {
-	    sequence_t dseq(seq-endpoints[rcallerid].seq);
-	    if( dseq != 0 ){
-	      local_server.send(msg, un, destport + portoffset);
-	      if( dseq != 1 ){
-		size_t un = packmsg(buffer, BUFSIZE, secret, callerid, PORT_SEQREP, 0, (char*)(&rcallerid), sizeof(rcallerid));
-		un = addmsg( buffer, BUFSIZE, un, (char*)(&dseq), sizeof(dseq) );
-		remote_server.send( buffer, un, toport );
-	      }
-	      endpoints[rcallerid].seq = seq;
-	    }
-	  }
+        if(destport > MAXSPECIALPORT) {
+          if(rcallerid != callerid) {
+            sequence_t dseq(seq - endpoints[rcallerid].seq);
+            if(dseq != 0) {
+              local_server.send(msg, un, destport + portoffset);
+              ++endpoints[rcallerid].num_received;
+              if(dseq > 200) {
+                size_t un =
+                    packmsg(buffer, BUFSIZE, secret, callerid, PORT_SEQREP, 0,
+                            (char*)(&rcallerid), sizeof(rcallerid));
+                un = addmsg(buffer, BUFSIZE, un, (char*)(&dseq), sizeof(dseq));
+                remote_server.send(buffer, un, toport);
+              } else {
+                endpoints[rcallerid].num_lost += (dseq-1);
+              }
+              endpoints[rcallerid].seq = seq;
+            }
+          }
         } else {
           switch(destport) {
           case PORT_PINGREQ:
-	    msg_port(buffer) = PORT_PINGRESP;
-	    msg_callerid(buffer) = callerid;
+            msg_port(buffer) = PORT_PINGRESP;
+            msg_callerid(buffer) = callerid;
             remote_server.send(buffer, n, sender_endpoint);
             break;
           case PORT_LISTCID:
-            if((un == sizeof(endpoint_t)) && (rcallerid != callerid)){
-	      // seq is peer2peer flag:
+            if((un == sizeof(endpoint_t)) && (rcallerid != callerid)) {
+              // seq is peer2peer flag:
               cid_isalive(rcallerid, *((endpoint_t*)msg));
-	      cid_set_peer2peer( rcallerid, seq );
-
-	    }
+              cid_set_peer2peer(rcallerid, seq);
+            }
             break;
           case PORT_PINGRESP:
-	    if( rcallerid != callerid ){
-	      double tms(get_pingtime(msg,un));
-	      if( tms > 0 )
-		cid_isalive(rcallerid, sender_endpoint, tms);
-	    }
+            if(rcallerid != callerid) {
+              double tms(get_pingtime(msg, un));
+              if(tms > 0)
+                cid_isalive(rcallerid, sender_endpoint, tms);
+            }
             break;
           }
         }
@@ -205,24 +222,25 @@ void udpreceiver_t::recsrv()
     while(runsession) {
       ssize_t n = local_server.recvfrom(buffer, BUFSIZE, sender_endpoint);
       ++seq;
-      size_t un = packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
+      size_t un =
+          packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
       bool sendtoserver(!peer2peer);
       if(peer2peer) {
         for(auto ep : endpoints)
-          if(ep.timeout){
-	    if( ep.peer2peer ){
-	      remote_server.send(msg, un, ep.ep);
-	      if( send_duplicates )
-		remote_server.send(msg, un, ep.ep);
-	    }else{
-	      sendtoserver = true;
-	    }
-	  }
+          if(ep.timeout) {
+            if(ep.peer2peer) {
+              remote_server.send(msg, un, ep.ep);
+              if(send_duplicates)
+                remote_server.send(msg, un, ep.ep);
+            } else {
+              sendtoserver = true;
+            }
+          }
       }
-      if( sendtoserver ) {
+      if(sendtoserver) {
         remote_server.send(msg, un, toport);
-	if( send_duplicates )
-	  remote_server.send(msg, un, toport);
+        if(send_duplicates)
+          remote_server.send(msg, un, toport);
       }
     }
   }
@@ -256,20 +274,14 @@ int main(int argc, char** argv)
     bool sendduplicates(false);
     std::string desthost("localhost");
     const char* options = "c:d:p:o:qr:hvl:2";
-    struct option long_options[] = {{"callerid", 1, 0, 'c'},
-                                    {"dest", 1, 0, 'd'},
-                                    {"rtprio", 1, 0, 'r'},
-                                    {"secret", 1, 0, 's'},
-                                    {"quiet", 0, 0, 'q'},
-                                    {"port", 1, 0, 'p'},
-                                    {"peer2peer", 1, 0, '2'},
-                                    {"portoffset", 1, 0, 'o'},
-                                    {"listenport", 1, 0, 'l'},
-                                    {"verbose", 0, 0, 'v'},
-                                    {"help", 0, 0, 'h'},
-                                    {"ctlport", 1, 0, 'x'},
-                                    {"sendduplicates", 0, 0, 'y'},
-                                    {0, 0, 0, 0}};
+    struct option long_options[] = {
+        {"callerid", 1, 0, 'c'},       {"dest", 1, 0, 'd'},
+        {"rtprio", 1, 0, 'r'},         {"secret", 1, 0, 's'},
+        {"quiet", 0, 0, 'q'},          {"port", 1, 0, 'p'},
+        {"peer2peer", 1, 0, '2'},      {"portoffset", 1, 0, 'o'},
+        {"listenport", 1, 0, 'l'},     {"verbose", 0, 0, 'v'},
+        {"help", 0, 0, 'h'},           {"ctlport", 1, 0, 'x'},
+        {"sendduplicates", 0, 0, 'y'}, {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
     while((opt = getopt_long(argc, argv, options, long_options,
@@ -285,8 +297,8 @@ int main(int argc, char** argv)
         desthost = optarg;
         break;
       case 'y':
-	sendduplicates = true;
-	break;
+        sendduplicates = true;
+        break;
       case 'p':
         destport = atoi(optarg);
         break;
