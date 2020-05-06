@@ -1,4 +1,4 @@
-CXXFLAGS += -Wall -ggdb
+CXXFLAGS += -Wall -std=c++11 -O3
 
 MPLX=mplx_server mplx_client
 

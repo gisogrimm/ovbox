@@ -104,7 +104,8 @@ void udpreceiver_t::ping_and_callerlist_service()
           for(callerid_t epl = 0; epl != MAXEP; ++epl) {
             if(endpoints[epl].timeout) {
               // endpoint is alive, send info of epl to cid:
-              size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID, 0,
+              size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID,
+                                 endpoints[epl].peer2peer,
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
               socket.send(buffer, n, endpoints[cid].ep);

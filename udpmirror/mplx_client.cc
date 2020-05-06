@@ -166,8 +166,12 @@ void udpreceiver_t::sendsrv()
             remote_server.send(buffer, n, sender_endpoint);
             break;
           case PORT_LISTCID:
-            if((un == sizeof(endpoint_t)) && (rcallerid != callerid))
+            if((un == sizeof(endpoint_t)) && (rcallerid != callerid)){
+	      // seq is peer2peer flag:
               cid_isalive(rcallerid, *((endpoint_t*)msg));
+	      cid_set_peer2peer( rcallerid, seq );
+
+	    }
             break;
           case PORT_PINGRESP:
 	    if( rcallerid != callerid ){

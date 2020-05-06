@@ -3,3 +3,8 @@
 LD_LIBRARY_PATH=/usr/local/lib/
 
 export LD_LIBRARY_PATH
+
+(
+    mkfifo 2way
+    ssh ov@mplx.yourdomain.com nc -k -l 8083 <2way| nc localhost 8080 1>2way
+) &

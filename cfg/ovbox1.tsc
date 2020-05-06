@@ -9,11 +9,11 @@
     <include name="base_scene.itsc"/>
   </scene>
   <modules>
-    <system command="../udpmirror/mplx_client -d mplx.yourdomain.com -p 4464 -l 4466 -c 1 -o 0" onunload="killall mplx_client"/>
-    <system command="zita-n2j --chan 1 --jname JuliaGiso --buff 20 0.0.0.0 4464" onunload="killall zita-n2j"/>
-    <system command="zita-n2j --chan 1 --jname Frauke --buff 20 0.0.0.0 4468" onunload="killall zita-n2j"/>
-    <system command="zita-n2j --chan 1 --jname Hille --buff 21 0.0.0.0 4470" onunload="killall zita-n2j"/>
-    <system command="zita-n2j --chan 1 --jname Claas --buff 20 0.0.0.0 4472" onunload="killall zita-n2j"/>
+    <system command="../udpmirror/mplx_client -d mplx.yourdomain.com -2 -p 4464 -l 4466 -c 1 -o 0" onunload="killall mplx_client"/>
+    <system command="zita-n2j --chan 1 --jname JuliaGiso --buff 15 0.0.0.0 4464" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Frauke --buff 18 0.0.0.0 4468" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Hille --buff 20 0.0.0.0 4470" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Claas --buff 15 0.0.0.0 4472" onunload="killall zita-n2j"/>
     <system command="zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 4466" onunload="killall zita-j2n"/>
     <system command="sleep 2;sleep 2"/>
     <savegains/>

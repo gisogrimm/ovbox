@@ -16,6 +16,12 @@ dup[2]="0"
 dup[3]="0"
 dup[4]="0"
 dup[5]="1000"
+p2p[0]="-2"
+p2p[1]="-2"
+p2p[2]="-2"
+p2p[3]=""
+p2p[4]="-2"
+p2p[5]="-2"
 dhost[0]="mplx.yourdomain.com"
 dhost[1]="mplx.yourdomain.com"
 dhost[2]="mplx.yourdomain.com"
@@ -51,7 +57,7 @@ for k in $mus; do
 	echo "    <include name=\"base_scene.itsc\"/>"
 	echo "  </scene>"
 	echo "  <modules>"
-	echo "    <system command=\"../udpmirror/mplx_client -d ${dhost[$k]} -p 4464 -l ${oport} -c ${k} -o ${dup[$k]}\" onunload=\"killall mplx_client\"/>"
+	echo "    <system command=\"../udpmirror/mplx_client -d ${dhost[$k]} ${p2p[$k]} -p 4464 -l ${oport} -c ${k} -o ${dup[$k]}\" onunload=\"killall mplx_client\"/>"
 	for j in $mus; do
 	    if test $k -ne $j; then
 		let j2=$j+$j
