@@ -1,0 +1,211 @@
+digraph {
+
+  //force="0.2";
+  //graph [pad="0.5", ranksep="0.525", nodesep="3"];
+  graph [pad=".5",K="2.5"];
+  //p2p graph [label="peer-to-peer mode",fontsize="32"];
+  //srv graph [label="server mode",fontsize="32"];
+  //mixed graph [label="mixed mode",fontsize="32"];
+  node [shape="circle"];
+
+  //, ranksep="2"
+
+  edge [penwidth="1"];
+
+  server [shape="circle",width="1.5"];
+
+  cli1;
+  cli2;
+  cli3;
+  cli4;
+  //mixed cli1 [label="cli1\n(no p2p)"];
+
+  {
+    node [style="invisible",shape="box",height="2"];
+    rank = "same";
+    leg1;
+    leg2;
+  }
+
+  {
+    // register
+    edge [penwidth="1",color="#ff00a0"];
+    leg1 -> leg2 [label="register",splines="false"];
+
+    cli1 -> server;
+    cli2 -> server;
+    cli3 -> server;
+    cli4 -> server;
+
+  }
+
+  {
+    // ping
+    edge [penwidth="2",color="#ffaaaa"];
+    leg1 -> leg2 [label="ping",splines="false"];
+
+    cli1 -> server;
+    cli2 -> server;
+    cli3 -> server;
+    cli4 -> server;
+
+    server -> cli1;
+    server -> cli2;
+    server -> cli3;
+    server -> cli4;
+
+    //p2p cli1 -> cli2;
+    //p2p cli1 -> cli3;
+    //p2p cli1 -> cli4;
+    
+    //p2p cli2 -> cli1;
+    //p2p cli2 -> cli3;
+    //p2p cli2 -> cli4;
+    
+    //p2p cli3 -> cli1;
+    //p2p cli3 -> cli2;
+    //p2p cli3 -> cli4;
+    
+    //p2p cli4 -> cli1;
+    //p2p cli4 -> cli2;
+    //p2p cli4 -> cli3;
+
+    //mixed cli2 -> cli3;
+    //mixed cli2 -> cli4;
+
+    //mixed cli3 -> cli2;
+    //mixed cli3 -> cli4;
+
+    //mixed cli4 -> cli2;
+    //mixed cli4 -> cli3;
+
+  }
+
+    
+  {
+    // caller list
+    edge [penwidth="2",color="#0030aa"];
+    leg1 -> leg2 [label="caller list",splines="false"];
+
+    server -> cli1;
+    server -> cli2;
+    server -> cli3;
+    server -> cli4;
+
+  }
+
+  {
+    // statistic report
+    edge [penwidth="2",color="#aa3000"];
+    leg1 -> leg2 [label="statistics",splines="false"];
+
+    cli1 -> server;
+    cli2 -> server;
+    cli3 -> server;
+    cli4 -> server;
+
+  }
+
+    
+  {
+    edge [penwidth="4",color="#00AA00"];
+    leg1 -> leg2 [label="audio",splines="false"];
+    //,label="audio"
+    // audio
+    //p2p cli1 -> cli2;
+    //p2p cli1 -> cli3;
+    //p2p cli1 -> cli4;
+    
+    //p2p cli2 -> cli1;
+    //p2p cli2 -> cli3;
+    //p2p cli2 -> cli4;
+    
+    //p2p cli3 -> cli1;
+    //p2p cli3 -> cli2;
+    //p2p cli3 -> cli4;
+
+    //p2p cli4 -> cli1;
+    //p2p cli4 -> cli2;
+    //p2p cli4 -> cli3;
+
+    //mixed cli2 -> cli3;
+    //mixed cli2 -> cli4;
+
+    //mixed cli3 -> cli2;
+    //mixed cli3 -> cli4;
+
+    //mixed cli4 -> cli2;
+    //mixed cli4 -> cli3;
+    
+    //mixed cli1 -> server;
+    //mixed cli2 -> server;
+    //mixed cli3 -> server;
+    //mixed cli4 -> server;
+    //mixed server -> cli1;
+    //mixed server -> cli1;
+    //mixed server -> cli1;
+    //mixed server -> cli2;
+    //mixed server -> cli3;
+    //mixed server -> cli4;
+
+    //srv cli1 -> server;
+    //srv cli2 -> server;
+    //srv cli3 -> server;
+    //srv cli4 -> server;
+    //srv server -> cli1;
+    //srv server -> cli2;
+    //srv server -> cli3;
+    //srv server -> cli4;
+    //srv server -> cli1;
+    //srv server -> cli2;
+    //srv server -> cli3;
+    //srv server -> cli4;
+    //srv server -> cli1;
+    //srv server -> cli2;
+    //srv server -> cli3;
+    //srv server -> cli4;
+  }
+
+  {
+    // local network
+    edge [len="0.1", penwidth="1",color="#00AA00"];
+    leg1 -> leg2 [label="local",splines="false"];
+
+    cli1 -> rec1;
+    cli1 -> rec1;
+    cli1 -> rec1;
+    rec1 -> cli1;
+    
+    cli2 -> rec2;
+    cli2 -> rec2;
+    cli2 -> rec2;
+    rec2 -> cli2;
+    
+    cli3 -> rec3;
+    cli3 -> rec3;
+    cli3 -> rec3;
+    rec3 -> cli3;
+
+    cli4 -> rec4;
+    cli4 -> rec4;
+    cli4 -> rec4;
+    rec4 -> cli4;
+
+  }
+
+
+  {
+    rec1 [label="mixer",shape="box"];
+    rec2 [label="mixer",shape="box"];
+    rec3 [label="mixer",shape="box"];
+    rec4 [label="mixer",shape="box"];
+  }
+  
+}
+
+  /*
+   * Local Variables:
+   * mode: c
+   * End:
+   */
+  
