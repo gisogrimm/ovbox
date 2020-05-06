@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<session license="CC BY-SA 4.0" attribution="Giso Grimm" levelmeter_tc="0.5">
+  <scene guiscale="26" guicenter="7 -2 0">
+    <source name="mus">
+      <sound name="Julia" maxdist="50" r="6.5" az="-60" layers="1"/>
+      <sound name="Marthe" maxdist="50" r="6.5" az="-36" layers="1"/>
+      <sound name="Frauke" maxdist="50" r="6.5" az="-12" layers="1"/>
+      <sound name="Giso" maxdist="50" r="6.5" az="12" layers="1"/>
+      <sound name="Hille" maxdist="50" r="6.5" az="36" layers="1"/>
+      <sound name="Claas" maxdist="50" r="6.5" az="60" layers="1"/>
+      <position>0 0 -3.7 1.3</position>
+      <orientation>0 90 0 0</orientation>
+    </source>
+    <receiver type="ortf" name="master" delaycomp="0.05" gain="3">
+      <position>0 0 -3.7 1.3</position>
+      <orientation>0 90 0 0</orientation>
+    </receiver>
+    <reverb type="simplefdn" volumetric="13 25 7.5" image="false" fdnorder="9" damping="0.7" layers="1" gain="0">
+      <position>0 0 -2.2 3.8</position>
+    </reverb>
+    <facegroup edgereflection="false" name="floor" importraw="sendesaal_ac_floor.raw" reflectivity="1" damping="0.2"/>
+    <facegroup edgereflection="false" name="ceiling" importraw="sendesaal_ac_ceiling.raw" reflectivity="-1" damping="0.2"/>
+    <facegroup edgereflection="false" name="walls" importraw="sendesaal_ac_walls.raw" reflectivity="1" damping="0.3"/>
+    
+  </scene>
+  <modules>
+    <system command="tascar_cpufreq"/>
+    <system command="../udpmirror/mplx_client -d mplx.yourdomain.com -p 4464 -l 3456 -c 5 -o 1000" onunload="killall mplx_client"/>
+    <system command="zita-n2j --chan 1,2 --jname JuliaGiso --buff 150 0.0.0.0 5000" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Marthe --buff 150 0.0.0.0 5466" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Frauke --buff 150 0.0.0.0 5468" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Hille --buff 150 0.0.0.0 5470" onunload="killall zita-n2j"/>
+    <system command="zita-n2j --chan 1 --jname Claas --buff 150 0.0.0.0 5472" onunload="killall zita-n2j"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib zita-j2n --jname mplx.yourdomain.com 192.168.188.38 5000"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib zita-n2j --chan 1 --jname david 0.0.0.0 5002"/>
+    <system command="obs --collection ovboxstream"/>
+    <system command="zita-j2n --chan 1 --jname toov ovbox0 5002" onunload="killall zita-j2n"/>
+    <system command="sleep 2;sleep 2"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect system:capture_2 render.scene:ego.0.0"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect system:capture_2 sender:in_1"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect david:out_1 sender:in_1"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect david:out_1 render.scene:ego.0.0"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect system:capture_1 mplx.yourdomain.com:in_1"/>
+    <system command="ssh ov@ovbox0 LD_LIBRARY_PATH=/usr/local/lib jack_connect system:capture_2 mplx.yourdomain.com:in_2"/>
+    <system command="sleep 2;sleep 2"/>
+  </modules>
+  <connect src="render.scene:master_l" dest="system:playback_1"/>
+  <connect src="render.scene:master_r" dest="system:playback_2"/>
+  <connect src="JuliaGiso:out_1" dest="render.scene:mus.Julia.0"/>
+  <connect src="JuliaGiso:out_2" dest="render.scene:mus.Giso.0"/>
+  <connect src="Marthe:out_1" dest="render.scene:mus.Marthe.0"/>
+  <connect src="Frauke:out_1" dest="render.scene:mus.Frauke.0"/>
+  <connect src="Hille:out_1" dest="render.scene:mus.Hille.0"/>
+  <connect src="Claas:out_1" dest="render.scene:mus.Claas.0"/>
+  <connect src="render.scene:master_l" dest="obs_input:in_1"/>
+  <connect src="render.scene:master_r" dest="obs_input:in_2"/>
+  <connect src="system:capture_1" dest="toov:in_1"/>
+</session>
