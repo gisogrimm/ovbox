@@ -8,9 +8,8 @@
 
 #define LISTEN_BACKLOG 512
 
-const size_t
-    pingbufsize(HEADERLEN +
-                sizeof(std::chrono::high_resolution_clock::time_point) + 1);
+const size_t pingbufsize(
+    HEADERLEN + sizeof(std::chrono::high_resolution_clock::time_point) + 1);
 
 udpsocket_t::udpsocket_t()
 {
@@ -111,15 +110,24 @@ void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
   send(buffer, n, ep);
 }
 
+void ovbox_udpsocket_t::send_registration(callerid_t cid, bool peer2peer,
+                                          port_t port)
+{
+  char buffer[HEADERLEN];
+  size_t n(
+      packmsg(buffer, HEADERLEN, secret, cid, PORT_REGISTER, peer2peer, "", 0));
+  send(buffer, n, port);
+}
+
 char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
-                                      callerid_t& cid, port_t& destport, sequence_t& seq,
-                                      endpoint_t& addr)
+                                      callerid_t& cid, port_t& destport,
+                                      sequence_t& seq, endpoint_t& addr)
 {
   ilen = recvfrom(inputbuf, ilen, addr);
   if(ilen < HEADERLEN)
     return NULL;
   // check secret:
-  if( msg_secret(inputbuf) != secret)
+  if(msg_secret(inputbuf) != secret)
     return NULL;
   cid = msg_callerid(inputbuf);
   destport = msg_port(inputbuf);

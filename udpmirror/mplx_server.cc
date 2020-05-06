@@ -36,7 +36,8 @@ private:
 };
 
 udpreceiver_t::udpreceiver_t(int portno, int prio, secret_t secret)
-  : portno(portno), prio(prio), socket( secret ), runsession(true), secret(secret)
+    : portno(portno), prio(prio), socket(secret), runsession(true),
+      secret(secret)
 {
   endpoints.resize(255);
   socket.bind(portno);
@@ -91,8 +92,8 @@ void udpreceiver_t::ping_and_callerlist_service()
     // send ping message to all connected endpoints:
     for(callerid_t cid = 0; cid != MAXEP; ++cid) {
       if(endpoints[cid].timeout) {
-	// endpoint is connected
-	socket.send_ping( cid, endpoints[cid].ep );
+        // endpoint is connected
+        socket.send_ping(cid, endpoints[cid].ep);
       }
     }
     if(!participantannouncementcnt) {
@@ -128,43 +129,53 @@ void udpreceiver_t::srv()
     size_t n(BUFSIZE);
     size_t un(BUFSIZE);
     sequence_t seq(0);
-    char* msg(socket.recv_sec_msg( buffer, n, un, rcallerid, destport, seq, sender_endpoint));
-    if( msg ){
-      cid_isalive(rcallerid, sender_endpoint);
+    char* msg(socket.recv_sec_msg(buffer, n, un, rcallerid, destport, seq,
+                                  sender_endpoint));
+    if(msg) {
       // retransmit data:
       if(destport > MAXSPECIALPORT) {
         for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-          if((ep != rcallerid) && (endpoints[ep].timeout > 0)) {
+          if((ep != rcallerid) && (endpoints[ep].timeout > 0) &&
+             ((!endpoints[ep].peer2peer) ||
+              (!endpoints[rcallerid].peer2peer))) {
             socket.send(buffer, n, endpoints[ep].ep);
           }
         }
       } else {
         // this is a control message:
         switch(destport) {
-	case PORT_SEQREP:
-	  if( un == sizeof(sequence_t)+sizeof(callerid_t) ){
-	    callerid_t sender_cid(*(sequence_t*)msg);
-	    sequence_t seq(*(sequence_t*)(&(msg[sizeof(callerid_t)])));
-	    char ctmp[1024];
-	    sprintf(ctmp, "sequence error %d sender %d %d", rcallerid, sender_cid, seq );
-	    log(portno, ctmp);
-	  }
-	  break;
-	case PORT_PEERLATREP:
-	  if( un == 4*sizeof(double) ){
-	    double* data((double*)msg);
-	    char ctmp[1024];
-	    sprintf(ctmp, "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms", rcallerid, data[0], data[1],
-		    data[2], data[3]);
-	    log(portno, ctmp);
-	  }
-	  break;
-        case PORT_PINGRESP:
-	  double tms(get_pingtime(msg,un));
-	  if( tms > 0 )
-            cid_isalive(rcallerid, sender_endpoint, tms);
+        case PORT_SEQREP:
+          if(un == sizeof(sequence_t) + sizeof(callerid_t)) {
+            callerid_t sender_cid(*(sequence_t*)msg);
+            sequence_t seq(*(sequence_t*)(&(msg[sizeof(callerid_t)])));
+            char ctmp[1024];
+            sprintf(ctmp, "sequence error %d sender %d %d", rcallerid,
+                    sender_cid, seq);
+            log(portno, ctmp);
+          }
           break;
-	}
+        case PORT_PEERLATREP:
+          if(un == 4 * sizeof(double)) {
+            double* data((double*)msg);
+            char ctmp[1024];
+            sprintf(ctmp,
+                    "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms",
+                    rcallerid, data[0], data[1], data[2], data[3]);
+            log(portno, ctmp);
+          }
+          break;
+        case PORT_PINGRESP: {
+          double tms(get_pingtime(msg, un));
+          if(tms > 0)
+            cid_isalive(rcallerid, sender_endpoint, tms);
+        } break;
+        case PORT_REGISTER:
+          // in the register packet the sequence is used to transmit
+          // peer2peer flag:
+          cid_isalive(rcallerid, sender_endpoint);
+          cid_set_peer2peer(rcallerid, seq);
+          break;
+        }
       }
     }
   }

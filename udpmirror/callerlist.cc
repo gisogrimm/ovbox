@@ -11,6 +11,7 @@ ep_desc_t::ep_desc_t()
   pingt_sum = 0;
   pingt_n = 0;
   seq = 0;
+  peer2peer = true;
 }
 
 endpoint_list_t::endpoint_list_t()
@@ -25,6 +26,13 @@ endpoint_list_t::~endpoint_list_t()
 {
   runthread = false;
   statusthread.join();
+}
+
+void endpoint_list_t::cid_set_peer2peer( callerid_t cid, bool peer2peer )
+{
+  if( cid < MAXEP ){
+    endpoints[cid].peer2peer = peer2peer;
+  }
 }
 
 void endpoint_list_t::cid_isalive( callerid_t cid, const endpoint_t& ep, double pingtime )

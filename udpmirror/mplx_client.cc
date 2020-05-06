@@ -112,6 +112,9 @@ void udpreceiver_t::pingservice()
   uint32_t ctlifcnt(10);
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
+    // send registration to server:
+    remote_server.send_registration( callerid, peer2peer, toport );
+    // send ping to other peers:
     for(auto ep : endpoints) {
       if(ep.timeout) {
 	remote_server.send_ping( callerid, ep.ep );
@@ -199,14 +202,20 @@ void udpreceiver_t::recsrv()
       ssize_t n = local_server.recvfrom(buffer, BUFSIZE, sender_endpoint);
       ++seq;
       size_t un = packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
+      bool sendtoserver(!peer2peer);
       if(peer2peer) {
         for(auto ep : endpoints)
           if(ep.timeout){
-            remote_server.send(msg, un, ep.ep);
-	    if( send_duplicates )
+	    if( ep.peer2peer ){
 	      remote_server.send(msg, un, ep.ep);
+	      if( send_duplicates )
+		remote_server.send(msg, un, ep.ep);
+	    }else{
+	      sendtoserver = true;
+	    }
 	  }
-      } else {
+      }
+      if( sendtoserver ) {
         remote_server.send(msg, un, toport);
 	if( send_duplicates )
 	  remote_server.send(msg, un, toport);

@@ -20,6 +20,7 @@ public:
   endpoint_t ep;
   uint32_t timeout;
   bool announced;
+  bool peer2peer;
   double pingt_min;
   double pingt_max;
   double pingt_sum;
@@ -37,6 +38,7 @@ protected:
   virtual void announce_connection_lost( callerid_t cid ) {};
   virtual void announce_latency( callerid_t cid, double lmin, double lmean, double lmax ) {};
   void cid_isalive( callerid_t cid, const endpoint_t& ep, double pingtime = 0 );
+  void cid_set_peer2peer( callerid_t cid, bool peer2peer );
   std::vector<ep_desc_t> endpoints;
 private:
   void checkstatus();
