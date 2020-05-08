@@ -14,6 +14,7 @@ ep_desc_t::ep_desc_t()
   num_lost = 0;
   num_received = 0;
   peer2peer = true;
+  version = "";
 }
 
 endpoint_list_t::endpoint_list_t() : runthread(true)
@@ -29,7 +30,7 @@ endpoint_list_t::~endpoint_list_t()
 }
 
 void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
-                                   bool peer2peer)
+                                   bool peer2peer, const std::string& rver)
 {
   if(cid < MAXEP) {
     endpoints[cid].ep = ep;
@@ -37,6 +38,7 @@ void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
       endpoints[cid].announced = false;
     endpoints[cid].peer2peer = peer2peer;
     endpoints[cid].timeout = TIMEOUT;
+    endpoints[cid].version = rver;
   }
 }
 
@@ -65,8 +67,7 @@ void endpoint_list_t::checkstatus()
       if(endpoints[ep].timeout) {
         // bookkeeping of connected endpoints:
         if(!endpoints[ep].announced) {
-          announce_new_connection(ep, endpoints[ep].ep,
-                                  endpoints[ep].peer2peer);
+          announce_new_connection(ep, endpoints[ep]);
           endpoints[ep].announced = true;
         }
         --endpoints[ep].timeout;
@@ -83,18 +84,18 @@ void endpoint_list_t::checkstatus()
       statlogcnt = STATLOGPERIOD;
       std::lock_guard<std::mutex> lk(mstat);
       for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-        if(endpoints[ep].pingt_n) {
-          announce_latency(ep, endpoints[ep].pingt_min,
-                           endpoints[ep].pingt_sum / endpoints[ep].pingt_n,
-                           endpoints[ep].pingt_max, endpoints[ep].num_received,
-                           endpoints[ep].num_lost);
-          endpoints[ep].pingt_n = 0;
-          endpoints[ep].pingt_min = 1000;
-          endpoints[ep].pingt_max = 0;
-          endpoints[ep].pingt_sum = 0.0;
-          endpoints[ep].num_received = 0;
-          endpoints[ep].num_lost = 0;
-        }
+	if( endpoints[ep].timeout ){
+	  announce_latency(ep, endpoints[ep].pingt_min,
+			   endpoints[ep].pingt_sum / std::max(1u,endpoints[ep].pingt_n),
+			   endpoints[ep].pingt_max, endpoints[ep].num_received,
+			   endpoints[ep].num_lost);
+	  endpoints[ep].pingt_n = 0;
+	  endpoints[ep].pingt_min = 1000;
+	  endpoints[ep].pingt_max = 0;
+	  endpoints[ep].pingt_sum = 0.0;
+	  endpoints[ep].num_received = 0;
+	  endpoints[ep].num_lost = 0;
+	}
       }
     }
     --statlogcnt;

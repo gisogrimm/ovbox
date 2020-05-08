@@ -27,6 +27,7 @@ public:
   uint32_t num_received;
   uint32_t num_lost;
   sequence_t seq;
+  std::string version;
 };
 
 class endpoint_list_t {
@@ -36,14 +37,13 @@ public:
   void add_endpoint(const endpoint_t& ep);
 
 protected:
-  virtual void announce_new_connection(callerid_t cid, const endpoint_t& ep,
-                                       bool peer2peer){};
+  virtual void announce_new_connection(callerid_t cid, const ep_desc_t& ep){};
   virtual void announce_connection_lost(callerid_t cid){};
   virtual void announce_latency(callerid_t cid, double lmin, double lmean,
                                 double lmax, uint32_t received,
                                 uint32_t lost){};
   void cid_setpingtime(callerid_t cid, double pingtime);
-  void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer);
+  void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer, const std::string& rver);
   std::vector<ep_desc_t> endpoints;
 
 private:

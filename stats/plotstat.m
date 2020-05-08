@@ -130,6 +130,56 @@ function plotstat(fname)
 			      nanmean(mjit), csLabels);
   title([fname,' peer-to-peer'],'interpreter','none');
   saveas(gcf,[fname,'_ping_p2p.png'],'png');
+  %% package loss
+  [vcid1,vcid2,received,lost] = get_pkgloss( fname );
+  mrec = zeros(numel(csLabels),numel(csLabels));
+  mloss = mrec;
+  for cid1=[1:numel(csLabels)]-1
+    for cid2=setdiff([1:numel(csLabels)]-1,cid1)
+      idx = find((vcid1==cid1).*(vcid2==cid2));
+      if numel(idx)>1
+	idx = idx(2:end);
+	mrec(cid1+1,cid2+1) = mrec(cid1+1,cid2+1) + sum(received(idx));
+	mloss(cid1+1,cid2+1) = mloss(cid1+1,cid2+1) + sum(lost(idx));
+      end
+    end
+  end
+  rloss = mloss./(mrec+mloss);
+  ploss = log(rloss);
+  pmin = min(ploss(find(isfinite(ploss))));
+  pmax = max(ploss(find(isfinite(ploss))));
+  ploss = (ploss-pmin)/(pmax-pmin)*62;
+  ploss(find(~isfinite(ploss))) = -5;
+  figure
+  imagesc(ploss);
+  hold on;
+  map = colormap('jet');
+  map(1,:) = ones(1,3);
+  colormap(map);
+  for kx=1:size(ploss,2)
+    plot(kx+[0.5,0.5],[0.5,size(ploss,1)+0.5],'k-');
+    hold on
+    plot([0.5,size(ploss,1)+0.5],kx+[0.5,0.5],'k-');
+    for ky=1:size(ploss,1)
+      if (kx ~= ky) && (mrec(ky,kx)>0)
+	fmt = '%1.3f%%';
+	text(kx,ky,sprintf(fmt,100*rloss(ky,kx)),...
+	     'HorizontalAlignment','center',...
+	     'FontSize',14);
+	hold on
+      end
+    end
+  end
+  set(gca,'XLim',[0.5,size(ploss,1)+0.5],...
+	  'XTick',1:size(ploss,1),...
+	  'XTickLabel',csLabels,...
+	  'YLim',[0.5,size(ploss,1)+0.5],...
+	  'YTick',1:size(ploss,1),...
+	  'YTickLabel',csLabels,...
+	  'YDir','normal')
+  xlabel('sender');
+  ylabel('receiver');
+  saveas(gcf,[fname,'_packageloss.png'],'png');
   
 function [vcid1,vcid2,vmin,vmean,vmax] = get_peer_lat( fname )
   [tmp,txt] = system(['cat ',fname,'|grep -e peerlat']);
@@ -140,6 +190,16 @@ function [vcid1,vcid2,vmin,vmean,vmax] = get_peer_lat( fname )
   vmin = c1{4};
   vmean = c1{5};
   vmax = c1{6};
+
+function [vcid1,vcid2,received,lost] = get_pkgloss( fname )
+  [tmp,txt] = system(['cat ',fname,'|grep -e packages']);
+  %packages 2-0 received=29453 lost=10 (0.03%)
+  c1 = textscan(txt,'%[^[][4464] packages %d-%d received=%d lost=%d (%f%%)');
+  cdates = c1{1};
+  vcid1 = c1{2};
+  vcid2 = c1{3};
+  received = c1{4};
+  lost = c1{5};
 
 
 function plot_lat_and_jitter_matrix( mlat, mjit, vlat, vjit, labels )
@@ -183,3 +243,5 @@ function plot_lat_and_jitter_matrix( mlat, mjit, vlat, vjit, labels )
 	  'YTick',1:size(mlat,1),...
 	  'YTickLabel',labels,...
 	  'YDir','normal')
+  xlabel('sender');
+  ylabel('receiver');

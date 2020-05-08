@@ -97,3 +97,15 @@ The tools `mplx_server` and `mplx_client` form the main communication protocol. 
 ## peer-to-peer mode vs server mode
 
 The `mplx_client` / `mplx_server` tools support connection via server or a peer-to-peer mode. In both cases the central server is needed for negotiation of the participants. peer-to-peer mode can activated at the client with the `-2` flag. A mixed automatic switching between peer-to-peer mode and server mode based on the client behavior and statistics is currently under development.
+
+## hardware delay
+
+We run the sound system with 48000 Hz sampling rate and periods of 2
+ms (96 samples). The measured hardware delay (combined input and output), as caused by block processing, USB BUS protocol and aliasing filters is:
+
+|                  |             |         |
+|------------------|-------------|---------|
+| TASCAM US-2x2    | 496 samples | 10.3 ms |
+| TASCAM US-100    | 510 samples | 10.6 ms |
+| ConnectAUDIO 2/4 | 627 samples | 13.1 ms | 
+
