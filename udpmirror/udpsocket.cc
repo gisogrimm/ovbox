@@ -129,8 +129,10 @@ char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
   if(ilen < HEADERLEN)
     return NULL;
   // check secret:
-  if(msg_secret(inputbuf) != secret)
+  if(msg_secret(inputbuf) != secret){
+    //log( 0, "invalid secret "+std::to_string(msg_secret(inputbuf)) +" from "+ep2str(addr));
     return NULL;
+  }
   cid = msg_callerid(inputbuf);
   destport = msg_port(inputbuf);
   seq = msg_seq(inputbuf);

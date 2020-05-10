@@ -61,12 +61,12 @@ void udpreceiver_t::quitwatch()
   socket.close();
 }
 
-void udpreceiver_t::announce_new_connection(callerid_t cid,
-                                            const ep_desc_t& ep)
+void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
 {
   log(portno, "new connection for " + std::to_string(cid) + " from " +
                   ep2str(ep.ep) + " in " +
-                  (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v"+ep.version);
+                  (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v" +
+                  ep.version);
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -180,11 +180,11 @@ void udpreceiver_t::srv()
         case PORT_REGISTER:
           // in the register packet the sequence is used to transmit
           // peer2peer flag:
-	  std::string rver("---");
-	  if( un > 0 ){
-	    msg[un-1] = 0;
-	    rver = msg;
-	  }
+          std::string rver("---");
+          if(un > 0) {
+            msg[un - 1] = 0;
+            rver = msg;
+          }
           cid_register(rcallerid, sender_endpoint, seq, rver);
           break;
         }
@@ -208,7 +208,7 @@ int main(int argc, char** argv)
     int portno(4464);
     int prio(55);
     secret_t secret(1234);
-    const char* options = "p:qr:hv";
+    const char* options = "p:qr:hvs:";
     struct option long_options[] = {
         {"rtprio", 1, 0, 'r'}, {"secret", 1, 0, 's'},  {"quiet", 0, 0, 'q'},
         {"port", 1, 0, 'p'},   {"verbose", 0, 0, 'v'}, {"help", 0, 0, 'h'},
@@ -234,12 +234,7 @@ int main(int argc, char** argv)
         prio = atoi(optarg);
         break;
       case 's':
-        if(sizeof(long) == sizeof(secret))
-          secret = atol(optarg);
-        else if(sizeof(long) == sizeof(secret))
-          secret = atoll(optarg);
-        else
-          secret = atoi(optarg);
+        secret = atoll(optarg);
         break;
       }
     }

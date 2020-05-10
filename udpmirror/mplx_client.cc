@@ -77,12 +77,12 @@ udpreceiver_t::~udpreceiver_t()
   runsession = false;
 }
 
-void udpreceiver_t::announce_new_connection(callerid_t cid,
-                                            const ep_desc_t& ep)
+void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
 {
   log(recport, "new connection for " + std::to_string(cid) + " from " +
                    ep2str(ep.ep) + " in " +
-                   (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v"+ep.version);
+                   (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v" +
+                   ep.version);
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -270,7 +270,7 @@ int main(int argc, char** argv)
     bool peer2peer(false);
     bool sendduplicates(false);
     std::string desthost("localhost");
-    const char* options = "c:d:p:o:qr:hvl:2";
+    const char* options = "c:d:p:o:qr:hvl:2s:";
     struct option long_options[] = {
         {"callerid", 1, 0, 'c'},       {"dest", 1, 0, 'd'},
         {"rtprio", 1, 0, 'r'},         {"secret", 1, 0, 's'},
@@ -321,12 +321,7 @@ int main(int argc, char** argv)
         callerid = atoi(optarg);
         break;
       case 's':
-        if(sizeof(long) == sizeof(secret))
-          secret = atol(optarg);
-        else if(sizeof(long) == sizeof(secret))
-          secret = atoll(optarg);
-        else
-          secret = atoi(optarg);
+        secret = atoll(optarg);
         break;
       }
     }
