@@ -15,8 +15,7 @@ public:
                 port_t loport);
   ~udpreceiver_t();
   void run();
-  void announce_new_connection(callerid_t cid, const endpoint_t& ep,
-                               bool peer2peer);
+  void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
@@ -79,12 +78,11 @@ udpreceiver_t::~udpreceiver_t()
 }
 
 void udpreceiver_t::announce_new_connection(callerid_t cid,
-                                            const endpoint_t& ep,
-                                            bool peer2peer)
+                                            const ep_desc_t& ep)
 {
   log(recport, "new connection for " + std::to_string(cid) + " from " +
-                   ep2str(ep) + " in " +
-                   (peer2peer ? "peer-to-peer" : "server") + "-mode");
+                   ep2str(ep.ep) + " in " +
+                   (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v"+ep.version);
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -189,7 +187,7 @@ void udpreceiver_t::sendsrv()
           case PORT_LISTCID:
             if((un == sizeof(endpoint_t)) && (rcallerid != callerid)) {
               // seq is peer2peer flag:
-              cid_register(rcallerid, *((endpoint_t*)msg), seq);
+              cid_register(rcallerid, *((endpoint_t*)msg), seq, "");
             }
             break;
           case PORT_PINGRESP:

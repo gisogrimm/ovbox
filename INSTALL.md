@@ -34,7 +34,7 @@ To install TASCAR, follow the instructions on the github page:
 
 [https://github.com/gisogrimm/tascar/blob/master/INSTALL](https://github.com/gisogrimm/tascar/blob/master/INSTALL)
 
-Essentiall these instructions are:
+Essentiall these instructions are (to be performed as user `pi`):
 
 ````
 git clone https://github.com/gisogrimm/tascar
