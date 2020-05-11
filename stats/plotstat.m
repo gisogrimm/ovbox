@@ -66,7 +66,7 @@ function plotstat(fname)
   plot_lat_and_jitter_matrix( pinglat+pinglat', jitter+jitter', ...
 			      pinglat, ...
 			      jitter, csLabels(callers(idx)+1));
-  title([fname,' via server'],'interpreter','none');
+  title([fname,' server latency'],'interpreter','none');
   saveas(gcf,[fname,'_ping_server.png'],'png');
   figure
   imagesc(mlat.*(1-eye(size(mlat,1))));
@@ -128,7 +128,7 @@ function plotstat(fname)
   plot_lat_and_jitter_matrix( mlat, mjit, ...
 			      nanmean(mlat), ...
 			      nanmean(mjit), csLabels);
-  title([fname,' peer-to-peer'],'interpreter','none');
+  title([fname,' peer-to-peer latency'],'interpreter','none');
   saveas(gcf,[fname,'_ping_p2p.png'],'png');
   %% package loss
   [vcid1,vcid2,received,lost] = get_pkgloss( fname );
@@ -146,10 +146,13 @@ function plotstat(fname)
   end
   rloss = mloss./(mrec+mloss);
   ploss = log(rloss);
-  pmin = min(ploss(find(isfinite(ploss))));
-  pmax = max(ploss(find(isfinite(ploss))));
+  pmin = log(0.0001);
+  pmax = log(0.1);
+  %pmin = min(ploss(find(isfinite(ploss))));
+  %pmax = max(ploss(find(isfinite(ploss))));
   ploss = (ploss-pmin)/(pmax-pmin)*62;
-  ploss(find(~isfinite(ploss))) = -5;
+  ploss(find(ploss<0)) = 0;
+  ploss(find(~isfinite(ploss))) = -6;
   figure
   imagesc(ploss);
   hold on;
@@ -172,6 +175,7 @@ function plotstat(fname)
   end
   set(gca,'XLim',[0.5,size(ploss,1)+0.5],...
 	  'XTick',1:size(ploss,1),...
+	  'CLim',[-6,62],...
 	  'XTickLabel',csLabels,...
 	  'YLim',[0.5,size(ploss,1)+0.5],...
 	  'YTick',1:size(ploss,1),...
@@ -179,7 +183,48 @@ function plotstat(fname)
 	  'YDir','normal')
   xlabel('sender');
   ylabel('receiver');
+  title([fname,' package loss'],'interpreter','none');
   saveas(gcf,[fname,'_packageloss.png'],'png');
+  % sequence errors:
+  [vcid1,vcid2,seq] = get_seqerr( fname );
+  mseq = zeros(numel(csLabels),numel(csLabels));
+  for cid1=[1:numel(csLabels)]-1
+    for cid2=setdiff([1:numel(csLabels)]-1,cid1)
+      idx = find((vcid1==cid1).*(vcid2==cid2));
+      mseq(cid1+1,cid2+1) = numel(idx);
+    end
+  end
+  figure
+  mseq = mseq .* (1-eye(size(mseq,1))) - 60*eye(size(mseq,1));
+  imagesc(mseq)
+  hold on;
+  colormap(map);
+  for kx=1:size(ploss,2)
+    plot(kx+[0.5,0.5],[0.5,size(ploss,1)+0.5],'k-');
+    hold on
+    plot([0.5,size(ploss,1)+0.5],kx+[0.5,0.5],'k-');
+    for ky=1:size(ploss,1)
+      if (kx ~= ky)
+	text(kx,ky,sprintf('%d',mseq(ky,kx)),...
+	     'HorizontalAlignment','center',...
+	     'FontSize',14);
+	hold on
+      end
+    end
+  end
+  set(gca,'XLim',[0.5,size(ploss,1)+0.5],...
+	  'XTick',1:size(ploss,1),...
+	  'CLim',[-60,700],...
+	  'XTickLabel',csLabels,...
+	  'YLim',[0.5,size(ploss,1)+0.5],...
+	  'YTick',1:size(ploss,1),...
+	  'YTickLabel',csLabels,...
+	  'YDir','normal')
+  xlabel('sender');
+  ylabel('receiver');
+  title([fname,' sequence errors'],'interpreter','none');
+  saveas(gcf,[fname,'_seq.png'],'png');
+  
   
 function [vcid1,vcid2,vmin,vmean,vmax] = get_peer_lat( fname )
   [tmp,txt] = system(['cat ',fname,'|grep -e peerlat']);
@@ -202,6 +247,16 @@ function [vcid1,vcid2,received,lost] = get_pkgloss( fname )
   lost = c1{5};
 
 
+function [vcid1,vcid2,seq] = get_seqerr( fname )
+  [tmp,txt] = system(['cat ',fname,'|grep -e sequence']);
+  %Sun May 10 08:00:29 2020 [4464] sequence error 1 sender 0 -4271
+  c1 = textscan(txt,'%[^[][4464] sequence error %d sender %d %d');
+  cdates = c1{1};
+  vcid1 = c1{2};
+  vcid2 = c1{3};
+  seq = c1{4};
+
+  
 function plot_lat_and_jitter_matrix( mlat, mjit, vlat, vjit, labels )
   imdata = mlat;
   idx = 1:size(mlat,1);
@@ -223,7 +278,7 @@ function plot_lat_and_jitter_matrix( mlat, mjit, vlat, vjit, labels )
 	  'HorizontalAlignment','center',...
 	  'FontSize',12);
     for ky=1:size(mlat,1)
-      if kx ~= ky
+      if (kx ~= ky) && (mlat(ky,kx)>0)
 	fmt = '%1.1f ms\n(%1.1f ms)';
 	text(kx,ky,sprintf(fmt,mlat(ky,kx),mjit(ky,kx)),...
 	     'HorizontalAlignment','center',...
