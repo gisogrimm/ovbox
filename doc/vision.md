@@ -49,3 +49,43 @@ will be replaced by an RTP client.
 
 Virtual acoustic sessions will be created and modified on the fly upon
 configuration changes reported from the room service.
+
+## Components
+
+### users:
+
+* username
+* device names
+
+### peers:
+
+* user
+* address (IP/port) - only while active
+* position
+
+### rooms:
+
+* list of peers
+* address (IP/port) of room service
+* lock (and other properties)
+
+### house:
+
+* list of rooms
+* list of users
+
+## Registration workflow
+
+1. A registered user enters the lobby
+2. The list of available rooms is displayed
+3. The user selects a room
+4. The device connects through the back door of the lobby
+5. The room key and location as well as the chair numberwithin the room is provided to the device
+6. The device connects to the room service using the room key and chair number
+7. The audio of the device is transmitted to all other devices, and the audio of all other devices is transmitted to this device
+
+The room is cleaned as soon as all members left the room. A new key is generated.
+
+Within a room the members are arranged either freely or in a circle. When arranged in a circle, a user can swap positions with other users. These changes will affect the listening position at all devices instantly. A room can be locked from inside. A locked room can not be entered.
+
+Each room service reports the availability of a room to the lobby.

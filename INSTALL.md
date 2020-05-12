@@ -30,7 +30,7 @@ We use a manually compiled version of jackd to avoid problems with missing dbus 
 For general system setup (especially `limits.conf`) see [https://wiki.linuxaudio.org/wiki/system_configuration](https://wiki.linuxaudio.org/wiki/system_configuration).
 
 
-To install TASCAR, follow the instructions on the github page:
+If you are on an arm-based system (e.g., Raspberry Pi), to install TASCAR, follow the instructions on the github page:
 
 [https://github.com/gisogrimm/tascar/blob/master/INSTALL](https://github.com/gisogrimm/tascar/blob/master/INSTALL)
 
@@ -44,6 +44,10 @@ make
 sudo make install
 ````
 
+On an x86 Ubuntu PC, you may follow the instructions on [http://install.tascar.org](http://install.tascar.org) instead. In that case, the OSC library needs to be installed separately:
+````
+sudo apt install liblo-dev
+````
 
 For the remote mixer, also `node-js` is needed, which can be installed with
 

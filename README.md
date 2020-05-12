@@ -59,6 +59,13 @@ jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2
 
 This starts the audio backend. `--sync` is required for delay optimization, since jackd2 uses one extra block in multi-threading mode. `-P 40` sets realtime priority - this can be adjusted, especially on realtime patched kernels, to the system requirements and potential rtirq settings. `-d alsa` selects ALSA driver. `-d hw:US2x2` is the TASCAM US2x2 audio device. `-r 48000` is the sampling rate. Again, for delay optimization it is advisable to use a period size which is a multiple of 1 ms, since USB audio protocol transmits 1ms chunks. To allow this, a sampling rate of 48000 Hz is preferred over 44100 Hz. `-p 96` sets the fragment size to 2 ms. `-n 2` sets to use two buffers (which is the default anyway).
 
+If you are using jackd2 with dbus enabled, but your system is running as a headless system, you should deactivate audio card reservation by setting the environment variable `JACK_NO_AUDIO_RESERVATION=1`:
+````
+JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2
+````
+Alternatively you may compile your own jackd with dbus deactivated.
+
+
 ````
 mplx_client -d mplx.yourdomain.com -p 4464 -l 4464 -c 0
 ````
