@@ -9,4 +9,7 @@
     </sound>
   </source>
   <receiver type="ortf" name="master" delaycomp="0.05"/>
+  <reverb type="simplefdn" volumetric="25 13 7.5" image="false" fdnorder="5" damping="0.7" layers="1" gain="-8">
+    <position>0 -2.2 0.1 3.8</position>
+  </reverb>
 </scene>
