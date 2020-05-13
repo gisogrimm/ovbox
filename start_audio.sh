@@ -1,5 +1,4 @@
 #!/bin/bash
-JACKCMD="echo start"
 TSCCMD="tascar_cli -s"
 . get_boxname.sh
 killall jackd zita-j2n zita-n2j tascar_cli
