@@ -173,9 +173,12 @@ void udpreceiver_t::srv()
           }
           break;
         case PORT_PINGRESP: {
-          double tms(get_pingtime(msg, un));
-          if(tms > 0)
-            cid_setpingtime(rcallerid, tms);
+          if(seq == socket.pingseq) {
+
+            double tms(get_pingtime(msg, un));
+            if(tms > 0)
+              cid_setpingtime(rcallerid, tms);
+          }
         } break;
         case PORT_REGISTER:
           // in the register packet the sequence is used to transmit

@@ -84,18 +84,19 @@ void endpoint_list_t::checkstatus()
       statlogcnt = STATLOGPERIOD;
       std::lock_guard<std::mutex> lk(mstat);
       for(callerid_t ep = 0; ep != MAXEP; ++ep) {
-	if( endpoints[ep].timeout ){
-	  announce_latency(ep, endpoints[ep].pingt_min,
-			   endpoints[ep].pingt_sum / std::max(1u,endpoints[ep].pingt_n),
-			   endpoints[ep].pingt_max, endpoints[ep].num_received,
-			   endpoints[ep].num_lost);
-	  endpoints[ep].pingt_n = 0;
-	  endpoints[ep].pingt_min = 1000;
-	  endpoints[ep].pingt_max = 0;
-	  endpoints[ep].pingt_sum = 0.0;
-	  endpoints[ep].num_received = 0;
-	  endpoints[ep].num_lost = 0;
-	}
+        if(endpoints[ep].timeout) {
+          announce_latency(ep, endpoints[ep].pingt_min,
+                           endpoints[ep].pingt_sum /
+                               std::max(1u, endpoints[ep].pingt_n),
+                           endpoints[ep].pingt_max, endpoints[ep].num_received,
+                           endpoints[ep].num_lost);
+          endpoints[ep].pingt_n = 0;
+          endpoints[ep].pingt_min = 1000;
+          endpoints[ep].pingt_max = 0;
+          endpoints[ep].pingt_sum = 0.0;
+          endpoints[ep].num_received = 0;
+          endpoints[ep].num_lost = 0;
+        }
       }
     }
     --statlogcnt;

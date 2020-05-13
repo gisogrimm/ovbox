@@ -58,7 +58,7 @@ size_t packmsg(char* destbuf, size_t maxlen, secret_t secret,
                callerid_t callerid, port_t destport, sequence_t seq,
                const char* msg, size_t msglen)
 {
-  if(maxlen < HEADERLEN + msglen){
+  if(maxlen < HEADERLEN + msglen) {
     DEBUG(maxlen);
     DEBUG(HEADERLEN);
     DEBUG(msglen);

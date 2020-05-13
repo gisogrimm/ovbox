@@ -191,7 +191,7 @@ void udpreceiver_t::sendsrv()
             }
             break;
           case PORT_PINGRESP:
-            if(rcallerid != callerid) {
+            if((rcallerid != callerid) && (seq == remote_server.pingseq)) {
               double tms(get_pingtime(msg, un));
               if(tms > 0)
                 cid_setpingtime(rcallerid, tms);

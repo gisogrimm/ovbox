@@ -43,7 +43,8 @@ protected:
                                 double lmax, uint32_t received,
                                 uint32_t lost){};
   void cid_setpingtime(callerid_t cid, double pingtime);
-  void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer, const std::string& rver);
+  void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer,
+                    const std::string& rver);
   std::vector<ep_desc_t> endpoints;
 
 private:

@@ -98,14 +98,18 @@ std::string ep2str(const endpoint_t& ep)
   return addr2str(ep.sin_addr) + "/" + std::to_string(ntohs(ep.sin_port));
 }
 
-ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret) : secret(secret) {}
+ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret)
+    : pingseq(0), secret(secret)
+{
+}
 
 void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
 {
   char buffer[pingbufsize];
   std::chrono::high_resolution_clock::time_point t1(
       std::chrono::high_resolution_clock::now());
-  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PINGREQ, 0,
+  ++pingseq;
+  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PINGREQ, pingseq,
                      (const char*)(&t1), sizeof(t1));
   send(buffer, n, ep);
 }
@@ -114,10 +118,10 @@ void ovbox_udpsocket_t::send_registration(callerid_t cid, bool peer2peer,
                                           port_t port)
 {
   std::string rver(OVBOXVERSION);
-  size_t buflen(HEADERLEN+rver.size()+1);
+  size_t buflen(HEADERLEN + rver.size() + 1);
   char buffer[buflen];
   size_t n(packmsg(buffer, buflen, secret, cid, PORT_REGISTER, peer2peer,
-                   rver.c_str(), rver.size()+1));
+                   rver.c_str(), rver.size() + 1));
   send(buffer, n, port);
 }
 
@@ -129,8 +133,9 @@ char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
   if(ilen < HEADERLEN)
     return NULL;
   // check secret:
-  if(msg_secret(inputbuf) != secret){
-    //log( 0, "invalid secret "+std::to_string(msg_secret(inputbuf)) +" from "+ep2str(addr));
+  if(msg_secret(inputbuf) != secret) {
+    // log( 0, "invalid secret "+std::to_string(msg_secret(inputbuf)) +" from
+    // "+ep2str(addr));
     return NULL;
   }
   cid = msg_callerid(inputbuf);
