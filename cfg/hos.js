@@ -33,8 +33,8 @@ socket.on("newfader", function(faderno,val){
     let els=document.createElement("input");
     els.setAttribute("class","fader");
     els.setAttribute("type","range");
-    els.setAttribute("min","-30");
-    els.setAttribute("max","10");
+    els.setAttribute("min","-20");
+    els.setAttribute("max","5");
     els.setAttribute("value",val);
     els.setAttribute("step","0.1");
     els.setAttribute("id",fader);
