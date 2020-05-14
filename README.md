@@ -49,6 +49,8 @@ The underlying adaptive resampling of zita-njbridge is described in [https://kok
 
 A simple mixing interface is provided with `node-js` and some TASCAR extensions. This mixer interface can be opened from any html5-compatible browser in the same network as the ovbox, and is optimized for smartphone/touch use.
 
+For a glimpse on what might come, see [vision.md](doc/vision.md).
+
 ## Starting the tools
 
 On our boxes, TASCAR is not only used for virtual acoustic simulation, but also for the whole session management. Essentially, on each client these commands are started:
@@ -110,9 +112,9 @@ The `mplx_client` / `mplx_server` tools support connection via server or a peer-
 We run the sound system with 48000 Hz sampling rate and periods of 2
 ms (96 samples). The measured hardware delay (combined input and output), as caused by block processing, USB BUS protocol and aliasing filters is:
 
-|                  |             |         |
-|------------------|-------------|---------|
-| TASCAM US-2x2    | 496 samples | 10.3 ms |
-| TASCAM US-100    | 510 samples | 10.6 ms |
-| ConnectAUDIO 2/4 | 627 samples | 13.1 ms | 
+|                  | period size | delay       | delay   |
+|------------------|-------------|-------------|---------|
+| TASCAM US-2x2    | 96          | 496 samples | 10.3 ms |
+| TASCAM US-100    | 96          | 510 samples | 10.6 ms |
+| ConnectAUDIO 2/4 | 96          | 627 samples | 13.1 ms | 
 
