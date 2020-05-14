@@ -80,12 +80,65 @@ configuration changes reported from the room service.
 2. The list of available rooms is displayed
 3. The user selects a room
 4. The device connects through the back door of the lobby
-5. The room key and location as well as the chair numberwithin the room is provided to the device
+5. The room key and location as well as the chair numberwithin the
+   room is provided to the device
 6. The device connects to the room service using the room key and chair number
-7. The audio of the device is transmitted to all other devices, and the audio of all other devices is transmitted to this device
+7. The audio of the device is transmitted to all other devices, and
+   the audio of all other devices is transmitted to this device
 
-The room is cleaned as soon as all members left the room. A new key is generated.
+The room is cleaned as soon as all members left the room. A new key is
+generated.
 
-Within a room the members are arranged either freely or in a circle. When arranged in a circle, a user can swap positions with other users. These changes will affect the listening position at all devices instantly. A room can be locked from inside. A locked room can not be entered.
+Within a room the members are arranged either freely or in a
+circle. When arranged in a circle, a user can swap positions with
+other users. These changes will affect the listening position at all
+devices instantly. A room can be locked from inside. A locked room can
+not be entered.
 
 Each room service reports the availability of a room to the lobby.
+
+## Structure and protocols
+
+The lobby is a server with three interfaces:
+
+* User interface: http
+* Device interface: http or websocket
+* Room service interface: http or websocket
+
+A room service is client and server with two interfaces:
+
+* Lobby interface (client): http or websocket
+* Device interface (server): dedicated protocol, UDP transport, RTP audio
+
+A device is a client and server with two interfaces:
+
+* Room service interface (client): dedicated protocol
+* Mixer/control interface (server): http
+
+## Prototype implemtation
+
+* User authentication: web server/htaccess
+* Device database: text files, name = device name, created / modified upon user input
+* Room database: text files, name = room id, created by room service connection
+
+Example room file (host:port pin-code):
+````
+mplx.yourdomain.com:4464 1234
+````
+
+Example device file (roomname pos-x pos-y pos-z)
+
+````
+room1 2 3 0
+````
+
+The device first gets the device file. Then it checks out the room
+file, and connects to the room service. The own position is sent to
+the room service upon registration. The names and positions of the
+other participants is received from the room service. The device sets
+up the renderer and receives/sends audio.
+
+In periodic follow-up requests (e.g., every 5 seconds) only the device
+file is requested. If the room has changed or is empty, then a new
+session is established. If the position changed, then the renderer is
+updated and the new position is transmitted to the room service.
