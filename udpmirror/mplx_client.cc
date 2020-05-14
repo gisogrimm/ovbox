@@ -179,22 +179,22 @@ void udpreceiver_t::sendsrv()
           }
         } else {
           switch(destport) {
-          case PORT_PINGREQ:
-            msg_port(buffer) = PORT_PINGRESP;
+          case PORT_PING:
+            msg_port(buffer) = PORT_PONG;
             msg_callerid(buffer) = callerid;
             remote_server.send(buffer, n, sender_endpoint);
+            break;
+          case PORT_PONG:
+            if((rcallerid != callerid) && (seq == remote_server.pingseq[rcallerid])) {
+              double tms(get_pingtime(msg, un));
+              if(tms > 0)
+                cid_setpingtime(rcallerid, tms);
+            }
             break;
           case PORT_LISTCID:
             if((un == sizeof(endpoint_t)) && (rcallerid != callerid)) {
               // seq is peer2peer flag:
               cid_register(rcallerid, *((endpoint_t*)msg), seq, "");
-            }
-            break;
-          case PORT_PINGRESP:
-            if((rcallerid != callerid) && (seq == remote_server.pingseq)) {
-              double tms(get_pingtime(msg, un));
-              if(tms > 0)
-                cid_setpingtime(rcallerid, tms);
             }
             break;
           }

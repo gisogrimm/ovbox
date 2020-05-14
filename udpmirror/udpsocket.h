@@ -35,7 +35,7 @@ public:
   char* recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len, callerid_t& cid,
                      port_t& destport, sequence_t& seq, endpoint_t& addr);
 
-  sequence_t pingseq;
+  sequence_t pingseq[MAXEP];
 
 private:
   secret_t secret;

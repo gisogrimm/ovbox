@@ -172,8 +172,8 @@ void udpreceiver_t::srv()
             log(portno, ctmp);
           }
           break;
-        case PORT_PINGRESP: {
-          if(seq == socket.pingseq) {
+        case PORT_PONG: {
+          if((rcallerid < MAXEP) && (seq == socket.pingseq[rcallerid])) {
 
             double tms(get_pingtime(msg, un));
             if(tms > 0)

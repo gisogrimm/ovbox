@@ -99,17 +99,21 @@ std::string ep2str(const endpoint_t& ep)
 }
 
 ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret)
-    : pingseq(0), secret(secret)
+    : secret(secret)
 {
+  for( uint32_t k=0;k<MAXEP;++k)
+    pingseq[k] = 0;
 }
 
 void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
 {
+  if( cid >= MAXEP )
+    return;
   char buffer[pingbufsize];
   std::chrono::high_resolution_clock::time_point t1(
       std::chrono::high_resolution_clock::now());
-  ++pingseq;
-  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PINGREQ, pingseq,
+  ++pingseq[cid];
+  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PING, ++pingseq[cid],
                      (const char*)(&t1), sizeof(t1));
   send(buffer, n, ep);
 }
