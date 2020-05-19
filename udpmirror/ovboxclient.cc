@@ -7,6 +7,7 @@
 #include <map>
 #include <thread>
 
+
 class udpreceiver_t : public endpoint_list_t {
 public:
   udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
@@ -185,7 +186,8 @@ void udpreceiver_t::sendsrv()
             remote_server.send(buffer, n, sender_endpoint);
             break;
           case PORT_PONG:
-            if((rcallerid != callerid) && (seq == remote_server.pingseq[rcallerid])) {
+            if((rcallerid != callerid) &&
+               (seq == remote_server.pingseq[rcallerid])) {
               double tms(get_pingtime(msg, un));
               if(tms > 0)
                 cid_setpingtime(rcallerid, tms);

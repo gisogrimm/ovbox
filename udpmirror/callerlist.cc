@@ -102,3 +102,11 @@ void endpoint_list_t::checkstatus()
     --statlogcnt;
   }
 }
+
+uint32_t endpoint_list_t::get_num_clients()
+{
+  uint32_t c(0);
+  for( auto ep : endpoints )
+    c += (ep.timeout > 0);
+  return c;
+}

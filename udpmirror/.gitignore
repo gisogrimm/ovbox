@@ -5,3 +5,7 @@ duptunnel_client
 *.o
 mplx_client
 mplx_server
+roomservice
+ovboxclient
+getmacaddr
+devconfigclient

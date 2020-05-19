@@ -177,6 +177,7 @@ filters is:
 |                  |             |             |         |
 | TASCAM US-2x2    | 96          | 518 samples | 10.8 ms |
 |                  | 48          | 316 samples |  6.7 ms |
+|                  |             |             |         |
 | TASCAM US-100    | 96          | 510 samples | 10.6 ms |
 |                  |             |             |         |
 | ConnectAUDIO 2/4 | 96          | 652 samples | 13.6 ms |
@@ -185,6 +186,7 @@ filters is:
 |                  |             |             |         |
 | Scarlett Solo    | 96          | 429 samples |  8.9 ms |
 |                  | 48          | 233 samples |  4.9 ms |
+|                  |             |             |         |
 | Mackie Onyx 2-2  | 96          | 587 samples | 12.2 ms |
 |                  | 48          | 364 samples |  7.6 ms |
 

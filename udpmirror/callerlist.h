@@ -45,6 +45,7 @@ protected:
   void cid_setpingtime(callerid_t cid, double pingtime);
   void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer,
                     const std::string& rver);
+  uint32_t get_num_clients();
   std::vector<ep_desc_t> endpoints;
 
 private:
