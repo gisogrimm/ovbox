@@ -40,6 +40,24 @@ function get_rooms()
   return $rooms;
 }
 
+function select_userdev( $user, $dev )
+{
+  $fname = '../db/' . $user . '.userdevice';
+  file_put_contents( $fname, $dev );
+}
+
+function rm_device( $dev )
+{
+  $fname = '../db/' . $dev . '.device';
+  unlink($fname);
+}
+
+function rm_room( $room )
+{
+  $fname = '../db/' . $room . '.room';
+  unlink($fname);
+}
+
 function get_device( $user )
 {
   $device = '';
@@ -54,12 +72,16 @@ function get_device( $user )
   return $device;
 }
 
+// device database:
+
 function get_device_prop( $device )
 {
-  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true );
+  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100 );
   $fname = '../db/' . $device . '.device';
-  if( file_exists( $fname ) ) 
+  if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
+    $prop['age'] = time()-filemtime($fname);
+  }
   return $prop;
 }
 
@@ -69,41 +91,87 @@ function set_device_prop( $device, $dprop )
   file_put_contents( $fname, json_encode( $dprop ));
 }
 
-function get_room_prop( $room )
-{
-  $rname = '';
-  $rhost = '';
-  $rport = '';
-  $pin = '0';
-  $age = -1;
-  $fname = '../db/' . $room . '.room';
-  if( file_exists( $fname ) ) {
-    $roomfd = fopen( $fname, 'r' );
-    if ( $roomfd ) {
-      $rname = trim(fgets( $roomfd ));
-      $rhost = trim(fgets( $roomfd ));
-      $rport = trim(fgets( $roomfd ));
-      $rpin = trim(fgets( $roomfd ));
-      fclose( $roomfd );
-    }
-    $age = time()-filemtime($fname);
-  }
-  return array('name'=>$rname,'host'=>$rhost,'port'=>$rport,'pin'=>$rpin,'age'=>$age);
-}
-
-function update_room( $host, $port, $name, $pin )
-{
-  $fname = '../db/' . $host . ':' . $port . '.room';
-  $roomfd = fopen( $fname, 'w' );
-  fprintf( $roomfd, "%s\n%s\n%d\n%d\n", $name, $host, $port, $pin );
-  fclose( $roomfd );
-}
-
 function modify_device_prop( $device, $key, $value )
 {
   $dprop = get_device_prop( $device );
   $dprop[$key] = $value;
   set_device_prop( $device, $dprop );
+}
+
+function agesort( $a, $b )
+{
+  if( $a['age'] > $b['age'] )
+    return 1;
+  if( $a['age'] < $b['age'] )
+    return -1;
+  return 0;
+}
+
+function list_devices()
+{
+  $devs = array();
+  foreach( glob( '../db/*.device') as $dev){
+    $device = basename($dev,'.device');
+    $devs[] = array('dev'=>$device,'age'=>time()-filemtime($dev));
+  }
+  usort( $devs, "agesort" );
+  return $devs;
+}
+
+function list_rooms()
+{
+  $rooms = array();
+  foreach( glob( '../db/*.room') as $roomf){
+    $room = basename($roomf,'.room');
+    $rooms[] = array('room'=>$room,'age'=>time()-filemtime($roomf));
+  }
+  usort( $rooms, "agesort" );
+  return $rooms;
+}
+
+function owned_devices( $user )
+{
+  $devs = array();
+  foreach( list_devices() as $dev ){
+    $prop = get_device_prop( $dev['dev']);
+    if( $prop['owner'] == $user )
+      $devs[] = array_merge($dev, $prop );
+  }
+  return $devs;
+}
+
+function get_room_prop( $room )
+{
+  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100 );
+  $fname = '../db/' . $room . '.room';
+  if( file_exists( $fname ) ){
+    $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
+    $prop['age'] = time()-filemtime($fname);
+  }
+  return $prop;
+}
+
+function set_room_prop( $room, $dprop )
+{
+  $fname = '../db/' . $room . '.room';
+  file_put_contents( $fname, json_encode( $dprop ));
+}
+
+function modify_room_prop( $room, $key, $value )
+{
+  $dprop = get_room_prop( $room );
+  $dprop[$key] = $value;
+  set_room_prop( $room, $dprop );
+}
+
+function update_room( $host, $port, $name, $pin )
+{
+  $room = $host . ':' . $port;
+  $dprop = get_room_prop( $room );
+  if( empty($dprop['name']) )
+    $dprop['name'] = $name;
+  $dprop['pin'] = $pin;
+  set_room_prop( $room, $dprop );
 }
 
 function get_devices_in_room( $room )
@@ -268,11 +336,11 @@ function get_tascar_cfg( $device, $devhash )
         // reverb
         $reverb = $doc->createElement("reverb");
         $reverb->setAttribute("type","simplefdn");
-        $reverb->setAttribute("volumetric","25 13 7.5");
+        $reverb->setAttribute("volumetric",$roomprop['size']);
         $reverb->setAttribute("image","false");
         $reverb->setAttribute("fdnorder","5");
-        $reverb->setAttribute("damping","0.7");
-        $reverb->setAttribute("gain","-8");
+        $reverb->setAttribute("damping",$roomprop['rvbdamp']);
+        $reverb->setAttribute("gain",$roomprop['rvbgain']);
         $scene->appendChild($reverb);
       }
       // modules
@@ -342,6 +410,19 @@ function get_tascar_cfg( $device, $devhash )
   }
 }
 
+function html_device_selector( $user, $currentdevice )
+{
+  echo "<form>";
+  echo '<select id="devselect" name="devselect">';
+  foreach( owned_devices( $user ) as $dev ){
+    echo '<option value="'.$dev['dev'].'"';
+    if( $currentdevice == $dev['dev'] )
+      echo ' selected';
+    echo '>'.$dev['dev'].' ('.$dev['label'].')</option>';
+  }
+  echo '</select><button>Select</button>';
+  echo "</form>\n";
+}
 
 /*
  * Local Variables:

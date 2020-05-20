@@ -41,3 +41,10 @@ body {
     border: 3px solid #644944;
     border-radius: 15px;
 }
+table {
+    border: 2px solid #644944;
+    border-radius: 5px;
+}
+tr {
+    background-color: #b7cef1;
+}
