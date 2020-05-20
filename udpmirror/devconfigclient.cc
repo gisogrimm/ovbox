@@ -103,7 +103,7 @@ int main(int argc, char** argv)
       throw ErrMsg("Unable to initialize curl");
     std::string lobby("localhost");
     std::string device("");
-    double gracetime(5);
+    double gracetime(10);
     const char* options = "d:hl:g:";
     struct option long_options[] = {{"device", 1, 0, 'd'},
                                     {"lobbyurl", 1, 0, 'l'},
