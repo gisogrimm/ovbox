@@ -78,7 +78,7 @@ function get_device( $user )
 
 function get_device_prop( $device )
 {
-  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100 );
+  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100, 'inputport'=>'system:capture_1' );
   $fname = '../db/' . $device . '.device';
   if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
@@ -260,6 +260,7 @@ function room_swap_devices( $dev1, $dev2 )
 function get_tascar_cfg( $device, $devhash )
 {
   $cuccess = false;
+  $devprop = get_device_prop( $device );
   // create TASCAR document:
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
@@ -283,7 +284,7 @@ function get_tascar_cfg( $device, $devhash )
   $egosound->setAttribute("x","0.4");
   $egosound->setAttribute("z","-0.7");
   $egosound->setAttribute("gain","-8");
-  $egosound->setAttribute("connect","system:capture_1");
+  $egosound->setAttribute("connect",$devprop['inputport']);
   $source->appendChild($egosound);
   $scene->appendChild($source);
   // master connections
@@ -296,7 +297,6 @@ function get_tascar_cfg( $device, $devhash )
   $conn->setAttribute("dest","system:playback_2");
   $session->appendChild($conn);
   // room specific setup:    
-  $devprop = get_device_prop( $device );
   if ( !empty( $devprop['room'] ) ){
     $room = $devprop['room'];
     $roomprop = get_room_prop( $room );
@@ -342,7 +342,7 @@ function get_tascar_cfg( $device, $devhash )
       $p2p = '';
       if( $devprop['peer2peer'] )
         $p2p = ' -2';
-      $mod->setAttribute("command","../udpmirror/ovboxclient -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
+      $mod->setAttribute("command","../udpmirror/ovboxclient -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
       // receiver:
@@ -370,7 +370,7 @@ function get_tascar_cfg( $device, $devhash )
       $mod->setAttribute("onunload","killall zita-j2n");
       $modules->appendChild($mod);
       $conn = $doc->createElement("connect");
-      $conn->setAttribute("src","system:capture_1");
+      $conn->setAttribute("src",$devprop['inputport']);
       $conn->setAttribute("dest","sender:in_1");
       $session->appendChild($conn);
       $mod = $doc->createElement("system");

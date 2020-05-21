@@ -135,6 +135,8 @@ if( isset($_GET['setdevprop']) ){
             $prop['jitterreceive'] = $_GET['jitterreceive'];
         if( isset($_GET['label']) )
             $prop['label'] = $_GET['label'];
+        if( isset($_GET['inputport']) )
+            $prop['inputport'] = $_GET['inputport'];
         set_device_prop( $device, $prop );
     }
 }
@@ -151,8 +153,10 @@ if ( empty( $device ) ) {
     $devprop = get_device_prop( $device );
     echo '<form class="devprop"><div class="devproptitle">Device properties:</div>' . "\n";
     // device properties:
-    echo '<label for="label">device label (appears in the mixer of the others): </label><br>';
+    echo '<label for="label">device label (appears in rooms and the mixer of the others): </label><br>';
     echo '<input id="label" name="label" type="text" value="'.$devprop['label'].'" pattern="[a-zA-Z0-9]*"><br>' . "\n";
+    echo '<label for="inputport">input port (to which your microphone/instrument is connected): </label><br>';
+    echo '<input id="inputport" name="inputport" type="text" value="'.$devprop['inputport'].'"><br>' . "\n";
     echo '<label for="jittersend">sender jitter (affects buffer length of others): </label><br>';
     echo '<input id="jittersend" name="jittersend" type="number" min="2" max="30" value="'.$devprop['jittersend'].'"><br>' . "\n";
     echo '<label for="jitterreceive">receiver jitter (affects your own buffer length): </label><br>';
