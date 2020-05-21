@@ -125,3 +125,21 @@ sleep 1
 done
 ````
 
+Make sure that the execution bits are set for the autorun scripts as well as for the start scripts. You can set the execution bits with:
+
+````
+chmod a+x autorun ovbox/*.sh
+````
+as user ov, and similarly as user pi:
+
+````
+chmod a+x autorun
+````
+
+## Configure sound card
+
+The sound is started in the script `start_audio.sh`. This script is managed by the git repository. It is configured to always use the second sound card. To change the sound device or device settings, you may override the `JACKCMD` variable in a script `ovbox` in the `cfg` directory (assuming that your device has the hostname `ovbox`, otherwise name it according to your host name). In that script add the line
+
+````
+export JACKCMD="jackd --sync -P 40 -d alsa -d hw:YourCard -r 48000 -p 96 -n 2"
+````

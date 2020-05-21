@@ -12,7 +12,9 @@ function print_head( $user = "" )
     echo $css;
   }
   echo '</style>';
-  echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+  //echo '<script>location.href="/";</script>';
+  //echo '<meta http-equiv="refresh" content="8; url=/"/>';   
+  echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
   echo '<h1>House of Consort</h1>';
 }
@@ -82,6 +84,10 @@ function get_device_prop( $device )
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
     $prop['age'] = time()-filemtime($fname);
   }
+  if( empty($prop['label']))
+    $prop['label'] = $prop['owner'];
+  if( empty($prop['label']))
+    $prop['label'] = $device;
   return $prop;
 }
 
@@ -140,13 +146,34 @@ function owned_devices( $user )
   return $devs;
 }
 
+function lock_room( $room, $device, $lock )
+{
+  if( in_array($device, get_devices_in_room( $room ) ) ){
+    modify_room_prop( $room, 'lock', $lock );
+  }
+}
+
 function get_room_prop( $room )
 {
-  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100 );
+  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'rvbabs'=>0.6, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100, 'lock'=>false );
   $fname = '../db/' . $room . '.room';
   if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
     $prop['age'] = time()-filemtime($fname);
+  }
+  $dim = explode(" ",$prop['size']);
+  if( count($dim)==3){
+    $vol = 1;
+    foreach($dim as $d)
+      $vol = $vol*$d;
+    $prop['volume'] = $vol;
+    $t60 = 0.161*$vol/($prop['rvbabs']*2*($dim[0]*$dim[1]+$dim[1]*$dim[2]+$dim[2]*$dim[0]));
+    $prop['t60'] = $t60;
+    $prop['area'] = $dim[0]*$dim[1];
+  }else{
+    $prop['volume'] = 0;
+    $prop['t60'] = 0;
+    $prop['area'] = 0;
   }
   return $prop;
 }
@@ -230,42 +257,6 @@ function room_swap_devices( $dev1, $dev2 )
   }
 }
 
-function get_users_with_device()
-{
-  $users = array();
-  foreach( glob( '../db/*.userdevice') as $u)
-    $users[] = basename($u,'.userdevice');
-  return $users;
-}
-
-function get_device_user( $device )
-{
-  $devuser = '['.$device.']';
-  foreach( get_users_with_device() as $user){
-    $dev = get_device( $user );
-    if( $dev == $device )
-      $devuser = $user;
-  }
-  return $devuser;
-}
-
-function html_user_selector( $currentuser )
-{
-  echo "\n";
-  echo '<div class="logout">Change user: <select id="userselect">';
-  foreach( get_users_with_device() as $user )
-    if( $user != $currentuser )
-      echo '<option value="'.$user.'">'.$user.'</option>';
-  echo '</select>';
-  echo "\n";
-  echo '<label for="pass">Password:</label>';
-  echo '<input type="password" id="pass">';
-  echo "\n";
-  echo '<input type="button" value="go" onclick="changeuser();">';
-  echo '<script>function changeuser() {url="http://"+document.getElementById("userselect").value+":"+document.getElementById("pass").value+"@'.$_SERVER['SERVER_NAME'].'";location.replace(url);}</script>';
-  echo '</div>';
-}
-
 function get_tascar_cfg( $device, $devhash )
 {
   $cuccess = false;
@@ -319,13 +310,13 @@ function get_tascar_cfg( $device, $devhash )
       foreach( $roomdev as $chair => $dev ){
         if ( $dev != $device ){
           $az = $az+$daz;
-          $devuser = get_device_user($dev);
+          $devuser = get_device_prop($dev);
           $source = $doc->createElement("source");
           $sound = $doc->createElement("sound");
           $sound->setAttribute("maxdist","50");
           $sound->setAttribute("r","2");
           $sound->setAttribute("az",round($az));
-          $source->setAttribute("name",$devuser);
+          $source->setAttribute("name",$devuser['label']);
           $source->appendChild($sound);
           $scene->appendChild($source);
         }else{
@@ -339,6 +330,7 @@ function get_tascar_cfg( $device, $devhash )
         $reverb->setAttribute("volumetric",$roomprop['size']);
         $reverb->setAttribute("image","false");
         $reverb->setAttribute("fdnorder","5");
+        $reverb->setAttribute("absorption",$roomprop['rvbabs']);
         $reverb->setAttribute("damping",$roomprop['rvbdamp']);
         $reverb->setAttribute("gain",$roomprop['rvbgain']);
         $scene->appendChild($reverb);
@@ -347,13 +339,16 @@ function get_tascar_cfg( $device, $devhash )
       $mod = $doc->createElement("system");
       $roomurl = explode( ":", $room );
       $myport = 4464+2*$mychair;
-      $mod->setAttribute("command","../udpmirror/ovboxclient -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport);
+      $p2p = '';
+      if( $devprop['peer2peer'] )
+        $p2p = ' -2';
+      $mod->setAttribute("command","../udpmirror/ovboxclient -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
       // receiver:
       foreach( $roomdev as $chair => $dev ){
-        $devuser = get_device_user($dev);
         $odevprop = get_device_prop( $dev );
+        $devuser = $odevprop['label'];
         if ( $dev != $device ){
           $iport = 4464+2*$chair;
           $buff = $devprop['jitterreceive']+$odevprop['jittersend'];

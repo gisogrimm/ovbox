@@ -44,6 +44,7 @@ if( $user == 'admin' ){
         modify_room_prop( $_GET['setroomreverb'], 'size', $_GET['size'] );
         modify_room_prop( $_GET['setroomreverb'], 'rvbgain', $_GET['rvbgain'] );
         modify_room_prop( $_GET['setroomreverb'], 'rvbdamp', $_GET['rvbdamp'] );
+        modify_room_prop( $_GET['setroomreverb'], 'rvbabs', $_GET['rvbabs'] );
     }
     if( isset($_GET['rmroom']) )
         rm_room( $_GET['rmroom'] );
@@ -67,7 +68,7 @@ if( $user == 'admin' ){
     echo "</table>\n";
     $rooms = list_rooms();
     echo "<h2>Rooms:</h2><table>\n";
-    echo "<tr><th>room</th><th>age</th><th>label</th><th>reverb (size [m x m x m]/gain [dB]/damping)</th></tr>\n";
+    echo "<tr><th>room</th><th>age</th><th>label</th><th>reverb (size/gain/damping/absorption)</th></tr>\n";
     foreach( $rooms as $room ){
         $dprop = get_room_prop( $room['room'] );
         echo '<tr><td>' .
@@ -77,9 +78,10 @@ if( $user == 'admin' ){
             '</td><td>' .
             '<form>' .
             '<input type="hidden" name="setroomreverb" value="'.$room['room'].'">'.
-            '<input type="text" name="size" pattern="[ 0-9\.]*" value="'.$dprop['size'].'">'.
-            '<input type="number" name="rvbgain" min="-20" max="0" step="0.1" value="'.$dprop['rvbgain'].'">'.
-            '<input type="number" name="rvbdamp" min="0" max="1" step="0.01" value="'.$dprop['rvbdamp'].'">'.
+            '<input type="text" title="Size x y z in m" name="size" pattern="[ 0-9\.]*" value="'.$dprop['size'].'">'.
+            '<input type="number" tite="Reverb gain in dB" name="rvbgain" min="-20" max="0" step="0.1" value="'.$dprop['rvbgain'].'">'.
+            '<input type="number" title="Damping low-pass coeff" name="rvbdamp" min="0" max="1" step="0.01" value="'.$dprop['rvbdamp'].'">'.
+            '<input type="number" title="Wall absorption" name="rvbabs" min="0" max="1" step="0.01" value="'.$dprop['rvbabs'].'">'.
             '<button>Save</button>' .
             '</form>' .
             '</td><td>' .
@@ -116,6 +118,12 @@ if( isset($_GET['swapdev']) ){
     }
 }
 
+if( isset($_GET['lockroom']) ){
+    if( !empty( $device ) ){
+        lock_room( $_GET['lockroom'], $device, $_GET['lck'] );
+    }
+}
+
 if( isset($_GET['setdevprop']) ){
     if( !empty( $device ) ){
         $prop = get_device_prop( $device );
@@ -143,7 +151,7 @@ if ( empty( $device ) ) {
     $devprop = get_device_prop( $device );
     echo '<form class="devprop"><div class="devproptitle">Device properties:</div>' . "\n";
     // device properties:
-    echo '<label for="label">device label: </label><br>';
+    echo '<label for="label">device label (appears in the mixer of the others): </label><br>';
     echo '<input id="label" name="label" type="text" value="'.$devprop['label'].'" pattern="[a-zA-Z0-9]*"><br>' . "\n";
     echo '<label for="jittersend">sender jitter (affects buffer length of others): </label><br>';
     echo '<input id="jittersend" name="jittersend" type="number" min="2" max="30" value="'.$devprop['jittersend'].'"><br>' . "\n";
@@ -165,42 +173,67 @@ if ( empty( $device ) ) {
     foreach( get_rooms() as $room){
         $rprop = get_room_prop( $room );
         if( $rprop['age'] < 3600 ) {
+            $myroom = false;
             // only show active rooms
             if( $room == $devprop['room'] ) {
+                $myroom = true;
                 echo '<div class="myroom">' . "\n";
             } else {
                 echo '<div class="room">' . "\n";
             }
-            echo '<div class="rname">'.$rprop['name'].'</div>'."\n";
+            echo '<div><span class="rname">'.$rprop['name'].'</span> (A='.$rprop['area'].' m<sup>2</sup>, V='.$rprop['volume'].' m<sup>3</sup>, T60='.sprintf("%1.2f",$rprop['t60']).' s)</div>'."\n";
             echo '<div class="rmembers">';
             $roomdev = get_devices_in_room( $room );
+            if( $rprop['lock'] && empty($roomdev) ){
+                modify_room_prop( $room, 'lock', false );
+                $rprop['lock'] = false;
+            }
             ksort($roomdev);
             foreach( $roomdev as $chair => $dev ){
+                $devuser = get_device_prop($dev);
+                $lab = $devuser['label'];
+                $bclass = "psvmember";
+                if( $devuser['age'] < 20 )
+                    $bclass = "actmember";
                 if ( $dev == $device ){
-                    echo '<b>';
+                    echo '<span class="'.$bclass.'" style="border: 2px solid #000000;">';
                 }else{
                     if( $room == $devprop['room'] ) {
-                        echo '<a href="?swapdev='.urlencode($dev).'">';
+                        echo '<a href="?swapdev='.urlencode($dev).'" class="'.$bclass.'">';
+                    }else{
+                        echo '<span class="'.$bclass.'">';
                     }
                 }
                 //echo htmlspecialchars($devuser) . ' ' . $chair;
-                $devuser = get_device_prop($dev);
-                echo htmlspecialchars($devuser['label']);
+                if( empty($lab) )
+                    $lab = $dev;
+                echo htmlspecialchars($lab);
                 if ( $dev == $device ){
-                    echo '</b>';
+                    echo '</span>';
                 }else{
                     if( $room == $devprop['room'] ) {
                         echo '</a>';
+                    }else{
+                        echo "</span>";
                     }
                 }
                 echo ' ';
             }
             echo '</div>';
             //echo '<div class="rhost">'.$rprop['host'].':'.$rprop['port'].'</div>'."\n";
-            if( $room == $devprop['room'] ) {
-                echo '<a href="?enterroom=">leave room</a>';
+            if( $myroom ) {
+                echo '<a href="?enterroom=">leave room</a> ';
+                if( $rprop['lock'] ){
+                    echo '<a href="?lockroom='.urlencode($room).'&lck=0">unlock room</a>';
+                }else{
+                    echo '<a href="?lockroom='.urlencode($room).'&lck=1">lock room</a>';
+                }
             } else {
-                echo '<a href="?enterroom='.urlencode($room).'">enter</a>';
+                if( $rprop['lock'] ){
+                    echo 'room is locked.';
+                }else{
+                    echo '<a href="?enterroom='.urlencode($room).'">enter</a>';
+                }
             }
             echo '</div>';
         }

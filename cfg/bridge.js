@@ -6,12 +6,21 @@ var iolib = require('socket.io');
 httpserver = http.createServer(function (req, res) {
     var hosjs = fs.readFileSync('hos.js');
     var hoscss = fs.readFileSync('hos.css');
+    var devname = os.hostname();
+    try{
+	devname = fs.readFileSync('devicename');
+    }
+    catch(ee){
+    }
+	
+    
+	
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.write('<!DOCTYPE HTML>\n');
     res.write('<html><head><style>');
     res.write(hoscss);
     res.write('</style><title>ORLANDOviols consort box</title>\n</head><body>\n');
-    res.write('<h1>ORLANDOviols consort box ('+os.hostname()+')</h1>\n<div id="mixer">mixer</div>\n');
+    res.write('<h1>ORLANDOviols consort box ('+devname+')</h1>\n<div id="mixer">mixer</div>\n');
     res.write('<div class="netctl" id="netctl"><p>Network settings</p>\n');
     res.write('<p><input type="checkbox" class="checkbox" id="peer2peer" name="peer2peer"><label for="peer2peer"> Peer-to-peer mode</label></p>\n');
     res.write('<p><input type="checkbox" class="checkbox" id="duplicates" name="duplicates"><label for="duplicates"> Send packages twice</label></p>\n');
