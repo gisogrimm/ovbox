@@ -14,7 +14,7 @@ class udpsocket_t {
 public:
   udpsocket_t();
   ~udpsocket_t();
-  void bind(port_t port);
+  port_t bind(port_t port);
   void destination(const char* host);
   size_t send(const char* buf, size_t len, int portno);
   size_t send(const char* buf, size_t len, const endpoint_t& ep);

@@ -44,7 +44,7 @@ void udpsocket_t::destination(const char* host)
         server->h_length);
 }
 
-void udpsocket_t::bind(port_t port)
+port_t udpsocket_t::bind(port_t port)
 {
   int optval = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval,
@@ -60,6 +60,9 @@ void udpsocket_t::bind(port_t port)
     throw ErrMsg("Binding the socket to port " + std::to_string(port) +
                      " failed: ",
                  errno);
+  socklen_t addrlen(sizeof(endpoint_t));
+  getsockname( sockfd, (struct sockaddr*)&my_addr, &addrlen);
+  return ntohs(my_addr.sin_port);
 }
 
 size_t udpsocket_t::send(const char* buf, size_t len, int portno)

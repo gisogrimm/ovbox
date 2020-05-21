@@ -20,7 +20,7 @@ class udpreceiver_t : public endpoint_list_t {
 public:
   udpreceiver_t(int portno, int prio);
   ~udpreceiver_t();
-  const int portno;
+  int portno;
   void srv();
   void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
   void announce_connection_lost(callerid_t cid);
@@ -46,12 +46,12 @@ private:
   std::string lobbyurl;
 };
 
-udpreceiver_t::udpreceiver_t(int portno, int prio)
-    : portno(portno), prio(prio), socket(secret), runsession(true),
+udpreceiver_t::udpreceiver_t(int portno_, int prio)
+    : portno(portno_), prio(prio), socket(secret), runsession(true),
       secret(1234), roomname("lakeview"), lobbyurl("http://localhost")
 {
   endpoints.resize(255);
-  socket.bind(portno);
+  portno = socket.bind(portno);
   logthread = std::thread(&udpreceiver_t::ping_and_callerlist_service, this);
   quitthread = std::thread(&udpreceiver_t::quitwatch, this);
   announce_thread = std::thread(&udpreceiver_t::announce_service, this);
@@ -259,10 +259,10 @@ int main(int argc, char** argv)
     curl = curl_easy_init();
     if(!curl)
       throw ErrMsg("Unable to initialize curl.");
-    int portno(4464);
+    int portno(0);
     int prio(55);
     std::string roomname;
-    std::string lobby;
+    std::string lobby("http://box.orlandoviols.com");
     const char* options = "p:qr:hvn:l:";
     struct option long_options[] = {
         {"rtprio", 1, 0, 'r'},   {"quiet", 0, 0, 'q'}, {"port", 1, 0, 'p'},
