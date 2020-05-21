@@ -36,8 +36,9 @@ public:
                      port_t& destport, sequence_t& seq, endpoint_t& addr);
 
   sequence_t pingseq[MAXEP];
+  void set_secret(secret_t s) { secret = s; };
 
-private:
+protected:
   secret_t secret;
 };
 

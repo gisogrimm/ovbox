@@ -1,4 +1,5 @@
 #!/bin/bash
+export JACK_NO_AUDIO_RESERVATION=1
 JACKCMD="jackd --sync -P 40 -d alsa -d hw:1 -r 48000 -p 96 -n 2"
 . get_boxname.sh
 killall jackd zita-j2n zita-n2j tascar_cli

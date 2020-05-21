@@ -18,7 +18,7 @@ static bool quit_app(false);
 
 class udpreceiver_t : public endpoint_list_t {
 public:
-  udpreceiver_t(int portno, int prio, secret_t secret);
+  udpreceiver_t(int portno, int prio);
   ~udpreceiver_t();
   const int portno;
   void srv();
@@ -26,8 +26,8 @@ public:
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
-  void set_lobbyurl( const std::string& url ) { lobbyurl = url; };
-  void set_roomname( const std::string& name ) { roomname = name; };
+  void set_lobbyurl(const std::string& url) { lobbyurl = url; };
+  void set_roomname(const std::string& name) { roomname = name; };
 
 private:
   void announce_service();
@@ -46,17 +46,15 @@ private:
   std::string lobbyurl;
 };
 
-udpreceiver_t::udpreceiver_t(int portno, int prio, secret_t secret)
+udpreceiver_t::udpreceiver_t(int portno, int prio)
     : portno(portno), prio(prio), socket(secret), runsession(true),
-      secret(secret),
-      roomname("lakeview"),
-      lobbyurl("http://localhost")
+      secret(1234), roomname("lakeview"), lobbyurl("http://localhost")
 {
   endpoints.resize(255);
   socket.bind(portno);
   logthread = std::thread(&udpreceiver_t::ping_and_callerlist_service, this);
   quitthread = std::thread(&udpreceiver_t::quitwatch, this);
-  announce_thread = std::thread(&udpreceiver_t::announce_service, this );
+  announce_thread = std::thread(&udpreceiver_t::announce_service, this);
 }
 
 udpreceiver_t::~udpreceiver_t()
@@ -104,25 +102,27 @@ void udpreceiver_t::announce_service()
   uint32_t cnt(0);
   char cpost[1024];
   while(runsession) {
-    if( !cnt ){
+    if(!cnt) {
       // if nobody is connected create a new pin:
-      if( get_num_clients() == 0 ){
-	long int r(random());
-	secret = r & 0xfffffff;
+      if(get_num_clients() == 0) {
+        long int r(random());
+        secret = r & 0xfffffff;
+	socket.set_secret( secret );
       }
       // register at lobby:
       CURLcode res;
-      sprintf(cpost, "?port=%d&name=%s&pin=%d",portno,roomname.c_str(),secret);
+      sprintf(cpost, "?port=%d&name=%s&pin=%d", portno, roomname.c_str(),
+              secret);
       std::string url(lobbyurl);
       url += cpost;
-      curl_easy_setopt(curl, CURLOPT_URL, url.c_str() );
+      curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
       curl_easy_setopt(curl, CURLOPT_USERPWD, "room:room");
       curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
       res = curl_easy_perform(curl);
-      if( res == 0 )
-	cnt = 3000;
+      if(res == 0)
+        cnt = 3000;
       else
-	cnt = 200;
+        cnt = 200;
     }
     --cnt;
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
@@ -249,26 +249,25 @@ static void sighandler(int sig)
 
 int main(int argc, char** argv)
 {
-  std::chrono::high_resolution_clock::time_point start(std::chrono::high_resolution_clock::now());
+  std::chrono::high_resolution_clock::time_point start(
+      std::chrono::high_resolution_clock::now());
   signal(SIGABRT, &sighandler);
   signal(SIGTERM, &sighandler);
   signal(SIGINT, &sighandler);
   try {
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    curl = curl_easy_init( );
-    if( !curl )
+    curl = curl_easy_init();
+    if(!curl)
       throw ErrMsg("Unable to initialize curl.");
     int portno(4464);
     int prio(55);
-    secret_t secret(1234);
     std::string roomname;
     std::string lobby;
-    const char* options = "p:qr:hvs:n:l:";
+    const char* options = "p:qr:hvn:l:";
     struct option long_options[] = {
-        {"rtprio", 1, 0, 'r'}, {"secret", 1, 0, 's'},  {"quiet", 0, 0, 'q'},
-        {"port", 1, 0, 'p'},   {"verbose", 0, 0, 'v'}, {"help", 0, 0, 'h'},
-	{"name",1,0,'n'}, {"lobbyurl",1,0,'l'},
-        {0, 0, 0, 0}};
+        {"rtprio", 1, 0, 'r'},   {"quiet", 0, 0, 'q'}, {"port", 1, 0, 'p'},
+        {"verbose", 0, 0, 'v'},  {"help", 0, 0, 'h'},  {"name", 1, 0, 'n'},
+        {"lobbyurl", 1, 0, 'l'}, {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
     while((opt = getopt_long(argc, argv, options, long_options,
@@ -289,9 +288,6 @@ int main(int argc, char** argv)
       case 'r':
         prio = atoi(optarg);
         break;
-      case 's':
-        secret = atoll(optarg);
-        break;
       case 'n':
         roomname = optarg;
         break;
@@ -300,16 +296,19 @@ int main(int argc, char** argv)
         break;
       }
     }
-    std::chrono::high_resolution_clock::time_point end(std::chrono::high_resolution_clock::now());
-    unsigned int seed(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    std::chrono::high_resolution_clock::time_point end(
+        std::chrono::high_resolution_clock::now());
+    unsigned int seed(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+            .count());
     seed += portno;
     // initialize random generator:
-    srandom( seed );
-    udpreceiver_t rec(portno, prio, secret);
-    if( !roomname.empty() )
-      rec.set_roomname( roomname );
-    if( !lobby.empty() )
-      rec.set_lobbyurl( lobby );
+    srandom(seed);
+    udpreceiver_t rec(portno, prio);
+    if(!roomname.empty())
+      rec.set_roomname(roomname);
+    if(!lobby.empty())
+      rec.set_lobbyurl(lobby);
     rec.srv();
     curl_easy_cleanup(curl);
     curl_global_cleanup();
