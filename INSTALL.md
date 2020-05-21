@@ -16,10 +16,10 @@ Do not forget to increase the image size after installation.
 
 ##  Install tools
 
-Install zita-njbridge and jackd2:
+Install zita-njbridge, jackd2, node-js and OSC library:
 
 ````
-sudo apt install zita-njbridge jackd2
+sudo apt install zita-njbridge jackd2 liblo-dev nodejs
 ````
 
 Follow the system optimization instructions on
@@ -44,16 +44,8 @@ make
 sudo make install
 ````
 
-On an x86 Ubuntu PC, you may follow the instructions on [http://install.tascar.org](http://install.tascar.org) instead. In that case, the OSC library needs to be installed separately:
-````
-sudo apt install liblo-dev
-````
+On an x86 Ubuntu PC, you may follow the instructions on [http://install.tascar.org](http://install.tascar.org) instead.
 
-For the remote mixer, also `node-js` is needed, which can be installed with
-
-````
-sudo apt install nodejs
-````
 
 ## Create user
 
@@ -61,7 +53,18 @@ Create a user without superuser priviledges but belonging to the audio group:
 
 ````
 sudo adduser ov
-usermod -a audio ov
+sudo adduser ov audio
+````
+
+Provide real-time priviledges to the new user:
+````
+sudo nano /etc/security/limits.conf
+````
+
+And add these lines:
+````
+@audio - rtprio 99
+@audio - memlock unlimited
 ````
 
 ## Add shutdown button to the device
@@ -75,7 +78,7 @@ The python script crashes sometimes, thus we execute it in an endless loop (see 
 
 ## Setup autostart
 
-We added entries to /etc/rc.local to autostart the processes, by adding these lines:
+We added entries to /etc/rc.local to autostart the processes, by adding these lines **before** the `exit 0` line:
 
 ````
 test -x /home/pi/autorun && su -l pi /home/pi/autorun &
