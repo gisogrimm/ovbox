@@ -1,9 +1,9 @@
 html { 
-  background: url(houseofconsort.jpg) no-repeat center center fixed; 
-  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover;
-  background-size: cover;
+    background: url(houseofconsort.jpg) no-repeat center center fixed; 
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
 }
 body {
     font-family: Helvetica,Arial,sans-serif;
@@ -67,10 +67,16 @@ tr {
     color: #000000;
     font-weight: bold;
 } 
- 
 .psvmember {
     background-color: #d6d6d6;
     color: #666666;
     padding: 5px;
     border-radius: 7px;
 }
+.roomsettingstoggle {
+    float: right;
+}
+.roomsettingstitle {
+    font-weight: bold;
+}
+

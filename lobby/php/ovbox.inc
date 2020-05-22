@@ -13,22 +13,25 @@ function print_head( $user = "" )
   }
   echo '</style>';
   //echo '<script>location.href="/";</script>';
-  //echo '<meta http-equiv="refresh" content="8; url=/"/>';   
+  //echo '<meta http-equiv="refresh" content="8; url=/"/>';
+  echo '<script>function toggledisplay(id){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";}else{x.style.display="none";}}</script>';
   echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
   echo '<h1>House of Consort</h1>';
 }
 
-function print_foot()
+function print_foot( $show_donate = true )
 {
-  echo '<div class="donate">';
-  echo '<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">';
-  echo '<input type="hidden" name="cmd" value="_s-xclick" />';
-  echo '<input type="hidden" name="hosted_button_id" value="V63WV7SAVQ6EC" />';
-  echo '<input type="image" src="https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />';
-  echo '<img alt="" border="0" src="https://www.paypal.com/en_DE/i/scr/pixel.gif" width="1" height="1" />';
-  echo '</form>';
-  echo '</div>';
+  if( $show_donate ){
+    echo '<div class="donate">';
+    echo '<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">';
+    echo '<input type="hidden" name="cmd" value="_s-xclick" />';
+    echo '<input type="hidden" name="hosted_button_id" value="V63WV7SAVQ6EC" />';
+    echo '<input type="image" src="https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />';
+    echo '<img alt="" border="0" src="https://www.paypal.com/en_DE/i/scr/pixel.gif" width="1" height="1" />';
+    echo '</form>';
+    echo '</div>';
+  }
   echo '</body>';
   echo '</html>';
 }
@@ -78,11 +81,11 @@ function get_device( $user )
 
 function get_device_prop( $device )
 {
-  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100, 'inputport'=>'system:capture_1' );
+  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100, 'inputport'=>'system:capture_1', 'access'=>0 );
   $fname = '../db/' . $device . '.device';
   if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
-    $prop['age'] = time()-filemtime($fname);
+    $prop['age'] = time()-$prop['access'];
   }
   if( empty($prop['label']))
     $prop['label'] = $prop['owner'];
@@ -118,7 +121,8 @@ function list_devices()
   $devs = array();
   foreach( glob( '../db/*.device') as $dev){
     $device = basename($dev,'.device');
-    $devs[] = array('dev'=>$device,'age'=>time()-filemtime($dev));
+    $prop = get_device_prop($device);
+    $devs[] = array('dev'=>$device,'age'=>$prop['age']);
   }
   usort( $devs, "agesort" );
   return $devs;
@@ -129,7 +133,8 @@ function list_rooms()
   $rooms = array();
   foreach( glob( '../db/*.room') as $roomf){
     $room = basename($roomf,'.room');
-    $rooms[] = array('room'=>$room,'age'=>time()-filemtime($roomf));
+    $prop = get_room_prop($room);
+    $rooms[] = array('room'=>$room,'age'=>$prop['age']);
   }
   usort( $rooms, "agesort" );
   return $rooms;
@@ -155,11 +160,11 @@ function lock_room( $room, $device, $lock )
 
 function get_room_prop( $room )
 {
-  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'rvbabs'=>0.6, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100, 'lock'=>false );
+  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'rvbabs'=>0.6, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100, 'lock'=>false, 'owner'=>'', 'access'=>0 );
   $fname = '../db/' . $room . '.room';
   if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
-    $prop['age'] = time()-filemtime($fname);
+    $prop['age'] = time()-$prop['access'];
   }
   $dim = explode(" ",$prop['size']);
   if( count($dim)==3){
@@ -170,10 +175,16 @@ function get_room_prop( $room )
     $t60 = 0.161*$vol/($prop['rvbabs']*2*($dim[0]*$dim[1]+$dim[1]*$dim[2]+$dim[2]*$dim[0]));
     $prop['t60'] = $t60;
     $prop['area'] = $dim[0]*$dim[1];
+    $prop['sx'] = $dim[0];
+    $prop['sy'] = $dim[1];
+    $prop['sz'] = $dim[2];
   }else{
     $prop['volume'] = 0;
     $prop['t60'] = 0;
     $prop['area'] = 0;
+    $prop['sx'] = 0;
+    $prop['sy'] = 0;
+    $prop['sz'] = 0;
   }
   return $prop;
 }
@@ -198,6 +209,7 @@ function update_room( $host, $port, $name, $pin )
   if( empty($dprop['name']) )
     $dprop['name'] = $name;
   $dprop['pin'] = $pin;
+  $dprop['access'] = time();
   set_room_prop( $room, $dprop );
 }
 
@@ -416,7 +428,214 @@ function html_device_selector( $user, $currentdevice )
     echo '>'.$dev['dev'].' ('.$dev['label'].')</option>';
   }
   echo '</select><button>Select</button>';
+  echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\');" value="device settings"/>';
   echo "</form>\n";
+}
+
+function auth( $username, $password )
+{
+  $fname = '../ovpasswd';
+  $pws = array();
+  if( !file_exists( $fname ) )
+    return false;
+  $pws = json_decode( file_get_contents( $fname ), true );
+  if( !array_key_exists( $username, $pws ) )
+    return false;
+  return password_verify( $password, $pws[$username] );
+}
+
+function html_show_room( $room, $device, $inroom, $user )
+{
+  $rprop = get_room_prop( $room );
+  if( $rprop['age'] < 3600 ) {
+    // only show active rooms
+    $doc = new DOMDocument('1.0');
+    $root = $doc->createElement('div');
+    $doc->appendChild($root);
+    if( $inroom )
+      $root->setAttribute('class','myroom');
+    else
+      $root->setAttribute('class','room');
+    $tit = $doc->createElement('div');
+    $root->appendChild($tit);
+    $span = $doc->createElement('span');
+    $tit->appendChild($span);
+    $span->setAttribute('class','rname');
+    $span->appendChild($doc->createTextNode($rprop['name']));
+    $tit->appendChild($doc->createTextNode('(A='.$rprop['area'].' m'));
+    $sup = $doc->createElement('sup');
+    $tit->appendChild($sup);
+    $sup->appendChild($doc->createTextNode('2'));
+    $tit->appendChild($doc->createTextNode(', V='.$rprop['volume'].' m'));
+    $sup = $doc->createElement('sup');
+    $tit->appendChild($sup);
+    $sup->appendChild($doc->createTextNode('3'));
+    $tit->appendChild($doc->createTextNode(', T60='.sprintf("%1.2f",$rprop['t60']).' s)'));
+    if( !empty($rprop['owner']) )
+      $tit->appendChild($doc->createTextNode(' managed by '.$rprop['owner']));
+    $memb = $doc->createElement('div');
+    $root->appendChild($memb);
+    $memb->setAttribute('class','rmembers');
+    $roomdev = get_devices_in_room( $room );
+    if( $rprop['lock'] && empty($roomdev) ){
+      modify_room_prop( $room, 'lock', false );
+      $rprop['lock'] = false;
+    }
+    ksort($roomdev);
+    foreach( $roomdev as $chair => $dev ){
+      $devuser = get_device_prop($dev);
+      $lab = $devuser['label'];
+      $bclass = "psvmember";
+      if( $devuser['age'] < 20 )
+        $bclass = "actmember";
+      $mtype = 'span';
+      if( ($dev != $device) && $inroom )
+        $mtype = 'a';
+      $mem = $doc->createElement($mtype);
+      $memb->appendChild($mem);
+      $mem->setAttribute('class',$bclass);
+      if ( $dev == $device )
+        $mem->setAttribute('style','border: 2px solid #000000;');
+      if( $mtype == 'a')
+        $mem->setAttribute('href','?swapdev='.urlencode($dev));
+      //echo htmlspecialchars($devuser) . ' ' . $chair;
+      if( empty($lab) )
+        $lab = $dev;
+      $mem->appendChild($doc->createTextNode( htmlspecialchars($lab) ));
+      $memb->appendChild($doc->createTextNode(' '));
+    }
+    $ctl = $doc->createElement('div');
+    $root->appendChild($ctl);
+    if( $inroom ) {
+      $a = $doc->createElement('a');
+      $ctl->appendChild($a);
+      $a->setAttribute('href','?enterroom=');
+      $a->appendChild($doc->createTextNode('leave room'));
+      $ctl->appendChild($doc->createTextNode(' '));
+      $a = $doc->createElement('a');
+      $ctl->appendChild($a);
+      if( $rprop['lock'] ){
+        $a->setAttribute('href','?lockroom='.urlencode($room).'&lck=0');
+        $a->appendChild($doc->createTextNode('unlock room'));
+      }else{
+        $a->setAttribute('href','?lockroom='.urlencode($room).'&lck=1');
+        $a->appendChild($doc->createTextNode('lock room'));
+      }
+    } else {
+      if( $rprop['lock'] ){
+        $ctl->appendChild($doc->createTextNode('room is locked.'));
+      }else{
+        $a = $doc->createElement('a');
+        $ctl->appendChild($a);
+        $a->setAttribute('href','?enterroom='.urlencode($room));
+        $a->appendChild($doc->createTextNode('enter'));
+      }
+    }
+    if( $user == $rprop['owner'] ){
+      $ctl->appendChild($doc->createTextNode(' '));
+      if( !empty($roomdev) ){
+        $a = $doc->createElement('a');
+        $ctl->appendChild($a);
+        $a->setAttribute('href','?clearroom='.urlencode($room));
+        $a->appendChild($doc->createTextNode('kick'));
+      }
+      $tog = $doc->createElement('input');
+      $ctl->appendChild($tog);
+      $tog->setAttribute('type','button');
+      $tog->setAttribute('class','roomsettingstoggle');
+      $tog->setAttribute('onclick','toggledisplay("'.$room.'ctl");');
+      $tog->setAttribute('value','room settings');
+      $rp = $doc->createElement('div');
+      $root->appendChild($rp);
+      $rp->setAttribute('style','display: none;');
+      $rp->setAttribute('id',$room.'ctl');
+      $rp->setAttribute('class','devprop');
+      $div = $doc->createElement('div');
+      $rp->appendChild($div);
+      $div->setAttribute('class','roomsettingstitle');
+      $div->appendChild($doc->createTextNode('Room settings:'));
+      $form = $doc->createElement('form');
+      $rp->appendChild($form);
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','hidden');
+      $inp->setAttribute('name','setroom');
+      $inp->setAttribute('value',$room);
+      $form->appendChild($doc->createTextNode('Name: '));
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','text');
+      $inp->setAttribute('name','label');
+      $inp->setAttribute('pattern','[a-zA-Z0-9]*');
+      $inp->setAttribute('value',$rprop['name']);
+      //<input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'">
+      $form->appendChild($doc->createElement('br'));
+      $form->appendChild($doc->createTextNode('Size L x W x H [m]: '));
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.1');
+      $inp->setAttribute('min','0');
+      $inp->setAttribute('max','300');
+      $inp->setAttribute('name','sx');
+      $inp->setAttribute('value',$rprop['sx']);
+      $inp->setAttribute('style','width: 50px;');
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.1');
+      $inp->setAttribute('min','0');
+      $inp->setAttribute('max','200');
+      $inp->setAttribute('name','sy');
+      $inp->setAttribute('value',$rprop['sy']);
+      $inp->setAttribute('style','width: 50px;');
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.1');
+      $inp->setAttribute('min','0');
+      $inp->setAttribute('max','100');
+      $inp->setAttribute('name','sz');
+      $inp->setAttribute('value',$rprop['sz']);
+      $inp->setAttribute('style','width: 50px;');
+      $form->appendChild($doc->createElement('br'));
+      $form->appendChild($doc->createTextNode('Gain / dB: '));
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.1');
+      $inp->setAttribute('name','rvbgain');
+      $inp->setAttribute('min','-20');
+      $inp->setAttribute('max','0');
+      $inp->setAttribute('value',$rprop['rvbgain']);
+      $inp->setAttribute('style','width: 50px;');
+      $form->appendChild($doc->createTextNode(' Damping: '));
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.01');
+      $inp->setAttribute('name','rvbdamp');
+      $inp->setAttribute('min','0');
+      $inp->setAttribute('max','1');
+      $inp->setAttribute('value',$rprop['rvbdamp']);
+      $inp->setAttribute('style','width: 50px;');
+      $form->appendChild($doc->createTextNode(' Absorption: '));
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','number');
+      $inp->setAttribute('step','0.01');
+      $inp->setAttribute('min','0');
+      $inp->setAttribute('max','1');
+      $inp->setAttribute('name','rvbabs');
+      $inp->setAttribute('value',$rprop['rvbabs']);
+      $inp->setAttribute('style','width: 50px;');
+      $form->appendChild($doc->createElement('br'));
+      $inp = $doc->createElement('button');
+      $form->appendChild($inp);
+      $inp->appendChild($doc->createTextNode('Save'));
+    }
+    echo $doc->saveHTML();
+  }
 }
 
 /*

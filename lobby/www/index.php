@@ -25,31 +25,59 @@ if ($user == 'device') {
             $devhash = $_GET['hash'];
         get_tascar_cfg( $device, $devhash );
         // touch device file:
-        touch( '../db/' . $device . '.device' );
+        modify_device_prop( $device, 'access', time() );
+    }
+    die();
+}
+
+// room update:
+if ($user == 'room') {
+    if( isset($_GET['port']) && isset($_GET['name']) && isset($_GET['pin']) ) {
+        update_room( $_SERVER['REMOTE_ADDR'], $_GET['port'], $_GET['name'], $_GET['pin'] );
     }
     die();
 }
 
 // admin page:
 if( $user == 'admin' ){
-    if( isset($_GET['setdevowner']) )
+    if( isset($_GET['setdevowner']) ){
         modify_device_prop( $_GET['setdevowner'], 'owner', $_GET['owner'] );
-    if( isset($_GET['setdevlabel']) )
-        modify_device_prop( $_GET['setdevlabel'], 'label', $_GET['label'] );
-    if( isset($_GET['rmdevice']) )
-        rm_device( $_GET['rmdevice'] );
-    if( isset($_GET['setroomlabel']) )
-        modify_room_prop( $_GET['setroomlabel'], 'name', $_GET['label'] );
-    if( isset($_GET['setroomreverb']) ){
-        modify_room_prop( $_GET['setroomreverb'], 'size', $_GET['size'] );
-        modify_room_prop( $_GET['setroomreverb'], 'rvbgain', $_GET['rvbgain'] );
-        modify_room_prop( $_GET['setroomreverb'], 'rvbdamp', $_GET['rvbdamp'] );
-        modify_room_prop( $_GET['setroomreverb'], 'rvbabs', $_GET['rvbabs'] );
+        header( "Location: /" );
     }
-    if( isset($_GET['rmroom']) )
+    if( isset($_GET['setdevlabel']) ){
+        modify_device_prop( $_GET['setdevlabel'], 'label', $_GET['label'] );
+        header( "Location: /" );
+    }
+    if( isset($_GET['rmdevice']) ){
+        rm_device( $_GET['rmdevice'] );
+        header( "Location: /" );
+    }
+    if( isset($_GET['setroomowner']) ){
+        modify_room_prop( $_GET['setroomowner'], 'owner', $_GET['owner'] );
+        header( "Location: /" );
+    }
+    if( isset($_GET['setroomlabel']) ){
+        modify_room_prop( $_GET['setroomlabel'], 'name', $_GET['label'] );
+        header( "Location: /" );
+    }
+    if( isset($_GET['setroom']) ){
+        if( isset($_GET['label']))
+            modify_room_prop( $_GET['setroom'], 'name', $_GET['label'] );
+        if( isset($_GET['size']))
+            modify_room_prop( $_GET['setroom'], 'size', $_GET['size'] );
+        if( isset($_GET['sx'])&&isset($_GET['sy'])&&isset($_GET['sz']))
+            modify_room_prop( $_GET['setroom'], 'size', $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz']);
+        modify_room_prop( $_GET['setroom'], 'rvbgain', $_GET['rvbgain'] );
+        modify_room_prop( $_GET['setroom'], 'rvbdamp', $_GET['rvbdamp'] );
+        modify_room_prop( $_GET['setroom'], 'rvbabs', $_GET['rvbabs'] );
+        header( "Location: /" );
+    }
+    if( isset($_GET['rmroom']) ){
         rm_room( $_GET['rmroom'] );
+        header( "Location: /" );
+    }
     print_head( $user );
-    echo '<form><button>Refresh</button></form>';
+    echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
     $devs = list_devices();
     echo "<h2>Devices:</h2><table>\n";
     echo "<tr><th>device</th><th>age</th><th>owner</th><th>label</th></tr>\n";
@@ -68,7 +96,7 @@ if( $user == 'admin' ){
     echo "</table>\n";
     $rooms = list_rooms();
     echo "<h2>Rooms:</h2><table>\n";
-    echo "<tr><th>room</th><th>age</th><th>label</th><th>reverb (size/gain/damping/absorption)</th></tr>\n";
+    echo "<tr><th>room</th><th>age</th><th>label</th><th>owner</th></tr>\n";
     foreach( $rooms as $room ){
         $dprop = get_room_prop( $room['room'] );
         echo '<tr><td>' .
@@ -77,11 +105,8 @@ if( $user == 'admin' ){
             '<form><input type="hidden" name="setroomlabel" value="'.$room['room'].'"><input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'"><button>Save</button></form>' .
             '</td><td>' .
             '<form>' .
-            '<input type="hidden" name="setroomreverb" value="'.$room['room'].'">'.
-            '<input type="text" title="Size x y z in m" name="size" pattern="[ 0-9\.]*" value="'.$dprop['size'].'">'.
-            '<input type="number" tite="Reverb gain in dB" name="rvbgain" min="-20" max="0" step="0.1" value="'.$dprop['rvbgain'].'">'.
-            '<input type="number" title="Damping low-pass coeff" name="rvbdamp" min="0" max="1" step="0.01" value="'.$dprop['rvbdamp'].'">'.
-            '<input type="number" title="Wall absorption" name="rvbabs" min="0" max="1" step="0.01" value="'.$dprop['rvbabs'].'">'.
+            '<input type="hidden" name="setroomowner" value="'.$room['room'].'">'.
+            '<input type="text" title="Owner" name="owner" pattern="[a-zA-Z0-9\.]*" value="'.$dprop['owner'].'">'.
             '<button>Save</button>' .
             '</form>' .
             '</td><td>' .
@@ -93,16 +118,9 @@ if( $user == 'admin' ){
     die();
 }
 
-// room update:
-if ($user == 'room') {
-    if( isset($_GET['port']) && isset($_GET['name']) && isset($_GET['pin']) ) {
-        update_room( $_SERVER['REMOTE_ADDR'], $_GET['port'], $_GET['name'], $_GET['pin'] );
-    }
-    die();
-}
-
 if( isset($_GET['devselect']) ){
     select_userdev( $user, $_GET['devselect'] );
+    header( "Location: /" );
 }
 
 $device = get_device( $user );
@@ -110,6 +128,7 @@ $device = get_device( $user );
 if( isset($_GET['enterroom']) ) {
     if( !empty( $device ) )
         device_enter_room( $device, $_GET['enterroom'] );
+    header( "Location: /" );
 }
 
 if( isset($_GET['swapdev']) ){
@@ -122,6 +141,7 @@ if( isset($_GET['lockroom']) ){
     if( !empty( $device ) ){
         lock_room( $_GET['lockroom'], $device, $_GET['lck'] );
     }
+    header( "Location: /" );
 }
 
 if( isset($_GET['setdevprop']) ){
@@ -139,19 +159,51 @@ if( isset($_GET['setdevprop']) ){
             $prop['inputport'] = $_GET['inputport'];
         set_device_prop( $device, $prop );
     }
+    header( "Location: /" );
+}
+
+if( isset($_GET['setroom']) ){
+    $rprop = get_room_prop($_GET['setroom']);
+    if( $user == $rprop['owner']){
+        if( isset($_GET['label']))
+            modify_room_prop( $_GET['setroom'], 'name', $_GET['label'] );
+        if( isset($_GET['size']))
+            modify_room_prop( $_GET['setroom'], 'size', $_GET['size'] );
+        if( isset($_GET['sx'])&&isset($_GET['sy'])&&isset($_GET['sz']))
+            modify_room_prop( $_GET['setroom'], 'size', $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz']);
+        if( isset($_GET['rvbgain']) )
+            modify_room_prop( $_GET['setroom'], 'rvbgain', $_GET['rvbgain'] );
+        if( isset($_GET['rvbdamp']) )
+            modify_room_prop( $_GET['setroom'], 'rvbdamp', $_GET['rvbdamp'] );
+        if( isset($_GET['rvbabs']) )
+            modify_room_prop( $_GET['setroom'], 'rvbabs', $_GET['rvbabs'] );
+    }
+    header( "Location: /" );
+}
+
+if( isset($_GET['clearroom']) ){
+    $room = $_GET['clearroom'];
+    $rprop = get_room_prop($room);
+    if( $user == $rprop['owner']){
+        $roomdev = get_devices_in_room( $room );
+        foreach( $roomdev as $dev ){
+            modify_device_prop( $dev, 'room', '');
+        }
+    }
+    header( "Location: /" );
 }
 
 print_head( $user );
     
 
 if ( empty( $device ) ) {
-    echo "<p>You are logged in as user {$user}. No device linked to this account.</p>";
+    echo "<p>You are logged in as user {$user}. Select a device to book a room.</p>";
     html_device_selector( $user, $device );
 } else {
-    echo "<p>You are logged in as user <b>{$user}</b> with device <b>{$device}</b>.</p>";
-    html_device_selector( $user, $device );
     $devprop = get_device_prop( $device );
-    echo '<form class="devprop"><div class="devproptitle">Device properties:</div>' . "\n";
+    echo "<p>You are logged in as user <b>{$user}</b> with device <b>{$device} (".$devprop['label'].")</b>.</p>";
+    html_device_selector( $user, $device );
+    echo '<form class="devprop" id="devsettings" style="display: none;"><div class="devproptitle">Device settings:</div>' . "\n";
     // device properties:
     echo '<label for="label">device label (appears in rooms and the mixer of the others): </label><br>';
     echo '<input id="label" name="label" type="text" value="'.$devprop['label'].'" pattern="[a-zA-Z0-9]*"><br>' . "\n";
@@ -175,72 +227,7 @@ if ( empty( $device ) ) {
     echo '</form>';
     echo '<p>Rooms: (<a href="http://' . $_SERVER['HTTP_HOST'] . '">refresh</a>)</p>' . "\n";
     foreach( get_rooms() as $room){
-        $rprop = get_room_prop( $room );
-        if( $rprop['age'] < 3600 ) {
-            $myroom = false;
-            // only show active rooms
-            if( $room == $devprop['room'] ) {
-                $myroom = true;
-                echo '<div class="myroom">' . "\n";
-            } else {
-                echo '<div class="room">' . "\n";
-            }
-            echo '<div><span class="rname">'.$rprop['name'].'</span> (A='.$rprop['area'].' m<sup>2</sup>, V='.$rprop['volume'].' m<sup>3</sup>, T60='.sprintf("%1.2f",$rprop['t60']).' s)</div>'."\n";
-            echo '<div class="rmembers">';
-            $roomdev = get_devices_in_room( $room );
-            if( $rprop['lock'] && empty($roomdev) ){
-                modify_room_prop( $room, 'lock', false );
-                $rprop['lock'] = false;
-            }
-            ksort($roomdev);
-            foreach( $roomdev as $chair => $dev ){
-                $devuser = get_device_prop($dev);
-                $lab = $devuser['label'];
-                $bclass = "psvmember";
-                if( $devuser['age'] < 20 )
-                    $bclass = "actmember";
-                if ( $dev == $device ){
-                    echo '<span class="'.$bclass.'" style="border: 2px solid #000000;">';
-                }else{
-                    if( $room == $devprop['room'] ) {
-                        echo '<a href="?swapdev='.urlencode($dev).'" class="'.$bclass.'">';
-                    }else{
-                        echo '<span class="'.$bclass.'">';
-                    }
-                }
-                //echo htmlspecialchars($devuser) . ' ' . $chair;
-                if( empty($lab) )
-                    $lab = $dev;
-                echo htmlspecialchars($lab);
-                if ( $dev == $device ){
-                    echo '</span>';
-                }else{
-                    if( $room == $devprop['room'] ) {
-                        echo '</a>';
-                    }else{
-                        echo "</span>";
-                    }
-                }
-                echo ' ';
-            }
-            echo '</div>';
-            //echo '<div class="rhost">'.$rprop['host'].':'.$rprop['port'].'</div>'."\n";
-            if( $myroom ) {
-                echo '<a href="?enterroom=">leave room</a> ';
-                if( $rprop['lock'] ){
-                    echo '<a href="?lockroom='.urlencode($room).'&lck=0">unlock room</a>';
-                }else{
-                    echo '<a href="?lockroom='.urlencode($room).'&lck=1">lock room</a>';
-                }
-            } else {
-                if( $rprop['lock'] ){
-                    echo 'room is locked.';
-                }else{
-                    echo '<a href="?enterroom='.urlencode($room).'">enter</a>';
-                }
-            }
-            echo '</div>';
-        }
+        html_show_room( $room, $device, $room == $devprop['room'], $user );
     }
 }
 print_foot();
