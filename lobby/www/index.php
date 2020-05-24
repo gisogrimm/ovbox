@@ -135,6 +135,7 @@ if( isset($_GET['swapdev']) ){
     if( !empty( $device ) ){
         room_swap_devices( $device, $_GET['swapdev'] );
     }
+    header( "Location: /" );
 }
 
 if( isset($_GET['lockroom']) ){
@@ -157,6 +158,10 @@ if( isset($_GET['setdevprop']) ){
             $prop['label'] = $_GET['label'];
         if( isset($_GET['inputport']) )
             $prop['inputport'] = $_GET['inputport'];
+        if( isset($_GET['inputport2']) )
+            $prop['inputport2'] = $_GET['inputport2'];
+        if( isset($_GET['srcdist']) )
+            $prop['srcdist'] = $_GET['srcdist'];
         set_device_prop( $device, $prop );
     }
     header( "Location: /" );
@@ -193,6 +198,13 @@ if( isset($_GET['clearroom']) ){
     header( "Location: /" );
 }
 
+if( isset($_GET['claim']) ){
+    $devs = list_unclaimed_devices();
+    if( in_array( $_GET['claim'], $devs ) )
+        modify_device_prop( $_GET['claim'], 'owner', $user );
+    header( "Location: /" );
+}
+
 print_head( $user );
     
 
@@ -207,8 +219,11 @@ if ( empty( $device ) ) {
     // device properties:
     echo '<label for="label">device label (appears in rooms and the mixer of the others): </label><br>';
     echo '<input id="label" name="label" type="text" value="'.$devprop['label'].'" pattern="[a-zA-Z0-9]*"><br>' . "\n";
-    echo '<label for="inputport">input port (to which your microphone/instrument is connected): </label><br>';
-    echo '<input id="inputport" name="inputport" type="text" value="'.$devprop['inputport'].'"><br>' . "\n";
+    echo '<label for="inputport">input ports (to which your microphones/instruments are connected): </label><br>';
+    echo '<input id="inputport" name="inputport" type="text" value="'.$devprop['inputport'].'">' . "\n";
+    echo '<input id="inputport2" name="inputport2" type="text" value="'.$devprop['inputport2'].'"><br>' . "\n";
+    echo '<label for="srcdist">distance between sources (in case of you send more than one channel): </label><br>';
+    echo '<input id="srcdist" name="srcdist" type="number" min="0" step="0.01" value="'.$devprop['srcdist'].'"><br>' . "\n";
     echo '<label for="jittersend">sender jitter (affects buffer length of others): </label><br>';
     echo '<input id="jittersend" name="jittersend" type="number" min="2" max="30" value="'.$devprop['jittersend'].'"><br>' . "\n";
     echo '<label for="jitterreceive">receiver jitter (affects your own buffer length): </label><br>';

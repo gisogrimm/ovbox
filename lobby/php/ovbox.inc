@@ -14,7 +14,7 @@ function print_head( $user = "" )
   echo '</style>';
   //echo '<script>location.href="/";</script>';
   //echo '<meta http-equiv="refresh" content="8; url=/"/>';
-  echo '<script>function toggledisplay(id){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";}else{x.style.display="none";}}</script>';
+  echo '<script>function toggledisplay(id,msg){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";event.target.value=\'hide \'+msg;}else{x.style.display="none";event.target.value=\'show \'+msg;}}</script>';
   echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
   echo '<h1>House of Consort</h1>';
@@ -32,6 +32,7 @@ function print_foot( $show_donate = true )
     echo '</form>';
     echo '</div>';
   }
+  echo '<div class="foto">Background image by Johannes Gontarski.</div>';
   echo '</body>';
   echo '</html>';
 }
@@ -81,7 +82,19 @@ function get_device( $user )
 
 function get_device_prop( $device )
 {
-  $prop = array( 'room'=>'', 'pos'=>'0 0 0', 'jittersend'=>5, 'jitterreceive'=>5, 'peer2peer'=>true, 'reverb'=>true, 'owner'=>'', 'label'=>'','age'=>3600*24*365*100, 'inputport'=>'system:capture_1', 'access'=>0 );
+  $prop = array( 'room'=>'',
+  'pos'=>'0 0 0',
+  'jittersend'=>5,
+  'jitterreceive'=>5,
+  'peer2peer'=>true,
+  'reverb'=>true,
+  'owner'=>'',
+  'label'=>'',
+  'age'=>3600*24*365*100,
+  'inputport'=>'system:capture_1',
+  'inputport2'=>'',
+  'srcdist'=>1.2,
+  'access'=>0 );
   $fname = '../db/' . $device . '.device';
   if( file_exists( $fname ) ){
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
@@ -122,11 +135,22 @@ function list_devices()
   foreach( glob( '../db/*.device') as $dev){
     $device = basename($dev,'.device');
     $prop = get_device_prop($device);
-    $devs[] = array('dev'=>$device,'age'=>$prop['age']);
+    $devs[] = array('dev'=>$device,'age'=>$prop['age'],'owner'=>$prop['owner']);
   }
   usort( $devs, "agesort" );
   return $devs;
 }
+
+function list_unclaimed_devices()
+{
+  $devs = array();
+  foreach( list_devices() as $dev){
+    if( ($dev['age'] < 120) && empty($dev['owner']) )
+      $devs[] = $dev['dev'];
+  }
+  return $devs;
+}
+
 
 function list_rooms()
 {
@@ -269,10 +293,23 @@ function room_swap_devices( $dev1, $dev2 )
   }
 }
 
+function xml_add_sound( &$source, $doc, $x, $y, $z, $port = '' )
+{
+  $sound = $doc->createElement("sound");
+  $source->appendChild($sound);
+  $sound->setAttribute("maxdist","50");
+  $sound->setAttribute("x",$x);
+  $sound->setAttribute("y",$y);
+  $sound->setAttribute("z",$z);
+  if( !empty($port) )
+    $sound->setAttribute("connect",$port );
+  return $sound;
+}
+
 function get_tascar_cfg( $device, $devhash )
 {
   $cuccess = false;
-  $devprop = get_device_prop( $device );
+  $localdevprop = get_device_prop( $device );
   // create TASCAR document:
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
@@ -281,24 +318,14 @@ function get_tascar_cfg( $device, $devhash )
   $session->setAttribute("levelmeter_tc","0.5");
   $scene = $doc->createElement("scene");
   $session->appendChild($scene);
+  $modules = $doc->createElement("modules");
+  $session->appendChild($modules);
+  // add receiver:
   $rec = $doc->createElement("receiver");
   $rec->setAttribute("type","ortf");
   $rec->setAttribute("name","master");
   $rec->setAttribute("delaycomp","0.05");
   $scene->appendChild($rec);
-  $modules = $doc->createElement("modules");
-  $session->appendChild($modules);
-  //
-  $source = $doc->createElement("source");
-  $source->setAttribute("name","ego");
-  $egosound = $doc->createElement("sound");
-  $egosound->setAttribute("maxdist","50");
-  $egosound->setAttribute("x","0.4");
-  $egosound->setAttribute("z","-0.7");
-  $egosound->setAttribute("gain","-8");
-  $egosound->setAttribute("connect",$devprop['inputport']);
-  $source->appendChild($egosound);
-  $scene->appendChild($source);
   // master connections
   $conn = $doc->createElement("connect");
   $conn->setAttribute("src","render.scene:master_l");
@@ -309,33 +336,65 @@ function get_tascar_cfg( $device, $devhash )
   $conn->setAttribute("dest","system:playback_2");
   $session->appendChild($conn);
   // room specific setup:    
-  if ( !empty( $devprop['room'] ) ){
-    $room = $devprop['room'];
+  if ( !empty( $localdevprop['room'] ) ){
+    $room = $localdevprop['room'];
     $roomprop = get_room_prop( $room );
     $mychair = -1;
     if( $roomprop['age'] < 3600 ) {
       // add users
       $roomdev = get_devices_in_room( $room );
       ksort($roomdev);
-      $daz = 200/count($roomdev);
-      $az = -96;
+      $daz = 360/count($roomdev)*(pi()/180);
+      $az = 0;
+      $radius = 1.7;
       foreach( $roomdev as $chair => $dev ){
-        if ( $dev != $device ){
-          $az = $az+$daz;
-          $devuser = get_device_prop($dev);
+        $az = $az+$daz;
+        $pos_x = sprintf("%1.3f",$radius * cos( $az ));
+        $pos_y = sprintf("%1.3f",$radius * sin( $az ));
+        // get configuration of player device:
+        $devprop = get_device_prop( $dev );
+        $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
+        if( $numsource > 0 ){
           $source = $doc->createElement("source");
-          $sound = $doc->createElement("sound");
-          $sound->setAttribute("maxdist","50");
-          $sound->setAttribute("r","2");
-          $sound->setAttribute("az",round($az));
-          $source->setAttribute("name",$devuser['label']);
-          $source->appendChild($sound);
           $scene->appendChild($source);
-        }else{
-          $mychair = $chair;
+          $inport = '';
+          if ( $dev == $device ){
+            $source->setAttribute("name","ego");
+          }else{
+            $source->setAttribute("name",$devprop['label']);
+          }
+          $dy = $devprop['srcdist'] * ($numsource > 1) * 0.5;
+          if( !empty($devprop['inputport']) ){
+            $inport = '';
+            if ( $dev == $device )
+              $inport = $devprop['inputport'];
+            xml_add_sound( $source, $doc, 0.4, $dy, -0.7, $inport );
+          }
+          if( !empty($devprop['inputport2']) ){
+            $inport = '';
+            if ( $dev == $device )
+              $inport = $devprop['inputport2'];
+            xml_add_sound( $source, $doc, 0.4, -$dy, -0.7, $inport );
+          }
+          $xmlpos = $doc->createElement("position");
+          $source->appendChild($xmlpos);
+          $xmlpos->appendChild($doc->createTextNode("0 ".$pos_x." ".$pos_y." 0"));
+          $xmlrot = $doc->createElement("orientation");
+          $source->appendChild($xmlrot);
+          $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*($az+pi()))." 0 0"));
+          if ( $dev == $device ){
+            $mychair = $chair;
+            // set receiver position:
+            $xmlpos = $doc->createElement("position");
+            $rec->appendChild($xmlpos);
+            $xmlpos->appendChild($doc->createTextNode("0 ".$pos_x." ".$pos_y." 0"));
+            $xmlrot = $doc->createElement("orientation");
+            $rec->appendChild($xmlrot);
+            $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*($az+pi()))." 0 0"));
+          }
         }
       }
-      if( $devprop['reverb'] ){
+      if( $localdevprop['reverb'] ){
         // reverb
         $reverb = $doc->createElement("reverb");
         $reverb->setAttribute("type","simplefdn");
@@ -352,39 +411,56 @@ function get_tascar_cfg( $device, $devhash )
       $roomurl = explode( ":", $room );
       $myport = 4464+2*$mychair;
       $p2p = '';
-      if( $devprop['peer2peer'] )
+      if( $localdevprop['peer2peer'] )
         $p2p = ' -2';
       $mod->setAttribute("command","../udpmirror/ovboxclient -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
       // receiver:
       foreach( $roomdev as $chair => $dev ){
-        $odevprop = get_device_prop( $dev );
-        $devuser = $odevprop['label'];
-        if ( $dev != $device ){
+        $devprop = get_device_prop( $dev );
+        $devuser = $devprop['label'];
+        $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
+        if ( ( $numsource > 0 ) && ($dev != $device) ){
           $iport = 4464+2*$chair;
-          $buff = $devprop['jitterreceive']+$odevprop['jittersend'];
+          $buff = $localdevprop['jitterreceive']+$devprop['jittersend'];
+          $chan = '1';
+          if( $numsource > 1 )
+            $chan = $chan . ',2';
           // zita
           $mod = $doc->createElement("system");
-          $mod->setAttribute("command","zita-n2j --chan 1 --jname " . $devuser . " --buf " . $buff . " 0.0.0.0 " . $iport);
+          $mod->setAttribute("command","zita-n2j --chan ".$chan." --jname " . $devuser . " --buf " . $buff . " 0.0.0.0 " . $iport);
           $mod->setAttribute("onunload","killall zita-n2j");
           $modules->appendChild($mod);
           // connection
+          for($k=0;$k<$numsource;$k++){
+            $conn = $doc->createElement("connect");
+            $conn->setAttribute("src",$devuser . ":out_".($k+1));
+            $conn->setAttribute("dest","render.scene:" . $devuser . ".".$k.".0");
+            $session->appendChild($conn);
+          }
+        }
+      }
+      $numsource = !empty($localdevprop['inputport']) + !empty($localdevprop['inputport2']);
+      if( $numsource > 0 ){
+        $mod = $doc->createElement("system");
+        //<system command=\"zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 ${oport}\" onunload=\"killall zita-j2n\"/>"
+        $mod->setAttribute("command","zita-j2n --chan ".$numsource." --jname sender --16bit 127.0.0.1 " . $myport);
+        $mod->setAttribute("onunload","killall zita-j2n");
+        $modules->appendChild($mod);
+        if( !empty($localdevprop['inputport']) ){
           $conn = $doc->createElement("connect");
-          $conn->setAttribute("src",$devuser . ":out_1");
-          $conn->setAttribute("dest","render.scene:" . $devuser . ".0.0");
+          $conn->setAttribute("src",$localdevprop['inputport']);
+          $conn->setAttribute("dest","sender:in_1");
+          $session->appendChild($conn);
+        }
+        if( !empty($localdevprop['inputport2']) ){
+          $conn = $doc->createElement("connect");
+          $conn->setAttribute("src",$localdevprop['inputport2']);
+          $conn->setAttribute("dest","sender:in_".$numsource);
           $session->appendChild($conn);
         }
       }
-      $mod = $doc->createElement("system");
-      //<system command=\"zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 ${oport}\" onunload=\"killall zita-j2n\"/>"
-      $mod->setAttribute("command","zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 " . $myport);
-      $mod->setAttribute("onunload","killall zita-j2n");
-      $modules->appendChild($mod);
-      $conn = $doc->createElement("connect");
-      $conn->setAttribute("src",$devprop['inputport']);
-      $conn->setAttribute("dest","sender:in_1");
-      $session->appendChild($conn);
       $mod = $doc->createElement("system");
       $mod->setAttribute("command","sleep 2;sleep 2");
       $modules->appendChild($mod);
@@ -400,6 +476,10 @@ function get_tascar_cfg( $device, $devhash )
   }
   if( !$success ){
     // add announcement source
+    $source = $doc->createElement("source");
+    $scene->appendChild($source);
+    $source->setAttribute("name","announce");
+    $egosound = xml_add_sound($source, $doc, 4, 0, 0 );
     $plugs = $doc->createElement("plugins");
     $egosound->appendChild($plugs);
     $sndfile = $doc->createElement("sndfile");
@@ -419,17 +499,26 @@ function get_tascar_cfg( $device, $devhash )
 
 function html_device_selector( $user, $currentdevice )
 {
-  echo "<form>";
-  echo '<select id="devselect" name="devselect">';
+  $devs = list_unclaimed_devices();
+  if( !empty($devs) ){
+    echo '<div class="devclaim">';
+    echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
+    foreach( $devs as $dev ){
+      echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
+    }
+    echo "</div>";
+  }
+  echo "<div>";
+  echo '<select id="devselect" name="devselect" oninput="location.href=\'?devselect=\'+event.target.value;">';
   foreach( owned_devices( $user ) as $dev ){
     echo '<option value="'.$dev['dev'].'"';
     if( $currentdevice == $dev['dev'] )
       echo ' selected';
     echo '>'.$dev['dev'].' ('.$dev['label'].')</option>';
   }
-  echo '</select><button>Select</button>';
-  echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\');" value="device settings"/>';
-  echo "</form>\n";
+  echo '</select>';
+  echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\',\'device settings\');" value="show device settings"/>';
+  echo "</div>\n";
 }
 
 function auth( $username, $password )
@@ -461,18 +550,21 @@ function html_show_room( $room, $device, $inroom, $user )
     $span = $doc->createElement('span');
     $tit->appendChild($span);
     $span->setAttribute('class','rname');
-    $span->appendChild($doc->createTextNode($rprop['name']));
-    $tit->appendChild($doc->createTextNode('(A='.$rprop['area'].' m'));
+    $span->appendChild($doc->createTextNode($rprop['name'].' '));
+    $span = $doc->createElement('span');
+    $tit->appendChild($span);
+    $span->setAttribute('class','rdesc');
+    $span->appendChild($doc->createTextNode('(size: '.$rprop['sx'].' x '.$rprop['sy'].' x '.$rprop['sz'].' m'));
     $sup = $doc->createElement('sup');
-    $tit->appendChild($sup);
-    $sup->appendChild($doc->createTextNode('2'));
-    $tit->appendChild($doc->createTextNode(', V='.$rprop['volume'].' m'));
-    $sup = $doc->createElement('sup');
-    $tit->appendChild($sup);
+    $span->appendChild($sup);
     $sup->appendChild($doc->createTextNode('3'));
-    $tit->appendChild($doc->createTextNode(', T60='.sprintf("%1.2f",$rprop['t60']).' s)'));
+    $span->appendChild($doc->createTextNode(', T'));
+    $sup = $doc->createElement('sub');
+    $span->appendChild($sup);
+    $sup->appendChild($doc->createTextNode('60'));
+    $span->appendChild($doc->createTextNode(': '.sprintf("%1.2f",$rprop['t60']).' s)'));
     if( !empty($rprop['owner']) )
-      $tit->appendChild($doc->createTextNode(' managed by '.$rprop['owner']));
+      $span->appendChild($doc->createTextNode(' managed by '.$rprop['owner']));
     $memb = $doc->createElement('div');
     $root->appendChild($memb);
     $memb->setAttribute('class','rmembers');
@@ -532,6 +624,7 @@ function html_show_room( $room, $device, $inroom, $user )
       }
     }
     if( $user == $rprop['owner'] ){
+      // my room, provide settings box:
       $ctl->appendChild($doc->createTextNode(' '));
       if( !empty($roomdev) ){
         $a = $doc->createElement('a');
@@ -543,8 +636,8 @@ function html_show_room( $room, $device, $inroom, $user )
       $ctl->appendChild($tog);
       $tog->setAttribute('type','button');
       $tog->setAttribute('class','roomsettingstoggle');
-      $tog->setAttribute('onclick','toggledisplay("'.$room.'ctl");');
-      $tog->setAttribute('value','room settings');
+      $tog->setAttribute('onclick','toggledisplay("'.$room.'ctl","room settings");');
+      $tog->setAttribute('value','show room settings');
       $rp = $doc->createElement('div');
       $root->appendChild($rp);
       $rp->setAttribute('style','display: none;');
@@ -561,6 +654,8 @@ function html_show_room( $room, $device, $inroom, $user )
       $inp->setAttribute('type','hidden');
       $inp->setAttribute('name','setroom');
       $inp->setAttribute('value',$room);
+      $form->appendChild($doc->createTextNode($room));
+      $form->appendChild($doc->createElement('br'));
       $form->appendChild($doc->createTextNode('Name: '));
       $inp = $doc->createElement('input');
       $form->appendChild($inp);
