@@ -1,10 +1,15 @@
 #include "udpsocket.h"
 #include "common.h"
 #include <errno.h>
+#include <net/if.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <stdio.h>
 #include <string.h>
 #include <string>
 #include <strings.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 #define LISTEN_BACKLOG 512
 
@@ -61,7 +66,7 @@ port_t udpsocket_t::bind(port_t port)
                      " failed: ",
                  errno);
   socklen_t addrlen(sizeof(endpoint_t));
-  getsockname( sockfd, (struct sockaddr*)&my_addr, &addrlen);
+  getsockname(sockfd, (struct sockaddr*)&my_addr, &addrlen);
   return ntohs(my_addr.sin_port);
 }
 
@@ -101,22 +106,16 @@ std::string ep2str(const endpoint_t& ep)
   return addr2str(ep.sin_addr) + "/" + std::to_string(ntohs(ep.sin_port));
 }
 
-ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret)
-    : secret(secret)
-{
-  for( uint32_t k=0;k<MAXEP;++k)
-    pingseq[k] = 0;
-}
+ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret) : secret(secret) {}
 
 void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
 {
-  if( cid >= MAXEP )
+  if(cid >= MAXEP)
     return;
   char buffer[pingbufsize];
   std::chrono::high_resolution_clock::time_point t1(
       std::chrono::high_resolution_clock::now());
-  ++pingseq[cid];
-  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PING, ++pingseq[cid],
+  size_t n = packmsg(buffer, pingbufsize, secret, cid, PORT_PING, 0,
                      (const char*)(&t1), sizeof(t1));
   send(buffer, n, ep);
 }
@@ -150,4 +149,52 @@ char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
   seq = msg_seq(inputbuf);
   len = ilen - HEADERLEN;
   return &(inputbuf[HEADERLEN]);
+}
+
+std::string getmacaddr()
+{
+  std::string retv;
+  struct ifreq ifr;
+  struct ifconf ifc;
+  char buf[1024];
+  int success = 0;
+
+  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+  if(sock == -1) { /* handle error*/
+    return retv;
+  };
+
+  ifc.ifc_len = sizeof(buf);
+  ifc.ifc_buf = buf;
+  if(ioctl(sock, SIOCGIFCONF, &ifc) == -1) { /* handle error */
+    return retv;
+  }
+
+  struct ifreq* it = ifc.ifc_req;
+  const struct ifreq* const end = it + (ifc.ifc_len / sizeof(struct ifreq));
+
+  for(; it != end; ++it) {
+    strcpy(ifr.ifr_name, it->ifr_name);
+    if(ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
+      if(!(ifr.ifr_flags & IFF_LOOPBACK)) { // don't count loopback
+        if(ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+          success = 1;
+          break;
+        }
+      }
+    } else { /* handle error */
+      return retv;
+    }
+  }
+
+  unsigned char mac_address[6];
+
+  if(success) {
+    memcpy(mac_address, ifr.ifr_hwaddr.sa_data, 6);
+    char ctmp[1024];
+    sprintf(ctmp, "%02x%02x%02x%02x%02x%02x", mac_address[0], mac_address[1],
+            mac_address[2], mac_address[3], mac_address[4], mac_address[5]);
+    retv = ctmp;
+  }
+  return retv;
 }

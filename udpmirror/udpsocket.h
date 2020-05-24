@@ -34,8 +34,6 @@ public:
   void send_registration(callerid_t cid, bool peer2peer, port_t port);
   char* recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len, callerid_t& cid,
                      port_t& destport, sequence_t& seq, endpoint_t& addr);
-
-  sequence_t pingseq[MAXEP];
   void set_secret(secret_t s) { secret = s; };
 
 protected:
@@ -44,6 +42,8 @@ protected:
 
 std::string addr2str(const struct in_addr& addr);
 std::string ep2str(const endpoint_t& ep);
+
+std::string getmacaddr();
 
 #endif
 

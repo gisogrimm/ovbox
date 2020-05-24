@@ -2,9 +2,7 @@ VERSION=0.1
 
 CXXFLAGS += -Wall -std=c++11 -O3
 
-LDLIBS = -lcurl
-
-MPLX=roomservice ovboxclient devconfigclient
+MPLX=roomservice ovboxclient devconfigclient getmacaddr
 
 BINFILES = $(MPLX)
 
@@ -16,11 +14,13 @@ FULLVERSION=$(VERSION).$(COMMIT_SINCE_MASTER)-$(COMMITHASH)$(GITMODIFIED)
 
 CXXFLAGS += -DOVBOXVERSION="\"$(FULLVERSION)\""
 
-all: $(BINFILES) getmacaddr
+all: $(BINFILES)
 
 common.o: common.cc common.h
 udpsocket.o: udpsocket.cc udpsocket.h common.h
 callerlist.o: callerlist.cc callerlist.h udpsocket.h common.h
+roomservice ovboxclient devconfigclient: LDLIBS = -lcurl
+
 
 $(DUP): LDLIBS+=-lboost_system -lpthread
 

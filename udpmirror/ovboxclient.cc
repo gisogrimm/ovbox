@@ -7,7 +7,6 @@
 #include <map>
 #include <thread>
 
-
 class udpreceiver_t : public endpoint_list_t {
 public:
   udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
@@ -96,9 +95,11 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
                                      uint32_t lost)
 {
   char ctmp[1024];
-  sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
-          lmean, lmax);
-  log(recport, ctmp);
+  if(lmean > 0) {
+    sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid,
+            lmin, lmean, lmax);
+    log(recport, ctmp);
+  }
   sprintf(ctmp, "packages from %d received=%d lost=%d (%1.2f%%)", cid, received,
           lost, 100.0 * (double)lost / (double)(std::max(1u, received + lost)));
   log(recport, ctmp);
@@ -186,8 +187,7 @@ void udpreceiver_t::sendsrv()
             remote_server.send(buffer, n, sender_endpoint);
             break;
           case PORT_PONG:
-            if((rcallerid != callerid) &&
-               (seq == remote_server.pingseq[rcallerid])) {
+            if(rcallerid != callerid) {
               double tms(get_pingtime(msg, un));
               if(tms > 0)
                 cid_setpingtime(rcallerid, tms);

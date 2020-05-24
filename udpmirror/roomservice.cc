@@ -89,10 +89,12 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
                                      double lmax, uint32_t received,
                                      uint32_t lost)
 {
-  char ctmp[1024];
-  sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid, lmin,
-          lmean, lmax);
-  log(portno, ctmp);
+  if(lmean > 0) {
+    char ctmp[1024];
+    sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid,
+            lmin, lmean, lmax);
+    log(portno, ctmp);
+  }
 }
 
 // this thread announces the room service to the lobby:
@@ -107,7 +109,7 @@ void udpreceiver_t::announce_service()
       if(get_num_clients() == 0) {
         long int r(random());
         secret = r & 0xfffffff;
-	socket.set_secret( secret );
+        socket.set_secret(secret);
       }
       // register at lobby:
       CURLcode res;
@@ -218,12 +220,9 @@ void udpreceiver_t::srv()
           }
           break;
         case PORT_PONG: {
-          if((rcallerid < MAXEP) && (seq == socket.pingseq[rcallerid])) {
-
-            double tms(get_pingtime(msg, un));
-            if(tms > 0)
-              cid_setpingtime(rcallerid, tms);
-          }
+          double tms(get_pingtime(msg, un));
+          if(tms > 0)
+            cid_setpingtime(rcallerid, tms);
         } break;
         case PORT_REGISTER:
           // in the register packet the sequence is used to transmit
