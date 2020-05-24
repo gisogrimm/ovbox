@@ -1,7 +1,7 @@
 # get device mac address:
-test -e cfg/devicename || ./udpmirror/getmacaddr > cfg/devicename
+./udpmirror/getmacaddr > cfg/devicename
 devicename=$(cat cfg/devicename)
-test -z "${devicename}" && ./udpmirror/getmacaddr > cfg/devicename
+test -z "${devicename}" && hostname > cfg/devicename
 devicename=$(cat cfg/devicename)
 
 # get hostname:
