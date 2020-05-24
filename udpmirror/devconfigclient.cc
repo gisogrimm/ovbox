@@ -1,12 +1,13 @@
 #include "common.h"
+#include "udpsocket.h"
 #include <curl/curl.h>
+#include <fstream>
+#include <signal.h>
 #include <sstream>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-#include <signal.h>
 #include <unistd.h>
-#include <fstream>
 
 CURL* curl;
 static bool quit_app(false);
@@ -41,7 +42,8 @@ namespace webCURL {
 
 } // namespace webCURL
 
-std::string get_device_info( std::string url, const std::string& device, std::string& hash)
+std::string get_device_info(std::string url, const std::string& device,
+                            std::string& hash)
 {
   CURLcode res;
   std::string retv;
@@ -77,7 +79,7 @@ std::string get_device_info( std::string url, const std::string& device, std::st
   bool first(true);
   retv = "";
   while(std::getline(ss, to, '\n')) {
-    if( first )
+    if(first)
       hash = to;
     else
       retv += to + '\n';
@@ -101,14 +103,14 @@ int main(int argc, char** argv)
     curl = curl_easy_init();
     if(!curl)
       throw ErrMsg("Unable to initialize curl");
-    std::string lobby("localhost");
-    std::string device("");
+    std::string lobby("http://box.orlandoviols.com/");
+    std::string device(getmacaddr());
     double gracetime(10);
     const char* options = "d:hl:g:";
     struct option long_options[] = {{"device", 1, 0, 'd'},
                                     {"lobbyurl", 1, 0, 'l'},
                                     {"help", 0, 0, 'h'},
-				    {"gracetime", 1, 0, 'g' },
+                                    {"gracetime", 1, 0, 'g'},
                                     {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
@@ -129,26 +131,28 @@ int main(int argc, char** argv)
         break;
       }
     }
+    std::cerr << "Connecting to " << lobby << " for device " << device << "."
+              << std::endl;
     std::string hash;
     FILE* h_pipe(NULL);
-    while( !quit_app ) {
+    while(!quit_app) {
       std::string tsc = get_device_info(lobby, device, hash);
-      if( tsc.size() ){
-	// close current TASCAR session:
-	if( h_pipe )
-	  fclose(h_pipe);
-	h_pipe = NULL;
-	// write new session file:
-	std::ofstream ofh("session.tsc");
-	ofh << tsc;
-	ofh.close();
-	// reopen TASCAR:
-	h_pipe = popen( "tascar_cli session.tsc", "w" );
+      if(tsc.size()) {
+        // close current TASCAR session:
+        if(h_pipe)
+          fclose(h_pipe);
+        h_pipe = NULL;
+        // write new session file:
+        std::ofstream ofh("session.tsc");
+        ofh << tsc;
+        ofh.close();
+        // reopen TASCAR:
+        h_pipe = popen("tascar_cli session.tsc", "w");
       }
       sleep(gracetime);
     }
     // close TASCAR::
-    if( h_pipe )
+    if(h_pipe)
       fclose(h_pipe);
     h_pipe = NULL;
     curl_easy_cleanup(curl);
