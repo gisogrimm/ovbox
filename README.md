@@ -72,7 +72,7 @@ extensions. This mixer interface can be opened from any
 html5-compatible browser in the same network as the ovbox, and is
 optimized for smartphone/touch use.
 
-For a glimpse on what might come, see [vision.md](doc/vision.md).
+For a description of our "House of Consort" (a virtual building with lots of rooms to play music), see [vision.md](doc/vision.md) (this is not a vision anymore). If you would like to get access to our "House of Consort", please contact us via email.
 
 ## Starting the tools
 
