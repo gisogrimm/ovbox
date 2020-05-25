@@ -13,7 +13,7 @@ function print_head( $user = "" )
   }
   echo '</style>';
   //echo '<script>location.href="/";</script>';
-  //echo '<meta http-equiv="refresh" content="8; url=/"/>';
+  echo '<meta http-equiv="refresh" content="180; url=/"/>';
   echo '<script>function toggledisplay(id,msg){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";event.target.value=\'hide \'+msg;}else{x.style.display="none";event.target.value=\'show \'+msg;}}</script>';
   echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
@@ -49,7 +49,11 @@ function get_rooms()
 function select_userdev( $user, $dev )
 {
   $fname = '../db/' . $user . '.userdevice';
-  file_put_contents( $fname, $dev );
+  if( empty($dev) ){
+    unlink($fname);
+  }else{
+    file_put_contents( $fname, $dev );
+  }
 }
 
 function rm_device( $dev )
@@ -94,6 +98,7 @@ function get_device_prop( $device )
   'inputport'=>'system:capture_1',
   'inputport2'=>'',
   'srcdist'=>1.2,
+  'egogain'=>-6,
   'access'=>0 );
   $fname = '../db/' . $device . '.device';
   if( file_exists( $fname ) ){
@@ -298,6 +303,7 @@ function xml_add_sound( &$source, $doc, $x, $y, $z, $port = '' )
   $sound = $doc->createElement("sound");
   $source->appendChild($sound);
   $sound->setAttribute("maxdist","50");
+  $sound->setAttribute("gainmodel","1");
   $sound->setAttribute("x",$x);
   $sound->setAttribute("y",$y);
   $sound->setAttribute("z",$z);
@@ -346,7 +352,7 @@ function get_tascar_cfg( $device, $devhash )
       ksort($roomdev);
       $daz = 360/count($roomdev)*(pi()/180);
       $az = 0;
-      $radius = 1.7;
+      $radius = 1.2;
       foreach( $roomdev as $chair => $dev ){
         $az = $az+$daz;
         $pos_x = sprintf("%1.3f",$radius * cos( $az ));
@@ -355,11 +361,17 @@ function get_tascar_cfg( $device, $devhash )
         $devprop = get_device_prop( $dev );
         $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
         if( $numsource > 0 ){
+          $dz = 0;
+          $dx = 0;
+          $gain = 0;
           $source = $doc->createElement("source");
           $scene->appendChild($source);
           $inport = '';
           if ( $dev == $device ){
             $source->setAttribute("name","ego");
+            $dz = -0.4;
+            $dx = 0.1;
+            $gain = $devprop['egogain'];
           }else{
             $source->setAttribute("name",$devprop['label']);
           }
@@ -368,13 +380,17 @@ function get_tascar_cfg( $device, $devhash )
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport'];
-            xml_add_sound( $source, $doc, 0.4, $dy, -0.7, $inport );
+            $snd = xml_add_sound( $source, $doc, $dx, $dy, $dz, $inport );
+            if( $gain != 0 )
+              $snd->setAttribute("gain",$gain);
           }
           if( !empty($devprop['inputport2']) ){
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport2'];
-            xml_add_sound( $source, $doc, 0.4, -$dy, -0.7, $inport );
+            $snd = xml_add_sound( $source, $doc, $dx, -$dy, $dz, $inport );
+            if( $gain != 0 )
+              $snd->setAttribute("gain",$gain);
           }
           $xmlpos = $doc->createElement("position");
           $source->appendChild($xmlpos);
@@ -401,6 +417,7 @@ function get_tascar_cfg( $device, $devhash )
         $reverb->setAttribute("volumetric",$roomprop['size']);
         $reverb->setAttribute("image","false");
         $reverb->setAttribute("fdnorder","5");
+        $reverb->setAttribute("dw","60");
         $reverb->setAttribute("absorption",$roomprop['rvbabs']);
         $reverb->setAttribute("damping",$roomprop['rvbdamp']);
         $reverb->setAttribute("gain",$roomprop['rvbgain']);
@@ -485,7 +502,7 @@ function get_tascar_cfg( $device, $devhash )
     $sndfile = $doc->createElement("sndfile");
     $plugs->appendChild($sndfile);
     $sndfile->setAttribute("name","announce.flac");
-    $sndfile->setAttribute("level","65");
+    $sndfile->setAttribute("level","57");
     $sndfile->setAttribute("transport","false");
     $sndfile->setAttribute("loop","0");
   }
@@ -510,6 +527,7 @@ function html_device_selector( $user, $currentdevice )
   }
   echo "<div>";
   echo '<select id="devselect" name="devselect" oninput="location.href=\'?devselect=\'+event.target.value;">';
+  echo '<option value="""> -- please select a device --</option>';
   foreach( owned_devices( $user ) as $dev ){
     echo '<option value="'.$dev['dev'].'"';
     if( $currentdevice == $dev['dev'] )
@@ -554,7 +572,7 @@ function html_show_room( $room, $device, $inroom, $user )
     $span = $doc->createElement('span');
     $tit->appendChild($span);
     $span->setAttribute('class','rdesc');
-    $span->appendChild($doc->createTextNode('(size: '.$rprop['sx'].' x '.$rprop['sy'].' x '.$rprop['sz'].' m'));
+    $span->appendChild($doc->createTextNode('('.$rprop['sx'].' x '.$rprop['sy'].' x '.$rprop['sz'].' m'));
     $sup = $doc->createElement('sup');
     $span->appendChild($sup);
     $sup->appendChild($doc->createTextNode('3'));

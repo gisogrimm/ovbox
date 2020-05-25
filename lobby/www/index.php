@@ -156,6 +156,8 @@ if( isset($_GET['setdevprop']) ){
             $prop['jitterreceive'] = $_GET['jitterreceive'];
         if( isset($_GET['label']) )
             $prop['label'] = $_GET['label'];
+        if( isset($_GET['egogain']) )
+            $prop['egogain'] = $_GET['egogain'];
         if( isset($_GET['inputport']) )
             $prop['inputport'] = $_GET['inputport'];
         if( isset($_GET['inputport2']) )
@@ -205,12 +207,18 @@ if( isset($_GET['claim']) ){
     header( "Location: /" );
 }
 
+if ( empty( $device ) ) {
+    foreach( owned_devices($user) as $dev ){
+        header( "Location: /?devselect=" . $dev['dev'] );
+        die();
+    }
+}
+
 print_head( $user );
     
 
 if ( empty( $device ) ) {
-    echo "<p>You are logged in as user {$user}. Select a device to book a room.</p>";
-    html_device_selector( $user, $device );
+    echo "<p>You are logged in as user {$user}. You have no registered device.</p>";
 } else {
     $devprop = get_device_prop( $device );
     echo "<p>You are logged in as user <b>{$user}</b> with device <b>{$device} (".$devprop['label'].")</b>.</p>";
@@ -224,6 +232,8 @@ if ( empty( $device ) ) {
     echo '<input id="inputport2" name="inputport2" type="text" value="'.$devprop['inputport2'].'"><br>' . "\n";
     echo '<label for="srcdist">distance between sources (in case of you send more than one channel): </label><br>';
     echo '<input id="srcdist" name="srcdist" type="number" min="0" step="0.01" value="'.$devprop['srcdist'].'"><br>' . "\n";
+    echo '<label for="egogain">ego monitor gain in dB: </label><br>';
+    echo '<input id="egogain" name="egogain" type="number" min="-30" max="10" step="0.1" value="'.$devprop['egogain'].'"><br>' . "\n";
     echo '<label for="jittersend">sender jitter (affects buffer length of others): </label><br>';
     echo '<input id="jittersend" name="jittersend" type="number" min="2" max="30" value="'.$devprop['jittersend'].'"><br>' . "\n";
     echo '<label for="jitterreceive">receiver jitter (affects your own buffer length): </label><br>';
