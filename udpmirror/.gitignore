@@ -9,3 +9,4 @@ roomservice
 ovboxclient
 getmacaddr
 devconfigclient
+jackwaitforport

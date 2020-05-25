@@ -14,7 +14,7 @@ FULLVERSION=$(VERSION).$(COMMIT_SINCE_MASTER)-$(COMMITHASH)$(GITMODIFIED)
 
 CXXFLAGS += -DOVBOXVERSION="\"$(FULLVERSION)\""
 
-all: $(BINFILES)
+all: $(BINFILES) jackwaitforport
 
 common.o: common.cc common.h
 udpsocket.o: udpsocket.cc udpsocket.h common.h
@@ -28,7 +28,10 @@ $(MPLX): LDLIBS+=-lpthread
 
 $(BINFILES): common.o udpsocket.o callerlist.o
 
+jackwaitforport: LDLIBS+=-ljack
+
 ovboxclient: LDLIBS+=-llo
 
 clean:
 	rm -f *~ $(BINFILES) *.o
+
