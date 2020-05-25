@@ -4,11 +4,13 @@ The ovbox is a remote collaboration box developed by the ensemble [ORLANDOviols]
 
 ![consortbox](doc/consortbox.jpg)
 
-## Hardware components
+## Tested hardware components
 
-Raspberry Pi 3B+
+Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
+Ubuntu LTS (20.04, 18.04, 16.04)
 
-TASCAM US2x2 (any other class-compliant sound card would do as well)
+Scarlett Solo (recommended), TASCAM US2x2, Mackie Onyx 2-2, or any
+other class compliant USB sound card
 
 basic condenser mic, headphones, cables
 
@@ -107,24 +109,29 @@ JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 9
 Alternatively you may compile your own0 jackd with dbus deactivated.
 
 
+In folder `cfg`, start the session management tool:
 ````
-mplx_client -d mplx.yourdomain.com -p 4464 -l 4464 -c 0
+cd cfg
+../udpmirror/devconfigclient
 ````
 
-This starts the multiplexer/tunnel client. `-d mplx.yourdomain.com` sets
-the remote server name, `-p 4464` the remote server port. `-l 4464` is
-the local port, to which UDP messages can be sent. `-c 0` sets the
-caller/client ID to 0. This is the participant number within the
-session, currently numbers up to 31 are supported.
+This starts the multiplexer/tunnel client. It will connect with our
+session management service at http://box.orlandoviols.com/ (this can
+be changed with the `-l` flag).
+
+Upon session registration, this will start a TASCAR session, with
+something like these network clients (details will specify on your
+configuration):
 
 ````
+../udpmirror/ovboxclient -s 8367365 -d 123.23.12.45 -p 4367 -c 0 -l 4464 -2
 zita-n2j --chan 1 --jname Marthe --buff 15 0.0.0.0 4466
 zita-n2j --chan 1 --jname Frauke --buff 17 0.0.0.0 4468
 zita-n2j --chan 1 --jname Hille --buff 19 0.0.0.0 4470
 zita-n2j --chan 1 --jname Claas --buff 14 0.0.0.0 4472
 ````
 
-These are the real audio clients. The `mplx_client` will distribute
+These are the real audio clients. The `ovboxclient` will distribute
 UDP messages from the server to these clients. The output of these
 clients can then used in jack for mixing (in our case spatialization
 with TASCAR, but any other panning/mixing could be possible). The
@@ -150,15 +157,15 @@ jack_connect system:capture_1 sender:in_1
 ````
 Here, `render.scene` is the TASCAR scene, which could be replaced by another mixer or simply by using the hardware outputs directly. The last line connects the first hardware input channel with the sender.
 
-## mplx_tools
+## udp tunnel tools
 
-The tools `mplx_server` and `mplx_client` form the main communication
+The tools `roomservice` and `ovboxclient` form the main communication
 protocol. They are essentially a STUN server and a TURN server, and
 provide a minimalistic session management.
 
 ## peer-to-peer mode vs server mode
 
-The `mplx_client` / `mplx_server` tools support connection via server
+The `roomservice` / `ovboxclient` tools support connection via server
 or a peer-to-peer mode. In both cases the central server is needed for
 negotiation of the participants. peer-to-peer mode can activated at
 the client with the `-2` flag. A mixed automatic switching between
