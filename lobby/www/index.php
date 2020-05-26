@@ -145,25 +145,27 @@ if( isset($_GET['lockroom']) ){
     header( "Location: /" );
 }
 
+function set_getprop( &$prop, $key )
+{
+    if( isset($_GET[$key]) ){
+        $prop[$key] = $_GET[$key];
+    }
+}
+    
 if( isset($_GET['setdevprop']) ){
     if( !empty( $device ) ){
         $prop = get_device_prop( $device );
         $prop['reverb'] = isset($_GET['reverb']);
         $prop['peer2peer'] = isset($_GET['peer2peer']);
-        if( isset($_GET['jittersend']) )
-            $prop['jittersend'] = $_GET['jittersend'];
-        if( isset($_GET['jitterreceive']) )
-            $prop['jitterreceive'] = $_GET['jitterreceive'];
-        if( isset($_GET['label']) )
-            $prop['label'] = $_GET['label'];
-        if( isset($_GET['egogain']) )
-            $prop['egogain'] = $_GET['egogain'];
-        if( isset($_GET['inputport']) )
-            $prop['inputport'] = $_GET['inputport'];
-        if( isset($_GET['inputport2']) )
-            $prop['inputport2'] = $_GET['inputport2'];
-        if( isset($_GET['srcdist']) )
-            $prop['srcdist'] = $_GET['srcdist'];
+        set_getprop($prop,'jittersend');
+        set_getprop($prop,'jitterreceive');
+        set_getprop($prop,'label');
+        set_getprop($prop,'egogain');
+        set_getprop($prop,'inputport');
+        set_getprop($prop,'inputport2');
+        set_getprop($prop,'srcdist');
+        set_getprop($prop,'outputport1');
+        set_getprop($prop,'outputport2');
         set_device_prop( $device, $prop );
     }
     header( "Location: /" );
@@ -230,6 +232,9 @@ if ( empty( $device ) ) {
     echo '<label for="inputport">input ports (to which your microphones/instruments are connected): </label><br>';
     echo '<input id="inputport" name="inputport" type="text" value="'.$devprop['inputport'].'">' . "\n";
     echo '<input id="inputport2" name="inputport2" type="text" value="'.$devprop['inputport2'].'"><br>' . "\n";
+    echo '<label for="outputport1">output ports (to which your headphones are connected): </label><br>';
+    echo '<input id="outputport1" name="outputport1" type="text" value="'.$devprop['outputport1'].'">' . "\n";
+    echo '<input id="outputport2" name="outputport2" type="text" value="'.$devprop['outputport2'].'"><br>' . "\n";
     echo '<label for="srcdist">distance between sources (in case of you send more than one channel): </label><br>';
     echo '<input id="srcdist" name="srcdist" type="number" min="0" step="0.01" value="'.$devprop['srcdist'].'"><br>' . "\n";
     echo '<label for="egogain">ego monitor gain in dB: </label><br>';

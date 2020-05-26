@@ -97,6 +97,8 @@ function get_device_prop( $device )
   'age'=>3600*24*365*100,
   'inputport'=>'system:capture_1',
   'inputport2'=>'',
+  'outputport1'=>'system:playback_1',
+  'outputport2'=>'system:playback_2',
   'srcdist'=>1.2,
   'egogain'=>-6,
   'access'=>0 );
@@ -335,11 +337,11 @@ function get_tascar_cfg( $device, $devhash )
   // master connections
   $conn = $doc->createElement("connect");
   $conn->setAttribute("src","render.scene:master_l");
-  $conn->setAttribute("dest","system:playback_1");
+  $conn->setAttribute("dest",$localdevprop['outputport1']);
   $session->appendChild($conn);
   $conn = $doc->createElement("connect");
   $conn->setAttribute("src","render.scene:master_r");
-  $conn->setAttribute("dest","system:playback_2");
+  $conn->setAttribute("dest",$localdevprop['outputport2']);
   $session->appendChild($conn);
   // room specific setup:    
   if ( !empty( $localdevprop['room'] ) ){
