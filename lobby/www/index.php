@@ -1,5 +1,8 @@
 <?php
 
+$fp = fopen("../lock.txt", "r+");
+flock($fp, LOCK_EX );
+
 include '../php/ovbox.inc';
 
 $user = getenv('ovboxuser');
