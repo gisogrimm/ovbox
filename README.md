@@ -1,6 +1,9 @@
 # ORLANDOviols Consort box (ovbox)
 
-The ovbox is a remote collaboration box developed by the ensemble [ORLANDOviols](http://orlandoviols.com) primarily to allow rehearsals during the lockdown due to Covid19 pandemia. This box is completely built upon open source software and open or standardized hardware.
+The ovbox is a remote collaboration box developed by the ensemble
+[ORLANDOviols](http://orlandoviols.com) primarily to allow rehearsals
+during the lockdown due to Covid19 pandemia. This box is completely
+built upon open source software and open or standardized hardware.
 
 ![consortbox](doc/consortbox.jpg)
 
@@ -34,6 +37,8 @@ TASCAR (virtual acoustic engine)
 
 a self-written UDP tunnel and multiplexer (see folder udpmirror)
 
+For installation instructions see file [INSTALL.md](INSTALL.md).
+
 
 ## Performance
 
@@ -53,13 +58,17 @@ and other pro-audio software.
 ## Architecture
 
 On a central server (or one endpoint reachable from outside) the
-multiplexer/tunnel server `mplx_server` needs to be running. This
-listens at a single UDP port. The boxes connect to this server with
-the multiplexer client software `mplx_client` and can receive UDP
-messages from the other participants sent their client software. UDP
-messages sent to the local client are transferred to the server. To
-minimize data manipulation, the packages are protected by a 32bit
-secret (but not encrypted).
+multiplexer/tunnel server `roomservice` needs to be running. This
+listens at a single UDP port. On the configuration/management server,
+a web based user interface is running. This server also runs a small
+database system, which stores device configurations and room settings.
+The boxes connect to this server, receive a configuration file, and
+start multiplexer client software `ovboxclient` to connect with the
+`roomservice` chosen in the web user interface. Now the boxes can
+receive UDP messages from the other participants sent to their client
+software. UDP messages sent to the local client are transferred to the
+`roomservice`. To minimize data manipulation, the packages are
+protected by a 32bit secret (but not encrypted).
 
 At each endpoint, one intance of zita-n2j is started for each
 potential participant. One instance of zita-j2n is started on each box
@@ -74,7 +83,10 @@ extensions. This mixer interface can be opened from any
 html5-compatible browser in the same network as the ovbox, and is
 optimized for smartphone/touch use.
 
-For a description of our "House of Consort" (a virtual building with lots of rooms to play music), see [vision.md](doc/vision.md) (this is not a vision anymore). If you would like to get access to our "House of Consort", please contact us via email.
+For a description of our "House of Consort" (a virtual building with
+lots of rooms to play music), see [vision.md](doc/vision.md) (this is
+not a vision anymore). If you would like to get access to our "House
+of Consort", please contact us via email.
 
 ## Starting the tools
 
@@ -83,7 +95,7 @@ but also for the whole session management. Essentially, on each client
 these commands are started:
 
 ````
-jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2
+jackd --sync -P 40 -d alsa -d hw:1 -r 48000 -p 96 -n 2
 ````
 
 This starts the audio backend. `--sync` is required for delay
@@ -106,7 +118,7 @@ setting the environment variable `JACK_NO_AUDIO_RESERVATION=1`:
 JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2
 ````
 
-Alternatively you may compile your own0 jackd with dbus deactivated.
+Alternatively you may compile your own jackd with dbus deactivated.
 
 
 In folder `cfg`, start the session management tool:
@@ -120,7 +132,7 @@ session management service at http://box.orlandoviols.com/ (this can
 be changed with the `-l` flag).
 
 Upon session registration, this will start a TASCAR session, with
-something like these network clients (details will specify on your
+something like these network clients (details will depend on your
 configuration):
 
 ````
@@ -155,7 +167,9 @@ jack_connect Hille:out_1 render.scene:Hille.0.0
 jack_connect Claas:out_1 render.scene:Claas.0.0
 jack_connect system:capture_1 sender:in_1
 ````
-Here, `render.scene` is the TASCAR scene, which could be replaced by another mixer or simply by using the hardware outputs directly. The last line connects the first hardware input channel with the sender.
+Here, `render.scene` is the TASCAR scene, which could be replaced by
+another mixer or simply by using the hardware outputs directly. The
+last line connects the first hardware input channel with the sender.
 
 ## udp tunnel tools
 
