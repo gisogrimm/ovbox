@@ -9,16 +9,6 @@ socket.on("scene", function(scene){
     el.append(scene,elheader);
     let elgainstore=document.createElement("p");
     elgainstore.setAttribute("class","gainstore");
-    let elbutsave=document.createElement("button");
-    elbutsave.setAttribute("id","/savegains/save");
-    elbutsave.setAttribute("onclick","socket.emit('msg',{path:'/savegains/save'});");
-    elbutsave.append("save");
-    elgainstore.appendChild(elbutsave);
-    let elbutrestore=document.createElement("button");
-    elbutrestore.setAttribute("id","/savegains/restore");
-    elbutrestore.setAttribute("onclick","socket.emit('msg',{path:'/savegains/restore'});");
-    elbutrestore.append("restore");
-    elgainstore.appendChild(elbutrestore);
     el.appendChild(elgainstore);
 });
 socket.on("newfader", function(faderno,val){

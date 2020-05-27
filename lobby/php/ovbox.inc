@@ -100,7 +100,7 @@ function get_device_prop( $device )
   'outputport1'=>'system:playback_1',
   'outputport2'=>'system:playback_2',
   'srcdist'=>1.2,
-  'egogain'=>-6,
+  'egogain'=>0,
   'access'=>0 );
   $fname = '../db/' . $device . '.device';
   if( file_exists( $fname ) ){
@@ -300,23 +300,22 @@ function room_swap_devices( $dev1, $dev2 )
   }
 }
 
-function xml_add_sound( &$source, $doc, $x, $y, $z, $port = '' )
+function xml_add_sound( &$source, $doc, $attrs )
 {
   $sound = $doc->createElement("sound");
   $source->appendChild($sound);
   $sound->setAttribute("maxdist","50");
   $sound->setAttribute("gainmodel","1");
-  $sound->setAttribute("x",$x);
-  $sound->setAttribute("y",$y);
-  $sound->setAttribute("z",$z);
-  if( !empty($port) )
-    $sound->setAttribute("connect",$port );
+  foreach( $attrs as $attr=>$value ){
+    $sound->setAttribute($attr,$value);
+  }
   return $sound;
 }
 
 function get_tascar_cfg( $device, $devhash )
 {
   $cuccess = false;
+  $waitports = '';
   $localdevprop = get_device_prop( $device );
   // create TASCAR document:
   $doc = new DOMDocument();
@@ -365,7 +364,8 @@ function get_tascar_cfg( $device, $devhash )
         if( $numsource > 0 ){
           $dz = 0;
           $dx = 0;
-          $gain = 0;
+          // relative gain:
+          $gain = -4.41;
           $source = $doc->createElement("source");
           $scene->appendChild($source);
           $inport = '';
@@ -382,17 +382,13 @@ function get_tascar_cfg( $device, $devhash )
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport'];
-            $snd = xml_add_sound( $source, $doc, $dx, $dy, $dz, $inport );
-            if( $gain != 0 )
-              $snd->setAttribute("gain",$gain);
+            $snd = xml_add_sound( $source, $doc, array('x'=>$dx, 'y'=>$dy, 'z'=>$dz, 'connect'=>$inport, 'gain'=>$gain) );
           }
           if( !empty($devprop['inputport2']) ){
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport2'];
-            $snd = xml_add_sound( $source, $doc, $dx, -$dy, $dz, $inport );
-            if( $gain != 0 )
-              $snd->setAttribute("gain",$gain);
+            $snd = xml_add_sound( $source, $doc, array('x'=>$dx, 'y'=>-$dy, 'z'=>$dz, 'connect'=>$inport, 'gain'=>$gain) );
           }
           $xmlpos = $doc->createElement("position");
           $source->appendChild($xmlpos);
@@ -454,7 +450,9 @@ function get_tascar_cfg( $device, $devhash )
           // connection
           for($k=0;$k<$numsource;$k++){
             $conn = $doc->createElement("connect");
-            $conn->setAttribute("src",$devuser . ":out_".($k+1));
+            $port = $devuser . ":out_".($k+1);
+            $waitports = $waitports . ' ' . $port;
+            $conn->setAttribute("src",$port);
             $conn->setAttribute("dest","render.scene:" . $devuser . ".".$k.".0");
             $session->appendChild($conn);
           }
@@ -470,20 +468,23 @@ function get_tascar_cfg( $device, $devhash )
         if( !empty($localdevprop['inputport']) ){
           $conn = $doc->createElement("connect");
           $conn->setAttribute("src",$localdevprop['inputport']);
-          $conn->setAttribute("dest","sender:in_1");
+          $port = "sender:in_1";
+          $waitports = $waitports . ' ' . $port;
+          $conn->setAttribute("dest",$port);
           $session->appendChild($conn);
         }
         if( !empty($localdevprop['inputport2']) ){
           $conn = $doc->createElement("connect");
           $conn->setAttribute("src",$localdevprop['inputport2']);
-          $conn->setAttribute("dest","sender:in_".$numsource);
+          $port = "sender:in_".$numsource;
+          $waitports = $waitports . ' ' . $port;
+          $conn->setAttribute("dest",$port);
           $session->appendChild($conn);
         }
       }
       $mod = $doc->createElement("system");
-      $mod->setAttribute("command","sleep 2;sleep 2");
-      $modules->appendChild($mod);
-      $mod = $doc->createElement("savegains");
+      //$mod->setAttribute("command","sleep 2;sleep 2");
+      $mod->setAttribute("command","../udpmirror/jackwaitforport" . $waitports . ";sleep 1");
       $modules->appendChild($mod);
       $mod = $doc->createElement("touchosc");
       $modules->appendChild($mod);
@@ -498,7 +499,7 @@ function get_tascar_cfg( $device, $devhash )
     $source = $doc->createElement("source");
     $scene->appendChild($source);
     $source->setAttribute("name","announce");
-    $egosound = xml_add_sound($source, $doc, 4, 0, 0 );
+    $egosound = xml_add_sound($source, $doc, array('x'=>4) );
     $plugs = $doc->createElement("plugins");
     $egosound->appendChild($plugs);
     $sndfile = $doc->createElement("sndfile");
@@ -534,7 +535,10 @@ function html_device_selector( $user, $currentdevice )
     echo '<option value="'.$dev['dev'].'"';
     if( $currentdevice == $dev['dev'] )
       echo ' selected';
-    echo '>'.$dev['dev'].' ('.$dev['label'].')</option>';
+    $active = '';
+    if( $dev['age'] < 20 )
+      $active = ' *active*';
+    echo '>'.$dev['dev'].' ('.$dev['label'].')'.$active.'</option>';
   }
   echo '</select>';
   echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\',\'device settings\');" value="show device settings"/>';
