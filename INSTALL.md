@@ -19,7 +19,7 @@ Do not forget to increase the image size after installation.
 Install zita-njbridge, jackd2, node-js and OSC library:
 
 ````
-sudo apt install zita-njbridge jackd2 liblo-dev nodejs
+sudo apt install zita-njbridge jackd2 liblo-dev nodejs libcurl4-openssl-dev build-essential
 ````
 
 Follow the system optimization instructions on
@@ -68,6 +68,8 @@ And add these lines:
 ````
 
 ## Add shutdown button to the device
+
+If you activate an overlay file system (see below), this step is not needed. However, when using an overlay file system, the startup time of the device will be significantly longer, because the tool set will be updated and compiled upon every boot.
 
 Since the Raspberry 3 B+ does not have a power button, it is required to add a button for soft shutdown to avoid damage of the SD card file system. We added a button as described here:
 
@@ -146,3 +148,7 @@ The sound is started in the script `start_audio.sh`. This script is managed by t
 ````
 export JACKCMD="jackd --sync -P 40 -d alsa -d hw:YourCard -r 48000 -p 96 -n 2"
 ````
+
+## Finalizing setup
+
+Once everything is setup correctly, you should protect your SD card against failure when powering the system down. You should activate the overlay file system, which can be achieved via `sudo rasbpi-config`.

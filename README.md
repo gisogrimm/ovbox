@@ -19,6 +19,11 @@ basic condenser mic, headphones, cables
 
 optionally: a small head tracking device based on MPU6050+ESP8266
 
+Here are the shopping lists we use - obviously these can be obtained from any electronics/music store:
+
+[Raspberry Pi etc.](https://www.reichelt.de/my/1693204)
+
+[Sound card, mic, etc.](https://www.thomann.de/de/wishlist_4u_788b06e69103.html)
 
 
 ## Software components
