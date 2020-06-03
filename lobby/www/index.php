@@ -94,22 +94,7 @@ if( $user == 'admin' ){
     }
     print_head( $user );
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
-    $devs = list_devices();
-    echo "<h2>Devices:</h2><table>\n";
-    echo "<tr><th>device</th><th>age</th><th>owner</th><th>label</th></tr>\n";
-    foreach( $devs as $dev ){
-        $dprop = get_device_prop( $dev['dev'] );
-        echo '<tr><td>' .
-            $dev['dev'] . '</td><td>' .
-            $dev['age'] . '</td><td>' .
-            '<form><input type="hidden" name="setdevowner" value="'.$dev['dev'].'"><input type="text" name="owner" pattern="[a-zA-Z0-9]*" value="'.$dprop['owner'].'"><button>Save</button></form>' .
-            '</td><td>' .
-            '<form><input type="hidden" name="setdevlabel" value="'.$dev['dev'].'"><input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['label'].'"><button>Save</button></form>' .
-            '</td><td>' .
-            '<form><input type="hidden" name="rmdevice" value="'.$dev['dev'].'"><button>Delete</button></form>' .
-            '</td></tr>' . "\n"; 
-    }
-    echo "</table>\n";
+    html_admin_devices();
     $rooms = list_rooms();
     echo "<h2>Rooms:</h2><table>\n";
     echo "<tr><th>room</th><th>age</th><th>label</th><th>owner</th></tr>\n";

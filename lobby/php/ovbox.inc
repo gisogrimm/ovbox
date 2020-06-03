@@ -657,6 +657,7 @@ function list_groups( $user = "" )
       }
     }
   }
+  sort($groups);
   return $groups;
 }
 
@@ -776,7 +777,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $span->appendChild($doc->createTextNode(': '.sprintf("%1.2f",$rprop['t60']).' s)'));
     }
     if( empty($rprop['group']) )
-      $span->appendChild($doc->createTextNode(' public '));
+      $span->appendChild($doc->createTextNode(' public'));
     else
       $span->appendChild($doc->createTextNode(' group \''.$rprop['group'].'\''));
     if( !empty($rprop['owner']) )
@@ -977,6 +978,71 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
     }
     echo $doc->saveHTML();
   }
+}
+
+function html_admin_devices()
+{
+  $devs = list_devices();
+  $doc = new DOMDocument('1.0');
+  $root = $doc->appendChild($doc->createElement('div'));
+  $root->appendChild($doc->createElement('h2'))->appendChild($doc->createTextNode('Devices:'));
+  $tab = $root->appendChild($doc->createElement('table'));
+  $tr = $tab->appendChild($doc->createElement('tr'));
+  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('device'));
+  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('age'));
+  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('owner'));
+  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('label'));
+  foreach( $devs as $dev ){
+    $dprop = get_device_prop( $dev['dev'] );
+    $tr = $tab->appendChild($doc->createElement('tr'));
+    $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dev['dev']));
+    $age = $dev['age'].'s';
+    if( $dev['age'] > 599 )
+      $age = sprintf('%1.1fm',$dev['age']/60);
+    if( $dev['age'] > 6*3600 )
+      $age = sprintf('%1.1fh',$dev['age']/3600);
+    if( $dev['age'] > 3*24*3600 )
+      $age = sprintf('%1.1fd',$dev['age']/(3600*24));
+    
+    $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($age));
+    // user:
+    $td = $tr->appendChild($doc->createElement('td'));
+    $inp = $td->appendChild($doc->createElement('select'));
+    $inp->setAttribute('oninput','location.href=\'?setdevowner='.urlencode($dev['dev']).'&owner=\'+event.target.value;');
+    $opt = $inp->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value','');
+    $opt->appendChild($doc->createTextNode(' -- unclaimed -- '));
+    $users = list_users();
+    foreach($users as $us){
+      $opt = $inp->appendChild($doc->createElement('option'));
+      $opt->setAttribute('value',$us);
+      $opt->appendChild($doc->createTextNode($us));
+      if( $dprop['owner'] == $us )
+        $opt->setAttribute('selected','');
+    }
+    //label:
+    $td = $tr->appendChild($doc->createElement('td'));
+    $form = $td->appendChild($doc->createElement('form'));
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('type','hidden');
+    $inp->setAttribute('name','setdevlabel');
+    $inp->setAttribute('value',$dev['dev']);
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('type','text');
+    $inp->setAttribute('name','label');
+    $inp->setAttribute('pattern','[a-zA-Z0-9]*');
+    $inp->setAttribute('value',$dprop['label']);
+    $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));
+    // delete
+    $td = $tr->appendChild($doc->createElement('td'));
+    $form = $td->appendChild($doc->createElement('form'));
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('type','hidden');
+    $inp->setAttribute('name','rmdevice');
+    $inp->setAttribute('value',$dev['dev']);
+    $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Delete'));
+  }
+  echo $doc->saveHTML() . "\n";
 }
 
 function html_admin_users()
