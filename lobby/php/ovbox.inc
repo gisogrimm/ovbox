@@ -1,27 +1,58 @@
 <?php
 
-function print_head( $user = "" )
+function get_properties( $id, $type, $defaults )
 {
+  $fname = '../db/'.$id.'.'.$type;
+  $prop = $defaults;
+  if( file_exists( $fname ) )
+    $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
+  return $prop;
+}  
+
+function set_properties( $id, $type, $dprop )
+{
+  $fname = '../db/'.$id.'.'.$type;
+  file_put_contents( $fname, json_encode( $dprop ));
+}
+
+function print_head( $user = "", $style = "" )
+{
+  $css = 'ovbox.css';
+  $title = 'House of Consort';
+  if( !empty($style) ){
+    
+    $sprop = get_properties( $style, 'style', array('css'=>$css,'pagetitle'=>$title));
+    $css = $sprop['css'];
+    $title = $sprop['pagetitle'];
+  }
   echo "<!DOCTYPE html>\n";
-  echo '<html><head><title>House of Consort';
-  if( !empty($user) )
+  echo '<html><head><title>'.$title;
+  if( !empty($user) ){
     echo ' - ' . $user;
+  }
   echo '</title><style>';
-  if( file_exists( 'ovbox.css' ) ){
-    $css = file_get_contents( 'ovbox.css' );
+  if( file_exists( $css ) ){
+    $css = file_get_contents( $css );
     echo $css;
   }
   echo '</style>';
   //echo '<script>location.href="/";</script>';
-  echo '<meta http-equiv="refresh" content="180; url=/"/>';
+  echo '<meta http-equiv="refresh" content="300; url=/"/>';
   echo '<script>function toggledisplay(id,msg){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";event.target.value=\'hide \'+msg;}else{x.style.display="none";event.target.value=\'show \'+msg;}}</script>';
   echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
-  echo '<h1>House of Consort</h1>';
+  echo '<h1>'.$title.'</h1>';
 }
 
-function print_foot( $show_donate = true )
+function print_foot($style = '')
 {
+  $show_donate = true;
+  $credits = 'Background image by Johannes Gontarski.';
+  if( !empty($style) ){
+    $sprop = get_properties( $style, 'style', array('credits'=>$credits,'showdonate'=>$show_donate));
+    $credits = $sprop['credits'];
+    $show_donate = $sprop['showdonate'];
+  }
   if( $show_donate ){
     echo '<div class="donate">';
     echo '<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">';
@@ -32,7 +63,7 @@ function print_foot( $show_donate = true )
     echo '</form>';
     echo '</div>';
   }
-  echo '<div class="foto">Background image by Johannes Gontarski.</div>';
+  echo '<div class="foto">'.$credits.'</div>';
   echo '</body>';
   echo '</html>';
 }
@@ -44,6 +75,15 @@ function get_rooms()
     $rooms[] = basename($room,'.room');
   }
   return $rooms;
+}
+
+function list_styles()
+{
+  $styles = [];
+  foreach( glob( '../db/*.style') as $style){
+    $styles[] = basename($style,'.style');
+  }
+  return $styles;
 }
 
 function select_userdev( $user, $dev )
@@ -107,24 +147,18 @@ function get_device_prop( $device )
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
     $prop['age'] = time()-$prop['access'];
   }
-  if( empty($prop['label']))
+  if( empty($prop['label']) && (!empty($prop['owner'])))
     $prop['label'] = $prop['owner'];
   if( empty($prop['label']))
     $prop['label'] = $device;
   return $prop;
 }
 
-function set_device_prop( $device, $dprop )
-{
-  $fname = '../db/' . $device . '.device';
-  file_put_contents( $fname, json_encode( $dprop ));
-}
-
 function modify_device_prop( $device, $key, $value )
 {
   $dprop = get_device_prop( $device );
   $dprop[$key] = $value;
-  set_device_prop( $device, $dprop );
+  set_properties( $device, 'device', $dprop );
 }
 
 function agesort( $a, $b )
@@ -158,7 +192,6 @@ function list_unclaimed_devices()
   return $devs;
 }
 
-
 function list_rooms()
 {
   $rooms = array();
@@ -189,14 +222,48 @@ function lock_room( $room, $device, $lock )
   }
 }
 
+function get_user_prop( $user )
+{
+  return get_properties( $user, 'user', array( 'group'=>'', 'seesall'=>true, 'maingroup'=>'' ) );
+}
+
+function get_group_prop( $group )
+{
+  return get_properties( $group, 'group', array( 'style'=>'default' ) );
+}
+
+function modify_group_prop( $group, $key, $value )
+{
+  $dprop = get_group_prop( $group );
+  $dprop[$key] = $value;
+  set_properties( $group, 'group', $dprop );
+}
+
+function modify_user_prop( $user, $key, $value )
+{
+  $dprop = get_user_prop( $user );
+  $dprop[$key] = $value;
+  set_properties( $user, 'user', $dprop );
+}
+
 function get_room_prop( $room )
 {
-  $prop = array( 'name'=>'', 'size'=>'25 13 7.5', 'rvbgain'=>-8, 'rvbdamp'=>0.7, 'rvbabs'=>0.6, 'host'=>'', 'port'=>'', 'pin'=>0, 'age'=>3600*24*365*100, 'lock'=>false, 'owner'=>'', 'access'=>0 );
-  $fname = '../db/' . $room . '.room';
-  if( file_exists( $fname ) ){
-    $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
-    $prop['age'] = time()-$prop['access'];
-  }
+  $prop = get_properties( $room, 'room', array(
+    'name'=>'',
+    'size'=>'25 13 7.5',
+    'rvbgain'=>-8,
+    'rvbdamp'=>0.7,
+    'rvbabs'=>0.6,
+    'private'=>false,
+    'host'=>'',
+    'port'=>'',
+    'pin'=>0,
+    'age'=>3600*24*365*100,
+    'lock'=>false,
+    'owner'=>'',
+    'group'=>'',
+    'access'=>0 ) );
+  $prop['age'] = time()-$prop['access'];
   $dim = explode(" ",$prop['size']);
   if( count($dim)==3){
     $vol = 1;
@@ -220,17 +287,11 @@ function get_room_prop( $room )
   return $prop;
 }
 
-function set_room_prop( $room, $dprop )
-{
-  $fname = '../db/' . $room . '.room';
-  file_put_contents( $fname, json_encode( $dprop ));
-}
-
 function modify_room_prop( $room, $key, $value )
 {
   $dprop = get_room_prop( $room );
   $dprop[$key] = $value;
-  set_room_prop( $room, $dprop );
+  set_properties( $room, 'room', $dprop );
 }
 
 function update_room( $host, $port, $name, $pin )
@@ -241,7 +302,7 @@ function update_room( $host, $port, $name, $pin )
     $dprop['name'] = $name;
   $dprop['pin'] = $pin;
   $dprop['access'] = time();
-  set_room_prop( $room, $dprop );
+  set_properties( $room, 'room', $dprop );
 }
 
 function get_devices_in_room( $room )
@@ -277,7 +338,7 @@ function device_enter_room( $device, $room )
     $dprop = get_device_prop( $device );
     $dprop['room'] = $room;
     $dprop['chair'] = get_free_chair($room);
-    set_device_prop( $device, $dprop );
+    set_properties( $device, 'device', $dprop );
   }
 }
 
@@ -530,7 +591,7 @@ function html_device_selector( $user, $currentdevice )
   }
   echo "<div>";
   echo '<select id="devselect" name="devselect" oninput="location.href=\'?devselect=\'+event.target.value;">';
-  echo '<option value="""> -- please select a device --</option>';
+  echo '<option value=""> -- please select a device --</option>';
   foreach( owned_devices( $user ) as $dev ){
     echo '<option value="'.$dev['dev'].'"';
     if( $currentdevice == $dev['dev'] )
@@ -557,10 +618,135 @@ function auth( $username, $password )
   return password_verify( $password, $pws[$username] );
 }
 
-function html_show_room( $room, $device, $inroom, $user )
+function list_users()
+{
+  $users = array();
+  $fname = '../ovboxusers';
+  if( file_exists( $fname ) ){
+    $fcontent = file_get_contents( $fname );
+    $lines = explode("\n",$fcontent);
+    foreach( $lines as $line ){
+      $linet = explode("#",trim($line));
+      $line = $linet[0];
+      if( !empty($line) ){
+        $linet = explode(":",trim($line));
+        if( !empty($linet[0]) ){
+          if( ($linet[0]!='room') && ($linet[0]!='device') && ($linet[0]!='admin'))
+            $users[] = $linet[0];
+        }
+      }
+    }
+  }
+  sort($users);
+  return $users;
+}
+
+function list_groups( $user = "" )
+{
+  $groups = array();
+  $fname = '../db/groups';
+  if( file_exists( $fname ) ){
+    $fgroups = json_decode( file_get_contents( $fname ), true );
+    if( empty($user) ){
+      $groups = array_keys($fgroups);
+    }else{
+      foreach( $fgroups as $group=>$users ){
+        if( in_array( $user, $users ) ){
+          $groups[] = $group;
+        }
+      }
+    }
+  }
+  return $groups;
+}
+
+function add_group( $group )
+{
+  if( !empty($group) ){
+    $fname = '../db/groups';
+    $groups = array();
+    if( file_exists( $fname ) )
+      $groups = json_decode( file_get_contents( $fname ), true );
+    if( !array_key_exists( $group, $groups ) ){
+      $groups[$group] = array();
+      file_put_contents( $fname, json_encode( $groups ));
+    }
+  }
+}
+
+function rm_group( $group )
+{
+  if( !empty($group) ){
+    $fname = '../db/groups';
+    $groups = array();
+    if( file_exists( $fname ) )
+      $groups = json_decode( file_get_contents( $fname ), true );
+    if( array_key_exists( $group, $groups ) ){
+      unset($groups[$group]);
+      file_put_contents( $fname, json_encode( $groups ));
+    }
+  }
+}
+
+function add_user_to_group( $user, $group )
+{
+  if( !(empty($group)||empty($user)) ){
+    $fname = '../db/groups';
+    if( file_exists( $fname ) ){
+      $groups = json_decode( file_get_contents( $fname ), true );
+      if( array_key_exists( $group, $groups ) ){
+        $users = $groups[$group];
+        if( !in_array( $user, $users ) ){
+          $users[] = $user;
+          $groups[$group] = $users;
+          file_put_contents( $fname, json_encode( $groups ));
+        }
+      }
+    }
+  }
+}
+
+function remove_user_from_group( $user, $group )
+{
+  if( !(empty($group)||empty($user)) ){
+    $fname = '../db/groups';
+    if( file_exists( $fname ) ){
+      $groups = json_decode( file_get_contents( $fname ), true );
+      if( array_key_exists( $group, $groups ) ){
+        $users = $groups[$group];
+        $us = array_search( $user, $users );
+        if( $us ){
+          unset($users[$us]);
+          $groups[$group] = $users;
+          file_put_contents( $fname, json_encode( $groups ));
+        }
+      }
+    }
+  }
+}
+
+function get_group_users( $group )
+{
+  $users = array();
+  if( !empty($group) ){
+    $fname = '../db/groups';
+    if( file_exists( $fname ) ){
+      $groups = json_decode( file_get_contents( $fname ), true );
+      if( array_key_exists( $group, $groups ) )
+        $users = $groups[$group];
+    }
+  }
+  return $users;
+}
+
+function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop, $usergroups )
 {
   $rprop = get_room_prop( $room );
-  if( $rprop['age'] < 3600 ) {
+  if( ($rprop['age'] < 3600) &&
+  ((!$rprop['private']) || ($rprop['owner']==$user)) &&
+  ($userprop['seesall'] || ($rprop['owner']==$user)) &&
+  (empty($rprop['group']) || (in_array($rprop['group'],$usergroups)))
+  ) {
     // only show active rooms
     $doc = new DOMDocument('1.0');
     $root = $doc->createElement('div');
@@ -578,17 +764,23 @@ function html_show_room( $room, $device, $inroom, $user )
     $span = $doc->createElement('span');
     $tit->appendChild($span);
     $span->setAttribute('class','rdesc');
-    $span->appendChild($doc->createTextNode('('.$rprop['sx'].' x '.$rprop['sy'].' x '.$rprop['sz'].' m'));
-    $sup = $doc->createElement('sup');
-    $span->appendChild($sup);
-    $sup->appendChild($doc->createTextNode('3'));
-    $span->appendChild($doc->createTextNode(', T'));
-    $sup = $doc->createElement('sub');
-    $span->appendChild($sup);
-    $sup->appendChild($doc->createTextNode('60'));
-    $span->appendChild($doc->createTextNode(': '.sprintf("%1.2f",$rprop['t60']).' s)'));
+    if( $deviceprop['reverb'] ){
+      $span->appendChild($doc->createTextNode('('.$rprop['sx'].' x '.$rprop['sy'].' x '.$rprop['sz'].' m'));
+      $sup = $doc->createElement('sup');
+      $span->appendChild($sup);
+      $sup->appendChild($doc->createTextNode('3'));
+      $span->appendChild($doc->createTextNode(', T'));
+      $sup = $doc->createElement('sub');
+      $span->appendChild($sup);
+      $sup->appendChild($doc->createTextNode('60'));
+      $span->appendChild($doc->createTextNode(': '.sprintf("%1.2f",$rprop['t60']).' s)'));
+    }
+    if( empty($rprop['group']) )
+      $span->appendChild($doc->createTextNode(' public '));
+    else
+      $span->appendChild($doc->createTextNode(' group \''.$rprop['group'].'\''));
     if( !empty($rprop['owner']) )
-      $span->appendChild($doc->createTextNode(' managed by '.$rprop['owner']));
+      $span->appendChild($doc->createTextNode(', managed by '.$rprop['owner']));
     $memb = $doc->createElement('div');
     $root->appendChild($memb);
     $memb->setAttribute('class','rmembers');
@@ -749,12 +941,232 @@ function html_show_room( $room, $device, $inroom, $user )
       $inp->setAttribute('value',$rprop['rvbabs']);
       $inp->setAttribute('style','width: 50px;');
       $form->appendChild($doc->createElement('br'));
+      // group:
+      $inp = $form->appendChild($doc->createElement('label'));
+      $inp->appendChild($doc->createTextNode('Group: '));
+      $inp = $form->appendChild($doc->createElement('select'));
+      $inp->setAttribute('name','group');
+      $opt = $inp->appendChild($doc->createElement('option'));
+      $opt->setAttribute('value','');
+      $opt->appendChild($doc->createTextNode(' - public - '));
+      $usgroups = list_groups($user);
+      foreach($usgroups as $grp){
+        $opt = $inp->appendChild($doc->createElement('option'));
+        $opt->setAttribute('value',$grp);
+        $opt->appendChild($doc->createTextNode($grp));
+        if( $rprop['group'] == $grp )
+          $opt->setAttribute('selected','');
+      }
+      // private room:
+      $inp = $doc->createElement('input');
+      $form->appendChild($inp);
+      $inp->setAttribute('type','checkbox');
+      $inp->setAttribute('id','private');
+      $inp->setAttribute('name','private');
+      if( $rprop['private'] )
+        $inp->setAttribute('checked','');
+      $inp = $doc->createElement('label');
+      $form->appendChild($inp);
+      $inp->setAttribute('for','private');
+      $inp->appendChild($doc->createTextNode('Private room - visible only to me (overrides group)'));
+      $form->appendChild($doc->createElement('br'));
+      // save button:
       $inp = $doc->createElement('button');
       $form->appendChild($inp);
       $inp->appendChild($doc->createTextNode('Save'));
     }
     echo $doc->saveHTML();
   }
+}
+
+function html_admin_users()
+{
+  $doc = new DOMDocument('1.0');
+  $root = $doc->createElement('div');
+  $doc->appendChild($root);
+  $el = $root->appendChild($doc->createElement('a'));
+  $el->setAttribute('name','users');
+  $el = $root->appendChild($doc->createElement('h2'));
+  $el->appendChild($doc->createTextNode('Users:'));
+  $tab = $root->appendChild($doc->createElement('table'));
+  $tr = $tab->appendChild($doc->createElement('tr'));
+  $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('user'));
+  $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('settings'));
+  $tab->appendChild($doc->createTextNode("\n"));
+  $users = list_users();
+  foreach($users as $us){
+    $uprop = get_user_prop($us);
+    $tr = $tab->appendChild($doc->createElement('tr'));
+    $td = $tr->appendChild($doc->createElement('td'));
+    $td->appendChild($doc->createTextNode($us));
+    $td = $tr->appendChild($doc->createElement('td'));
+    $form = $td->appendChild($doc->createElement('form'));
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('type','hidden');
+    $inp->setAttribute('name','moduser');
+    $inp->setAttribute('value',$us);
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('title','If checked, the user can see all public rooms, otherwise only the owned rooms.');
+    $inp->setAttribute('type','checkbox');
+    $inp->setAttribute('name','seesall');
+    $inp->setAttribute('id','seesall');
+    if( $uprop['seesall'] )
+      $inp->setAttribute('checked','');
+    $inp = $form->appendChild($doc->createElement('label'));
+    $inp->setAttribute('for','seesall');
+    $inp->appendChild($doc->createTextNode(' sees public rooms '));
+    
+    $inp = $form->appendChild($doc->createElement('select'));
+    $inp->setAttribute('name','maingroup');
+    $opt = $inp->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value','');
+    $opt->appendChild($doc->createTextNode(' -- no main group -- '));
+    $usgroups = list_groups($us);
+    foreach($usgroups as $grp){
+      $opt = $inp->appendChild($doc->createElement('option'));
+      $opt->setAttribute('value',$grp);
+      $opt->appendChild($doc->createTextNode($grp));
+      if( $uprop['maingroup'] == $grp )
+        $opt->setAttribute('selected','');
+    }
+
+    $inp = $form->appendChild($doc->createElement('button'));
+    $inp->appendChild($doc->createTextNode('Save'));
+    $tab->appendChild($doc->createTextNode("\n"));
+  }
+  echo $doc->saveHTML() . "\n";
+}
+
+function html_admin_groups()
+{
+  $doc = new DOMDocument('1.0');
+  $root = $doc->createElement('div');
+  $doc->appendChild($root);
+  $el = $root->appendChild($doc->createElement('a'));
+  $el->setAttribute('name','groups');
+  $el = $root->appendChild($doc->createElement('h2'));
+  $el->appendChild($doc->createTextNode('Groups:'));
+  $form = $root->appendChild($doc->createElement('form'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('name','addgroup');
+  $el->setAttribute('type','text');
+  $el->setAttribute('pattern','[a-zA-Z0-9]*');
+  $el = $form->appendChild($doc->createElement('button'));
+  $el->appendChild($doc->createTextNode('add group'));
+  $tab = $root->appendChild($doc->createElement('table'));
+  $tr = $tab->appendChild($doc->createElement('tr'));
+  $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('group'));
+  $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('users'));
+  $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('style'));
+  $tab->appendChild($doc->createTextNode("\n"));
+  $users = list_users();
+  $grps = list_groups();
+  $styles = list_styles();
+  foreach($grps as $group){
+    $gprop = get_group_prop( $group );
+    $grpusers = get_group_users( $group );
+    sort($grpusers);
+    $tr = $tab->appendChild($doc->createElement('tr'));
+    $td = $tr->appendChild($doc->createElement('td'));
+    $td->appendChild($doc->createTextNode($group));
+    $td = $tr->appendChild($doc->createElement('td'));
+    $td->setAttribute('style','line-height: 2.1em;');
+    foreach( $grpusers as $us ){
+      $sp = $td->appendChild($doc->createElement('span'));
+      $sp->setAttribute('class','psvmember');
+      $sp->appendChild($doc->createTextNode($us));
+      $form = $sp->appendChild($doc->createElement('form'));
+      $form->setAttribute('style','display: inline;');
+      $inp = $form->appendChild($doc->createElement('input'));
+      $inp->setAttribute('type','hidden');
+      $inp->setAttribute('name','removeuserfromgroup');
+      $inp->setAttribute('value',$group);
+      $inp = $form->appendChild($doc->createElement('input'));
+      $inp->setAttribute('type','hidden');
+      $inp->setAttribute('name','groupuser');
+      $inp->setAttribute('value',$us);
+      $inp = $form->appendChild($doc->createElement('button'));
+      $inp->appendChild($doc->createTextNode('X'));
+      $td->appendChild($doc->createTextNode(' '));
+    }
+    $inp = $td->appendChild($doc->createElement('select'));
+    $inp->setAttribute('oninput','location.href=\'?addusertogroup='.urlencode($group).'&newuser=\'+event.target.value;');
+    $opt = $inp->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value','');
+    $opt->appendChild($doc->createTextNode(' -- select a user to add -- '));
+    foreach($users as $us){
+      if( !in_array($us,$grpusers) ){
+        $opt = $inp->appendChild($doc->createElement('option'));
+        $opt->setAttribute('value',$us);
+        $opt->appendChild($doc->createTextNode($us));
+      }
+    }
+    
+    $td = $tr->appendChild($doc->createElement('td'));
+    $inp = $td->appendChild($doc->createElement('select'));
+    $inp->setAttribute('oninput','location.href=\'?setgrpstyle='.urlencode($group).'&grpstyle=\'+event.target.value;');
+    //$inp->setAttribute('name','css');
+    $opt = $inp->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value','');
+    $opt->appendChild($doc->createTextNode(' -- default style -- '));
+    $usgroups = list_groups($us);
+    foreach($styles as $style){
+      $opt = $inp->appendChild($doc->createElement('option'));
+      $opt->setAttribute('value',$style);
+      $opt->appendChild($doc->createTextNode($style));
+      if( $gprop['style'] == $style )
+        $opt->setAttribute('selected','');
+    }
+
+    $td = $tr->appendChild($doc->createElement('td'));
+    $form = $td->appendChild($doc->createElement('form'));
+    $inp = $form->appendChild($doc->createElement('input'));
+    $inp->setAttribute('type','hidden');
+    $inp->setAttribute('name','rmgroup');
+    $inp->setAttribute('value',$group);
+    $inp = $form->appendChild($doc->createElement('button'));
+    $inp->appendChild($doc->createTextNode('delete group'));
+    $tab->appendChild($doc->createTextNode("\n"));
+  }
+  echo $doc->saveHTML() . "\n";
+}
+
+function html_show_user( $user, $device, $devprop )
+{
+  $doc = new DOMDocument('1.0');
+  $root = $doc->appendChild($doc->createElement('div'));
+  $p = $root->appendChild($doc->createElement('p'));
+  $p->appendChild($doc->createTextNode('You are logged in as user '));
+  $p->appendChild($doc->createElement('b'))->appendChild($doc->createTextNode($user));
+  $p->appendChild($doc->createTextNode(' with device '));
+  $p->appendChild($doc->createElement('b'))->appendChild($doc->createTextNode($device.' ('.$devprop['label'].')' ));
+  $p->appendChild($doc->createTextNode('.'));
+  $inf = $root->appendChild($doc->createElement('div'));
+  $inf->setAttribute('id','groupinfo');
+  $inf->setAttribute('class','devprop');
+  $inf->setAttribute('style','display: none;');
+  $el = $inf->appendChild($doc->createElement('div'));
+  $el->setAttribute('class','devproptitle');
+  $el->appendChild($doc->createTextNode('You are a member of these groups:'));
+  foreach( list_groups($user) as $grp ){
+    $p1 = $inf->appendChild($doc->createElement('div'));
+    $p1->appendChild($doc->createElement('b'))->appendChild($doc->createTextNode($grp.': '));
+    foreach( get_group_users( $grp ) as $us ){
+      $p1->appendChild($doc->createTextNode($us.' '));
+    }
+  }
+
+  $inp = $p->appendChild($doc->createElement('input'));
+  $inp->setAttribute('type','button');
+  $inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('onclick','toggledisplay(\'groupinfo\',\'group info\');');
+  $inp->setAttribute('value','show group info');
+  echo $doc->saveHTML() . "\n";
 }
 
 /*

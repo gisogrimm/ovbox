@@ -1,6 +1,6 @@
 <?php
 
-$fp = fopen("../lock.txt", "r+");
+$fp = fopen("../lock.txt", "a+");
 flock($fp, LOCK_EX );
 
 include '../php/ovbox.inc';
@@ -43,6 +43,31 @@ if ($user == 'room') {
 
 // admin page:
 if( $user == 'admin' ){
+    if( isset($_GET['addgroup']) ){
+        add_group($_GET['addgroup']);
+        header( "Location: /#groups" );
+    }
+    if( isset($_GET['rmgroup']) ){
+        rm_group($_GET['rmgroup']);
+        header( "Location: /#groups" );
+    }
+    if( isset($_GET['addusertogroup']) ){
+        add_user_to_group($_GET['newuser'],$_GET['addusertogroup']);
+        header( "Location: /#groups" );
+    }
+    if( isset($_GET['removeuserfromgroup']) ){
+        remove_user_from_group($_GET['groupuser'],$_GET['removeuserfromgroup']);
+        header( "Location: /#groups" );
+    }
+    if( isset($_GET['setgrpstyle'])){
+        modify_group_prop( $_GET['setgrpstyle'], 'style', $_GET['grpstyle']);
+        header( "Location: /#groups" );
+    }
+    if( isset($_GET['moduser']) ){
+        modify_user_prop( $_GET['moduser'], 'seesall', isset($_GET['seesall']));
+        modify_user_prop( $_GET['moduser'], 'maingroup', $_GET['maingroup']);
+        header( "Location: /#users" );
+    }
     if( isset($_GET['setdevowner']) ){
         modify_device_prop( $_GET['setdevowner'], 'owner', $_GET['owner'] );
         header( "Location: /" );
@@ -61,18 +86,6 @@ if( $user == 'admin' ){
     }
     if( isset($_GET['setroomlabel']) ){
         modify_room_prop( $_GET['setroomlabel'], 'name', $_GET['label'] );
-        header( "Location: /" );
-    }
-    if( isset($_GET['setroom']) ){
-        if( isset($_GET['label']))
-            modify_room_prop( $_GET['setroom'], 'name', $_GET['label'] );
-        if( isset($_GET['size']))
-            modify_room_prop( $_GET['setroom'], 'size', $_GET['size'] );
-        if( isset($_GET['sx'])&&isset($_GET['sy'])&&isset($_GET['sz']))
-            modify_room_prop( $_GET['setroom'], 'size', $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz']);
-        modify_room_prop( $_GET['setroom'], 'rvbgain', $_GET['rvbgain'] );
-        modify_room_prop( $_GET['setroom'], 'rvbdamp', $_GET['rvbdamp'] );
-        modify_room_prop( $_GET['setroom'], 'rvbabs', $_GET['rvbabs'] );
         header( "Location: /" );
     }
     if( isset($_GET['rmroom']) ){
@@ -117,6 +130,8 @@ if( $user == 'admin' ){
             '</td></tr>' . "\n"; 
     }
     echo "</table>\n";
+    html_admin_users();
+    html_admin_groups();
     print_foot();
     die();
 }
@@ -127,6 +142,24 @@ if( isset($_GET['devselect']) ){
 }
 
 $device = get_device( $user );
+if( !empty($device) ){
+    $devprop = get_device_prop( $device );
+    if($user != $devprop['owner']){
+        select_userdev( $user, '' );
+        header( "Location: /" );
+        die();
+    }
+}
+$usergroups = list_groups($user);
+$userprop = get_user_prop($user);
+$maingroup = $userprop['maingroup'];
+if( !in_array($maingroup,$usergroups) )
+    $maingroup = '';
+$style = '';
+if( !empty($maingroup) ){
+    $groupprop = get_group_prop($maingroup);
+    $style = $groupprop['style'];
+}
 
 if( isset($_GET['enterroom']) ) {
     if( !empty( $device ) )
@@ -169,26 +202,26 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'srcdist');
         set_getprop($prop,'outputport1');
         set_getprop($prop,'outputport2');
-        set_device_prop( $device, $prop );
+        set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );
 }
 
 if( isset($_GET['setroom']) ){
-    $rprop = get_room_prop($_GET['setroom']);
+    $room = $_GET['setroom'];
+    $rprop = get_room_prop($room);
     if( $user == $rprop['owner']){
         if( isset($_GET['label']))
-            modify_room_prop( $_GET['setroom'], 'name', $_GET['label'] );
-        if( isset($_GET['size']))
-            modify_room_prop( $_GET['setroom'], 'size', $_GET['size'] );
+            $rprop['name'] = $_GET['label'];
+        set_getprop( $rprop, 'size' );
         if( isset($_GET['sx'])&&isset($_GET['sy'])&&isset($_GET['sz']))
-            modify_room_prop( $_GET['setroom'], 'size', $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz']);
-        if( isset($_GET['rvbgain']) )
-            modify_room_prop( $_GET['setroom'], 'rvbgain', $_GET['rvbgain'] );
-        if( isset($_GET['rvbdamp']) )
-            modify_room_prop( $_GET['setroom'], 'rvbdamp', $_GET['rvbdamp'] );
-        if( isset($_GET['rvbabs']) )
-            modify_room_prop( $_GET['setroom'], 'rvbabs', $_GET['rvbabs'] );
+            $rprop['size'] = $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz'];
+        set_getprop( $rprop, 'rvbgain' );
+        set_getprop( $rprop, 'rvbdamp' );
+        set_getprop( $rprop, 'rvbabs' );
+        $rprop['private'] = isset($_GET['private']);
+        set_getprop( $rprop, 'group' );
+        set_properties( $room, 'room', $rprop );
     }
     header( "Location: /" );
 }
@@ -218,15 +251,15 @@ if ( empty( $device ) ) {
         die();
     }
 }
-
-print_head( $user );
     
+print_head( $user, $style );
+
 
 if ( empty( $device ) ) {
     echo "<p>You are logged in as user {$user}. You have no registered device.</p>";
 } else {
     $devprop = get_device_prop( $device );
-    echo "<p>You are logged in as user <b>{$user}</b> with device <b>{$device} (".$devprop['label'].")</b>.</p>";
+    html_show_user( $user, $device, $devprop );
     html_device_selector( $user, $device );
     echo '<form class="devprop" id="devsettings" style="display: none;"><div class="devproptitle">Device settings:</div>' . "\n";
     // device properties:
@@ -260,9 +293,9 @@ if ( empty( $device ) ) {
     echo '</form>';
     echo '<p>Rooms: (<a href="http://' . $_SERVER['HTTP_HOST'] . '">refresh</a>)</p>' . "\n";
     foreach( get_rooms() as $room){
-        html_show_room( $room, $device, $room == $devprop['room'], $user );
+        html_show_room( $room, $device, $devprop, $room == $devprop['room'], $user, $userprop, $usergroups );
     }
 }
-print_foot();
+print_foot($style);
 
 ?>
