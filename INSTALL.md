@@ -27,6 +27,12 @@ wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 ````
 Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Type Enter when the TASCAR installer asks to install files.
 
+Finally, restart the system with
+````
+sudo shutdown -r now
+````
+
+
 Alternatively, you may follow the manual installation instructions below.
 
 ##  Install tools
