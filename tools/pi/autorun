@@ -30,8 +30,19 @@ killall dbus-launch
 ## Stop all wifi/bluetooth devices
 rfkill block all
 
-# power button:
-while true; do
-~/shutdown-press-simple.py
-sleep 1
-done
+## power button:
+#while true; do
+#~/shutdown-press-simple.py
+#sleep 1
+#done
+
+# clone ovbox repo if not yet available:
+sudo su -l ov -c "test -e ovbox || git clone http://github.com/gisogrimm/ovbox"
+
+# update ovbox repo:
+sudo su -l ov -c "cd ovbox && git pull"
+
+# activate overlay filesystem:
+
+# start tools:
+sudo su -l ov -c "/home/ov/ovbox/start_all.sh"

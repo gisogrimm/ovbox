@@ -2,17 +2,32 @@
 
 The installation instructions are probably incomplete, however, they may give a rough idea of the steps involved.
 
-## Repository
-
-Create a fork of this repository, or create your own repo. We use the git repository to update the settings in the headless remote boxes upon reboot.
-
 ## Download and install raspbian
 
-Download the raspbian image:
+Download the Raspberry Pi OS image. The 'Lite' version is sufficient, since the system will be headless:
 
-[https://www.raspberrypi.org/downloads/raspbian/](https://www.raspberrypi.org/downloads/raspbian/)
+[https://www.raspberrypi.org/downloads/raspberry-pi-os/](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
 
-Do not forget to increase the image size after installation.
+To enable ssh access in a headless environment, follow these instructions:
+[https://www.raspberrypi.org/documentation/remote-access/ssh/](https://www.raspberrypi.org/documentation/remote-access/ssh/). Essentially you need to create a file `ssh` in the `/boot` partition, e.g. with
+````
+touch /your/path/to/boot/ssh
+````
+
+Now you should be able to login via ssh, with
+````
+ssh pi@raspberrypi
+````
+The default password is `raspberry`. This need to be changed, e.g., to `ovbox2020`. To change the password, type `passwd`.
+
+At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take several hours to run. To use the installer script, type these commands as user pi:
+````
+wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
+. installovbox.sh
+````
+Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Type Enter when the TASCAR installer asks to install files.
+
+Alternatively, you may follow the manual installation instructions below.
 
 ##  Install tools
 
@@ -21,11 +36,10 @@ Install zita-njbridge, jackd2, node-js and OSC library:
 ````
 sudo apt install zita-njbridge jackd2 liblo-dev nodejs libcurl4-openssl-dev build-essential
 ````
+When asked wether to enable realtime priority or not, say `yes`.
 
 Follow the system optimization instructions on
 [https://wiki.linuxaudio.org/wiki/raspberrypi](https://wiki.linuxaudio.org/wiki/raspberrypi).
-
-We use a manually compiled version of jackd to avoid problems with missing dbus in the headless systems. However, another workaround is documented on the linux audio page.
 
 For general system setup (especially `limits.conf`) see [https://wiki.linuxaudio.org/wiki/system_configuration](https://wiki.linuxaudio.org/wiki/system_configuration).
 
@@ -37,12 +51,15 @@ If you are on an arm-based system (e.g., Raspberry Pi), to install TASCAR, follo
 Essentiall these instructions are (to be performed as user `pi`):
 
 ````
-git clone https://github.com/gisogrimm/tascar
 sudo apt-get install build-essential default-jre doxygen dpkg-dev g++ git imagemagick jackd2 libasound2-dev libboost-all-dev libcairomm-1.0-dev libcurl4-openssl-dev libeigen3-dev libfftw3-dev libfftw3-double3 libfftw3-single3 libgsl-dev libgtkmm-3.0-dev libgtksourceviewmm-3.0-dev libjack-jackd2-dev liblo-dev libltc-dev libmatio-dev libsndfile1-dev libwebkit2gtk-4.0-dev libxml++2.6-dev lsb-release make portaudio19-dev ruby-dev software-properties-common texlive-latex-extra texlive-latex-recommended vim-common wget
+git clone https://github.com/gisogrimm/tascar
 cd tascar
 make
 sudo make install
 ````
+
+These steps may take some time.
+
 
 On an x86 Ubuntu PC, you may follow the instructions on [http://install.tascar.org](http://install.tascar.org) instead.
 
@@ -66,6 +83,12 @@ And add these lines:
 @audio - rtprio 99
 @audio - memlock unlimited
 ````
+
+## Repository
+
+Create a fork of this repository, or create your own repo. We use the git repository to update the settings in the headless remote boxes upon reboot.
+
+
 
 ## Add shutdown button to the device
 
