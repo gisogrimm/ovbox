@@ -1,11 +1,102 @@
 <?php
 
-function get_properties( $id, $type, $defaults )
+function defaults( $type )
+{
+  $defaults = array();
+  $defaults['style'] = array(
+    'credits'=>'',
+    'css'=>'ovbox.css',
+    'pagetitle'=>'House of Consort',
+    'showdonate'=>true,
+  );
+  $defaults['device'] = array(
+    'access'=>0,
+    'label'=>'',
+    'owner'=>'',
+    'egogain'=>0,
+    'inputport'=>'system:capture_1',
+    'inputport2'=>'',
+    'jitterreceive'=>5,
+    'jittersend'=>5,
+    'outputport1'=>'system:playback_1',
+    'outputport2'=>'system:playback_2',
+    'peer2peer'=>true,
+    'pos'=>'0 0 0',
+    'reverb'=>true,
+    'room'=>'',
+    'srcdist'=>1.2,
+  );
+  $defaults['room'] = array(
+    'access'=>0,
+    'label'=>'',
+    'owner'=>'',
+    'group'=>'',
+    'host'=>'',
+    'lock'=>false,
+    'pin'=>0,
+    'port'=>'',
+    'private'=>false,
+    'rvbabs'=>0.6,
+    'rvbdamp'=>0.7,
+    'rvbgain'=>-8,
+    'size'=>'25 13 7.5',
+  );
+  $defaults['user'] = array(
+    'group'=>'',
+    'seesall'=>true,
+    'maingroup'=>'',
+  );
+  $defaults['group'] = array( 'style'=>'default' );
+  if( array_key_exists( $type, $defaults ) )
+    return $defaults[$type];
+  return array();
+}
+
+function postproc_prop( &$prop, $type )
+{
+  if( array_key_exists('access',$prop) )
+    $prop['age'] = time()-$prop['access'];
+  if( $type == 'device' ){
+    if( empty($prop['label']) && (!empty($prop['owner'])))
+      $prop['label'] = $prop['owner'];
+    if( empty($prop['label']))
+      $prop['label'] = $device;
+    $prop['label'] = preg_replace('/[^a-zA-Z0-9-_]*/','',$prop['label']);
+  }
+  if( $type == 'room' ){
+    if( empty($prop['label']))
+      $prop['label'] = $prop['name'];
+    unset($prop['name']);
+    $dim = explode(" ",$prop['size']);
+    if( count($dim)==3){
+      $vol = 1;
+      foreach($dim as $d)
+        $vol = $vol*$d;
+      $prop['volume'] = $vol;
+      $t60 = 0.161*$vol/($prop['rvbabs']*2*($dim[0]*$dim[1]+$dim[1]*$dim[2]+$dim[2]*$dim[0]));
+      $prop['t60'] = $t60;
+      $prop['area'] = $dim[0]*$dim[1];
+      $prop['sx'] = $dim[0];
+      $prop['sy'] = $dim[1];
+      $prop['sz'] = $dim[2];
+    }else{
+      $prop['volume'] = 0;
+      $prop['t60'] = 0;
+      $prop['area'] = 0;
+      $prop['sx'] = 0;
+      $prop['sy'] = 0;
+      $prop['sz'] = 0;
+    }
+  }
+}
+
+function get_properties( $id, $type )
 {
   $fname = '../db/'.$id.'.'.$type;
-  $prop = $defaults;
+  $prop = defaults($type);
   if( file_exists( $fname ) )
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
+  postproc_prop( $prop, $type );
   return $prop;
 }  
 
@@ -21,7 +112,7 @@ function print_head( $user = "", $style = "" )
   $title = 'House of Consort';
   if( !empty($style) ){
     
-    $sprop = get_properties( $style, 'style', array('css'=>$css,'pagetitle'=>$title));
+    $sprop = get_properties( $style, 'style' );
     $css = $sprop['css'];
     $title = $sprop['pagetitle'];
   }
@@ -49,7 +140,7 @@ function print_foot($style = '')
   $show_donate = true;
   $credits = 'Background image by Johannes Gontarski.';
   if( !empty($style) ){
-    $sprop = get_properties( $style, 'style', array('credits'=>$credits,'showdonate'=>$show_donate));
+    $sprop = get_properties( $style, 'style' );
     $credits = $sprop['credits'];
     $show_donate = $sprop['showdonate'];
   }
@@ -124,39 +215,10 @@ function get_device( $user )
 
 // device database:
 
-function get_device_prop( $device )
-{
-  $prop = array( 'room'=>'',
-  'pos'=>'0 0 0',
-  'jittersend'=>5,
-  'jitterreceive'=>5,
-  'peer2peer'=>true,
-  'reverb'=>true,
-  'owner'=>'',
-  'label'=>'',
-  'age'=>3600*24*365*100,
-  'inputport'=>'system:capture_1',
-  'inputport2'=>'',
-  'outputport1'=>'system:playback_1',
-  'outputport2'=>'system:playback_2',
-  'srcdist'=>1.2,
-  'egogain'=>0,
-  'access'=>0 );
-  $fname = '../db/' . $device . '.device';
-  if( file_exists( $fname ) ){
-    $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
-    $prop['age'] = time()-$prop['access'];
-  }
-  if( empty($prop['label']) && (!empty($prop['owner'])))
-    $prop['label'] = $prop['owner'];
-  if( empty($prop['label']))
-    $prop['label'] = $device;
-  return $prop;
-}
 
 function modify_device_prop( $device, $key, $value )
 {
-  $dprop = get_device_prop( $device );
+  $dprop = get_properties( $device, 'device' );
   $dprop[$key] = $value;
   set_properties( $device, 'device', $dprop );
 }
@@ -170,26 +232,21 @@ function agesort( $a, $b )
   return 0;
 }
 
-function list_devices()
+function list_db($type)
 {
   $devs = array();
-  foreach( glob( '../db/*.device') as $dev){
-    $device = basename($dev,'.device');
-    $prop = get_device_prop($device);
-    $devs[] = array('dev'=>$device,'age'=>$prop['age'],'owner'=>$prop['owner']);
+  foreach( glob( '../db/*.'.$type) as $dev){
+    $device = basename($dev,'.'.$type);
+    $prop = get_properties($device,$type);
+    $devs[$device] = $prop;
   }
-  usort( $devs, "agesort" );
+  uasort( $devs, "agesort" );
   return $devs;
 }
 
-function list_unclaimed_devices()
+function list_devices()
 {
-  $devs = array();
-  foreach( list_devices() as $dev){
-    if( ($dev['age'] < 120) && empty($dev['owner']) )
-      $devs[] = $dev['dev'];
-  }
-  return $devs;
+  return list_db('device');
 }
 
 function list_rooms()
@@ -200,17 +257,27 @@ function list_rooms()
     $prop = get_room_prop($room);
     $rooms[] = array('room'=>$room,'age'=>$prop['age']);
   }
-  usort( $rooms, "agesort" );
+  uasort( $rooms, "agesort" );
   return $rooms;
+}
+
+function list_unclaimed_devices()
+{
+  $devs = array();
+  foreach( list_devices() as $dev=>$devprop){
+    if( ($devprop['age'] < 120) && empty($devprop['owner']) ){
+      $devs[] = $dev;
+    }
+  }
+  return $devs;
 }
 
 function owned_devices( $user )
 {
   $devs = array();
-  foreach( list_devices() as $dev ){
-    $prop = get_device_prop( $dev['dev']);
-    if( $prop['owner'] == $user )
-      $devs[] = array_merge($dev, $prop );
+  foreach( list_devices() as $dev=>$devprop ){
+    if( $devprop['owner'] == $user )
+      $devs[$dev] = $devprop;
   }
   return $devs;
 }
@@ -222,48 +289,24 @@ function lock_room( $room, $device, $lock )
   }
 }
 
-function get_user_prop( $user )
-{
-  return get_properties( $user, 'user', array( 'group'=>'', 'seesall'=>true, 'maingroup'=>'' ) );
-}
-
-function get_group_prop( $group )
-{
-  return get_properties( $group, 'group', array( 'style'=>'default' ) );
-}
-
 function modify_group_prop( $group, $key, $value )
 {
-  $dprop = get_group_prop( $group );
+  $dprop = get_properties( $group, 'group' );
   $dprop[$key] = $value;
   set_properties( $group, 'group', $dprop );
 }
 
 function modify_user_prop( $user, $key, $value )
 {
-  $dprop = get_user_prop( $user );
+  $dprop = get_properties( $user, 'user' );
   $dprop[$key] = $value;
   set_properties( $user, 'user', $dprop );
 }
 
 function get_room_prop( $room )
 {
-  $prop = get_properties( $room, 'room', array(
-    'name'=>'',
-    'size'=>'25 13 7.5',
-    'rvbgain'=>-8,
-    'rvbdamp'=>0.7,
-    'rvbabs'=>0.6,
-    'private'=>false,
-    'host'=>'',
-    'port'=>'',
-    'pin'=>0,
-    'age'=>3600*24*365*100,
-    'lock'=>false,
-    'owner'=>'',
-    'group'=>'',
-    'access'=>0 ) );
-  $prop['age'] = time()-$prop['access'];
+  $prop = get_properties( $room, 'room' );
+
   $dim = explode(" ",$prop['size']);
   if( count($dim)==3){
     $vol = 1;
@@ -298,8 +341,8 @@ function update_room( $host, $port, $name, $pin )
 {
   $room = $host . ':' . $port;
   $dprop = get_room_prop( $room );
-  if( empty($dprop['name']) )
-    $dprop['name'] = $name;
+  if( empty($dprop['label']) )
+    $dprop['label'] = $name;
   $dprop['pin'] = $pin;
   $dprop['access'] = time();
   set_properties( $room, 'room', $dprop );
@@ -310,7 +353,7 @@ function get_devices_in_room( $room )
   $devices = array();
   foreach( glob( '../db/*.device') as $dev){
     $device = basename($dev,'.device');
-    $prop = get_device_prop( $device );
+    $prop = get_properties( $device, 'device' );
     if( $room == $prop['room'] ){
       if( array_key_exists( 'chair', $prop ) )
         $devices[$prop['chair']] = $device;
@@ -335,7 +378,7 @@ function device_enter_room( $device, $room )
 {
   $othersinroom = get_devices_in_room( $room );
   if( !in_array( $device, $othersinroom ) ){
-    $dprop = get_device_prop( $device );
+    $dprop = get_properties( $device, 'device' );
     $dprop['room'] = $room;
     $dprop['chair'] = get_free_chair($room);
     set_properties( $device, 'device', $dprop );
@@ -344,7 +387,7 @@ function device_enter_room( $device, $room )
 
 function room_swap_devices( $dev1, $dev2 )
 {
-  $dprop = get_device_prop( $dev1 );
+  $dprop = get_properties( $dev1, 'device' );
   $room = $dprop['room'];
   $members = get_devices_in_room( $room );
   $chair1 = -1;
@@ -377,7 +420,7 @@ function get_tascar_cfg( $device, $devhash )
 {
   $cuccess = false;
   $waitports = '';
-  $localdevprop = get_device_prop( $device );
+  $localdevprop = get_properties( $device, 'device' );
   // create TASCAR document:
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
@@ -420,7 +463,7 @@ function get_tascar_cfg( $device, $devhash )
         $pos_x = sprintf("%1.3f",$radius * cos( $az ));
         $pos_y = sprintf("%1.3f",$radius * sin( $az ));
         // get configuration of player device:
-        $devprop = get_device_prop( $dev );
+        $devprop = get_properties( $dev, 'device' );
         $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
         if( $numsource > 0 ){
           $dz = 0;
@@ -489,12 +532,12 @@ function get_tascar_cfg( $device, $devhash )
       $p2p = '';
       if( $localdevprop['peer2peer'] )
         $p2p = ' -2';
-      $mod->setAttribute("command","../udpmirror/ovboxclient -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
+      $mod->setAttribute("command","../udpmirror/ovboxclient --rtprio=30 -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
       // receiver:
       foreach( $roomdev as $chair => $dev ){
-        $devprop = get_device_prop( $dev );
+        $devprop = get_properties( $dev, 'device' );
         $devuser = $devprop['label'];
         $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
         if ( ( $numsource > 0 ) && ($dev != $device) ){
@@ -592,14 +635,14 @@ function html_device_selector( $user, $currentdevice )
   echo "<div>";
   echo '<select id="devselect" name="devselect" oninput="location.href=\'?devselect=\'+event.target.value;">';
   echo '<option value=""> -- please select a device --</option>';
-  foreach( owned_devices( $user ) as $dev ){
-    echo '<option value="'.$dev['dev'].'"';
-    if( $currentdevice == $dev['dev'] )
+  foreach( owned_devices( $user ) as $dev=>$dprop ){
+    echo '<option value="'.$dev.'"';
+    if( $currentdevice == $dev )
       echo ' selected';
     $active = '';
-    if( $dev['age'] < 20 )
+    if( $dprop['age'] < 20 )
       $active = ' *active*';
-    echo '>'.$dev['dev'].' ('.$dev['label'].')'.$active.'</option>';
+    echo '>'.$dev.' ('.$dprop['label'].')'.$active.'</option>';
   }
   echo '</select>';
   echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\',\'device settings\');" value="show device settings"/>';
@@ -761,7 +804,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
     $span = $doc->createElement('span');
     $tit->appendChild($span);
     $span->setAttribute('class','rname');
-    $span->appendChild($doc->createTextNode($rprop['name'].' '));
+    $span->appendChild($doc->createTextNode($rprop['label'].' '));
     $span = $doc->createElement('span');
     $tit->appendChild($span);
     $span->setAttribute('class','rdesc');
@@ -792,7 +835,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
     }
     ksort($roomdev);
     foreach( $roomdev as $chair => $dev ){
-      $devuser = get_device_prop($dev);
+      $devuser = get_properties($dev, 'device');
       $lab = $devuser['label'];
       $bclass = "psvmember";
       if( $devuser['age'] < 20 )
@@ -879,7 +922,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $inp->setAttribute('type','text');
       $inp->setAttribute('name','label');
       $inp->setAttribute('pattern','[a-zA-Z0-9]*');
-      $inp->setAttribute('value',$rprop['name']);
+      $inp->setAttribute('value',$rprop['label']);
       //<input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'">
       $form->appendChild($doc->createElement('br'));
       $form->appendChild($doc->createTextNode('Size L x W x H [m]: '));
@@ -980,35 +1023,35 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
   }
 }
 
-function html_admin_devices()
+function html_admin_db($type)
 {
-  $devs = list_devices();
+  $devs = list_db($type);
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
-  $root->appendChild($doc->createElement('h2'))->appendChild($doc->createTextNode('Devices:'));
+  $root->appendChild($doc->createElement('a'))->setAttribute('name',$type.'s');
+  $root->appendChild($doc->createElement('h2'))->appendChild($doc->createTextNode($type.'s:'));
   $tab = $root->appendChild($doc->createElement('table'));
   $tr = $tab->appendChild($doc->createElement('tr'));
-  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('device'));
+  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode($type));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('age'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('owner'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('label'));
-  foreach( $devs as $dev ){
-    $dprop = get_device_prop( $dev['dev'] );
+  foreach( $devs as $dev=>$dprop ){
     $tr = $tab->appendChild($doc->createElement('tr'));
-    $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dev['dev']));
-    $age = $dev['age'].'s';
-    if( $dev['age'] > 599 )
-      $age = sprintf('%1.1fm',$dev['age']/60);
-    if( $dev['age'] > 6*3600 )
-      $age = sprintf('%1.1fh',$dev['age']/3600);
-    if( $dev['age'] > 3*24*3600 )
-      $age = sprintf('%1.1fd',$dev['age']/(3600*24));
+    $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dev));
+    $age = $dprop['age'].'s';
+    if( $dprop['age'] > 599 )
+      $age = sprintf('%1.1fm',$dprop['age']/60);
+    if( $dprop['age'] > 6*3600 )
+      $age = sprintf('%1.1fh',$dprop['age']/3600);
+    if( $dprop['age'] > 3*24*3600 )
+      $age = sprintf('%1.1fd',$dprop['age']/(3600*24));
     
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($age));
     // user:
     $td = $tr->appendChild($doc->createElement('td'));
     $inp = $td->appendChild($doc->createElement('select'));
-    $inp->setAttribute('oninput','location.href=\'?setdevowner='.urlencode($dev['dev']).'&owner=\'+event.target.value;');
+    $inp->setAttribute('oninput','location.href=\'?set'.$type.'owner='.urlencode($dev).'&owner=\'+event.target.value;');
     $opt = $inp->appendChild($doc->createElement('option'));
     $opt->setAttribute('value','');
     $opt->appendChild($doc->createTextNode(' -- unclaimed -- '));
@@ -1025,8 +1068,8 @@ function html_admin_devices()
     $form = $td->appendChild($doc->createElement('form'));
     $inp = $form->appendChild($doc->createElement('input'));
     $inp->setAttribute('type','hidden');
-    $inp->setAttribute('name','setdevlabel');
-    $inp->setAttribute('value',$dev['dev']);
+    $inp->setAttribute('name','set'.$type.'label');
+    $inp->setAttribute('value',$dev);
     $inp = $form->appendChild($doc->createElement('input'));
     $inp->setAttribute('type','text');
     $inp->setAttribute('name','label');
@@ -1038,8 +1081,8 @@ function html_admin_devices()
     $form = $td->appendChild($doc->createElement('form'));
     $inp = $form->appendChild($doc->createElement('input'));
     $inp->setAttribute('type','hidden');
-    $inp->setAttribute('name','rmdevice');
-    $inp->setAttribute('value',$dev['dev']);
+    $inp->setAttribute('name','rm'.$type);
+    $inp->setAttribute('value',$dev);
     $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Delete'));
   }
   echo $doc->saveHTML() . "\n";
@@ -1050,8 +1093,7 @@ function html_admin_users()
   $doc = new DOMDocument('1.0');
   $root = $doc->createElement('div');
   $doc->appendChild($root);
-  $el = $root->appendChild($doc->createElement('a'));
-  $el->setAttribute('name','users');
+  $root->appendChild($doc->createElement('a'))->setAttribute('name','users');
   $el = $root->appendChild($doc->createElement('h2'));
   $el->appendChild($doc->createTextNode('Users:'));
   $tab = $root->appendChild($doc->createElement('table'));
@@ -1063,7 +1105,7 @@ function html_admin_users()
   $tab->appendChild($doc->createTextNode("\n"));
   $users = list_users();
   foreach($users as $us){
-    $uprop = get_user_prop($us);
+    $uprop = get_properties($us,'user');
     $tr = $tab->appendChild($doc->createElement('tr'));
     $td = $tr->appendChild($doc->createElement('td'));
     $td->appendChild($doc->createTextNode($us));
@@ -1110,8 +1152,7 @@ function html_admin_groups()
   $doc = new DOMDocument('1.0');
   $root = $doc->createElement('div');
   $doc->appendChild($root);
-  $el = $root->appendChild($doc->createElement('a'));
-  $el->setAttribute('name','groups');
+  $root->appendChild($doc->createElement('a'))->setAttribute('name','groups');
   $el = $root->appendChild($doc->createElement('h2'));
   $el->appendChild($doc->createTextNode('Groups:'));
   $form = $root->appendChild($doc->createElement('form'));
@@ -1134,7 +1175,7 @@ function html_admin_groups()
   $grps = list_groups();
   $styles = list_styles();
   foreach($grps as $group){
-    $gprop = get_group_prop( $group );
+    $gprop = get_properties( $group, 'group' );
     $grpusers = get_group_users( $group );
     sort($grpusers);
     $tr = $tab->appendChild($doc->createElement('tr'));

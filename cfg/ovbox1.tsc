@@ -6,7 +6,15 @@
     <source name="Frauke"><sound maxdist="50" r="4" az="-16" layers="1"/></source>
     <source name="Hille"><sound maxdist="50" r="4" az="24" layers="1"/></source>
     <source name="Claas"><sound maxdist="50" r="4" az="64" layers="1"/></source>
-    <include name="base_scene.itsc"/>
+    <source name="ego">
+      <sound maxdist="50" x="0.3" z="-0.7" layers="1" connect="system:capture_1" gain="-10">
+	<plugins>
+	  <sndfile name="akkord_up_48.wav" level="60" triggered="true" transport="false"/>
+	  <sndfile name="akkord_down_48.wav" level="60" triggered="true" transport="false"/>
+	</plugins>
+      </sound>
+    </source>
+    <receiver type="ortf" name="master" delaycomp="0.05"/>
   </scene>
   <modules>
     <system command="../udpmirror/mplx_client -d mplx.yourdomain.com  -p 4464 -l 4466 -c 1 -o 0" onunload="killall mplx_client"/>

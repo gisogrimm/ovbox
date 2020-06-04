@@ -68,12 +68,12 @@ if( $user == 'admin' ){
         modify_user_prop( $_GET['moduser'], 'maingroup', $_GET['maingroup']);
         header( "Location: /#users" );
     }
-    if( isset($_GET['setdevowner']) ){
-        modify_device_prop( $_GET['setdevowner'], 'owner', $_GET['owner'] );
+    if( isset($_GET['setdeviceowner']) ){
+        modify_device_prop( $_GET['setdeviceowner'], 'owner', $_GET['owner'] );
         header( "Location: /" );
     }
-    if( isset($_GET['setdevlabel']) ){
-        modify_device_prop( $_GET['setdevlabel'], 'label', $_GET['label'] );
+    if( isset($_GET['setdevicelabel']) ){
+        modify_device_prop( $_GET['setdevicelabel'], 'label', $_GET['label'] );
         header( "Location: /" );
     }
     if( isset($_GET['rmdevice']) ){
@@ -85,7 +85,7 @@ if( $user == 'admin' ){
         header( "Location: /" );
     }
     if( isset($_GET['setroomlabel']) ){
-        modify_room_prop( $_GET['setroomlabel'], 'name', $_GET['label'] );
+        modify_room_prop( $_GET['setroomlabel'], 'label', $_GET['label'] );
         header( "Location: /" );
     }
     if( isset($_GET['rmroom']) ){
@@ -94,27 +94,8 @@ if( $user == 'admin' ){
     }
     print_head( $user );
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
-    html_admin_devices();
-    $rooms = list_rooms();
-    echo "<h2>Rooms:</h2><table>\n";
-    echo "<tr><th>room</th><th>age</th><th>label</th><th>owner</th></tr>\n";
-    foreach( $rooms as $room ){
-        $dprop = get_room_prop( $room['room'] );
-        echo '<tr><td>' .
-            $room['room'] . '</td><td>' .
-            $room['age'] . '</td><td>' .
-            '<form><input type="hidden" name="setroomlabel" value="'.$room['room'].'"><input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'"><button>Save</button></form>' .
-            '</td><td>' .
-            '<form>' .
-            '<input type="hidden" name="setroomowner" value="'.$room['room'].'">'.
-            '<input type="text" title="Owner" name="owner" pattern="[a-zA-Z0-9\.]*" value="'.$dprop['owner'].'">'.
-            '<button>Save</button>' .
-            '</form>' .
-            '</td><td>' .
-            '<form><input type="hidden" name="rmroom" value="'.$room['room'].'"><button>Delete</button></form>' .
-            '</td></tr>' . "\n"; 
-    }
-    echo "</table>\n";
+    html_admin_db('device');
+    html_admin_db('room');
     html_admin_users();
     html_admin_groups();
     print_foot();
@@ -128,7 +109,7 @@ if( isset($_GET['devselect']) ){
 
 $device = get_device( $user );
 if( !empty($device) ){
-    $devprop = get_device_prop( $device );
+    $devprop = get_properties( $device, 'device' );
     if($user != $devprop['owner']){
         select_userdev( $user, '' );
         header( "Location: /" );
@@ -136,13 +117,13 @@ if( !empty($device) ){
     }
 }
 $usergroups = list_groups($user);
-$userprop = get_user_prop($user);
+$userprop = get_properties($user,'user');
 $maingroup = $userprop['maingroup'];
 if( !in_array($maingroup,$usergroups) )
     $maingroup = '';
 $style = '';
 if( !empty($maingroup) ){
-    $groupprop = get_group_prop($maingroup);
+    $groupprop = get_properties( $maingroup, 'group' );
     $style = $groupprop['style'];
 }
 
@@ -175,7 +156,7 @@ function set_getprop( &$prop, $key )
     
 if( isset($_GET['setdevprop']) ){
     if( !empty( $device ) ){
-        $prop = get_device_prop( $device );
+        $prop = get_properties( $device, 'device' );
         $prop['reverb'] = isset($_GET['reverb']);
         $prop['peer2peer'] = isset($_GET['peer2peer']);
         set_getprop($prop,'jittersend');
@@ -197,7 +178,7 @@ if( isset($_GET['setroom']) ){
     $rprop = get_room_prop($room);
     if( $user == $rprop['owner']){
         if( isset($_GET['label']))
-            $rprop['name'] = $_GET['label'];
+            $rprop['label'] = $_GET['label'];
         set_getprop( $rprop, 'size' );
         if( isset($_GET['sx'])&&isset($_GET['sy'])&&isset($_GET['sz']))
             $rprop['size'] = $_GET['sx'].' '.$_GET['sy'].' '.$_GET['sz'];
@@ -231,8 +212,8 @@ if( isset($_GET['claim']) ){
 }
 
 if ( empty( $device ) ) {
-    foreach( owned_devices($user) as $dev ){
-        header( "Location: /?devselect=" . $dev['dev'] );
+    foreach( owned_devices($user) as $dev=>$dprop ){
+        header( "Location: /?devselect=" . $dev );
         die();
     }
 }
@@ -242,8 +223,17 @@ print_head( $user, $style );
 
 if ( empty( $device ) ) {
     echo "<p>You are logged in as user {$user}. You have no registered device.</p>";
+    $devs = list_unclaimed_devices();
+    if( !empty($devs) ){
+        echo '<div class="devclaim">';
+        echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
+        foreach( $devs as $dev ){
+            echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
+        }
+        echo "</div>";
+    }
 } else {
-    $devprop = get_device_prop( $device );
+    $devprop = get_properties( $device, 'device' );
     html_show_user( $user, $device, $devprop );
     html_device_selector( $user, $device );
     echo '<form class="devprop" id="devsettings" style="display: none;"><div class="devproptitle">Device settings:</div>' . "\n";
