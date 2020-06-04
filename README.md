@@ -44,6 +44,8 @@ a self-written UDP tunnel and multiplexer (see folder udpmirror)
 
 For installation instructions see file [INSTALL.md](INSTALL.md).
 
+Once your installation is ready you may wish to get an account at box.orlandoviols.com - in that case please contact us via e-mail.
+
 
 ## Performance
 

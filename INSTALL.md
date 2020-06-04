@@ -18,19 +18,21 @@ Now you should be able to login via ssh, with
 ````
 ssh pi@raspberrypi
 ````
-The default password is `raspberry`. This need to be changed, e.g., to `ovbox2020`. To change the password, type `passwd`.
+The default password is `raspberry`. This needs to be changed, e.g., to `ovbox2020`. To change the password, type `passwd`.
 
 At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take several hours to run. To use the installer script, type these commands as user pi:
 ````
 wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 . installovbox.sh
 ````
+Please mind the space between the dot and `installovbox.sh`.
 Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Type Enter when the TASCAR installer asks to install files.
 
 Finally, restart the system with
 ````
 sudo shutdown -r now
 ````
+If everything went well, approximately 1 minute after powering on the device you should hear an announcement via headphones. You may shutdown the device by simply unplugging the power.
 
 
 Alternatively, you may follow the manual installation instructions below.
