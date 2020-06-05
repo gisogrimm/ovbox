@@ -22,6 +22,7 @@ function defaults( $type )
     'outputport2'=>'system:playback_2',
     'peer2peer'=>true,
     'pos'=>'0 0 0',
+    'rawmode'=>false,
     'reverb'=>true,
     'room'=>'',
     'srcdist'=>1.2,
@@ -108,7 +109,7 @@ function set_properties( $id, $type, $dprop )
 
 function print_head( $user = "", $style = "" )
 {
-  $css = 'ovbox.css';
+  $css = '';
   $title = 'House of Consort';
   if( !empty($style) ){
     
@@ -122,9 +123,11 @@ function print_head( $user = "", $style = "" )
     echo ' - ' . $user;
   }
   echo '</title><style>';
-  if( file_exists( $css ) ){
-    $css = file_get_contents( $css );
-    echo $css;
+  if( file_exists( 'ovbox.css' ) ){
+    echo file_get_contents( 'ovbox.css' );
+  }
+  if( (!empty($css)) && file_exists( $css ) ){
+    echo file_get_contents( $css );
   }
   echo '</style>';
   //echo '<script>location.href="/";</script>';
@@ -428,7 +431,8 @@ function get_tascar_cfg( $device, $devhash )
   $session->setAttribute("license","CC0");
   $session->setAttribute("levelmeter_tc","0.5");
   $scene = $doc->createElement("scene");
-  $session->appendChild($scene);
+  if( ! $localdevprop['rawmode'] )
+    $session->appendChild($scene);
   $modules = $doc->createElement("modules");
   $session->appendChild($modules);
   // add receiver:
@@ -438,14 +442,18 @@ function get_tascar_cfg( $device, $devhash )
   $rec->setAttribute("delaycomp","0.05");
   $scene->appendChild($rec);
   // master connections
-  $conn = $doc->createElement("connect");
-  $conn->setAttribute("src","render.scene:master_l");
-  $conn->setAttribute("dest",$localdevprop['outputport1']);
-  $session->appendChild($conn);
-  $conn = $doc->createElement("connect");
-  $conn->setAttribute("src","render.scene:master_r");
-  $conn->setAttribute("dest",$localdevprop['outputport2']);
-  $session->appendChild($conn);
+  if( ! $localdevprop['rawmode'] ){
+    $conn = $doc->createElement("connect");
+    $conn->setAttribute("src","render.scene:master_l");
+    $conn->setAttribute("dest",$localdevprop['outputport1']);
+    if( !empty($localdevprop['outputport1']))
+      $session->appendChild($conn);
+    $conn = $doc->createElement("connect");
+    $conn->setAttribute("src","render.scene:master_r");
+    $conn->setAttribute("dest",$localdevprop['outputport2']);
+    if( !empty($localdevprop['outputport2']))
+      $session->appendChild($conn);
+  }
   // room specific setup:    
   if ( !empty( $localdevprop['room'] ) ){
     $room = $localdevprop['room'];
@@ -557,8 +565,14 @@ function get_tascar_cfg( $device, $devhash )
             $port = $devuser . ":out_".($k+1);
             $waitports = $waitports . ' ' . $port;
             $conn->setAttribute("src",$port);
-            $conn->setAttribute("dest","render.scene:" . $devuser . ".".$k.".0");
-            $session->appendChild($conn);
+            if( $localdevprop['rawmode'] ){
+              $conn->setAttribute("dest",$localdevprop['outputport'.($k+1)]);
+              if( !empty($localdevprop['outputport'.($k+1)]))
+                $session->appendChild($conn);
+            }else{
+              $conn->setAttribute("dest","render.scene:" . $devuser . ".".$k.".0");
+              $session->appendChild($conn);
+            }
           }
         }
       }
@@ -591,9 +605,11 @@ function get_tascar_cfg( $device, $devhash )
       $mod->setAttribute("command","../udpmirror/jackwaitforport" . $waitports . ";sleep 1");
       $modules->appendChild($mod);
       $mod = $doc->createElement("touchosc");
-      $modules->appendChild($mod);
+      if( ! $localdevprop['rawmode'] )
+        $modules->appendChild($mod);
       $mod = $doc->createElement("system");
       $mod->setAttribute("command","node bridge.js");
+      if( ! $localdevprop['rawmode'] )
       $modules->appendChild($mod);
       $success = true;
     }
@@ -624,29 +640,42 @@ function get_tascar_cfg( $device, $devhash )
 function html_device_selector( $user, $currentdevice )
 {
   $devs = list_unclaimed_devices();
+  $doc = new DOMDocument('1.0');
+  $root = $doc->appendChild($doc->createElement('div'));
   if( !empty($devs) ){
-    echo '<div class="devclaim">';
-    echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
+    $el = $root->appendChild($doc->createElement('div'))->setAttribute('class','devclaim');
+    $el->appendChild($doc->createTextNode('Unclaimed active devices exist. If your device is active now, you may claim one of these devices: '));
     foreach( $devs as $dev ){
-      echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
+      $form = $el->appendChild($doc->createElement('form'));
+      $inp = $form->appendChild($doc->createElement('input'));
+      $inp->setAttribute('type','hidden');
+      $inp->setAttribute('name','claim');
+      $inp->setAttribute('value',$dev);
+      $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode($dev));;
     }
-    echo "</div>";
   }
-  echo "<div>";
-  echo '<select id="devselect" name="devselect" oninput="location.href=\'?devselect=\'+event.target.value;">';
-  echo '<option value=""> -- please select a device --</option>';
+  $div = $root->appendChild($doc->createElement('div'));
+  $select = $div->appendChild($doc->createElement('select'));
+  //$select->setAttribute('id','devselect');
+  //$select->setAttribute('name','devselect');
+  $select->setAttribute('oninput','location.href=\'?devselect=\'+event.target.value;');
+  $select->appendChild($doc->createElement('option'))->appendChild($doc->createTextNode(' -- please select a device -- '));
   foreach( owned_devices( $user ) as $dev=>$dprop ){
-    echo '<option value="'.$dev.'"';
+    $opt = $select->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value',$dev);
     if( $currentdevice == $dev )
-      echo ' selected';
+      $opt->setAttribute('selected','');
     $active = '';
     if( $dprop['age'] < 20 )
       $active = ' *active*';
-    echo '>'.$dev.' ('.$dprop['label'].')'.$active.'</option>';
+    $opt->appendChild($doc->createTextNode($dev.' ('.$dprop['label'].')'.$active));
   }
-  echo '</select>';
-  echo '<input type="button" class="roomsettingstoggle" onclick="toggledisplay(\'devsettings\',\'device settings\');" value="show device settings"/>';
-  echo "</div>\n";
+  $inp = $div->appendChild($doc->createElement('input'));
+  $inp->setAttribute('type','button');
+  $inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('onclick','toggledisplay(\'devsettings\',\'device settings\');');
+  $inp->setAttribute('value','show device settings');
+  echo $doc->saveHTML();
 }
 
 function auth( $username, $password )
@@ -1273,6 +1302,167 @@ function html_show_user( $user, $device, $devprop )
   $inp->setAttribute('class','roomsettingstoggle');
   $inp->setAttribute('onclick','toggledisplay(\'groupinfo\',\'group info\');');
   $inp->setAttribute('value','show group info');
+  echo $doc->saveHTML() . "\n";
+}
+
+function html_show_device( $user, $device, $devprop )
+{
+  html_device_selector( $user, $device );
+  $doc = new DOMDocument('1.0');
+  $root = $doc->appendChild($doc->createElement('div'));
+  $form = $root->appendChild($doc->createElement('form'));
+  $form->setAttribute('class','devprop');
+  $form->setAttribute('id','devsettings');
+  $form->setAttribute('style','display: none;');
+  $el = $form->appendChild($doc->createElement('div'));
+  $el->setAttribute('class','devproptitle');
+  $el->appendChild($doc->createTextNode('Device settings:'));
+  // device properties:
+  // label:
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','label');
+  $el->appendChild($doc->createTextNode('device label (appears in rooms and the mixer of the others): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','label');
+  $el->setAttribute('name','label');
+  $el->setAttribute('type','text');
+  $el->setAttribute('pattern','[a-zA-Z0-9]*');
+  $el->setAttribute('value',$devprop['label']);
+  $form->appendChild($doc->createElement('br'));
+  $form->appendChild($doc->createElement('hr'));
+  $el = $form->appendChild($doc->createElement('div'));
+  $el->setAttribute('class','devproptitle');
+  $el->appendChild($doc->createTextNode('Audio settings:'));
+  // input port:
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','inputport');
+  $el->appendChild($doc->createTextNode('input ports (to which your microphones/instruments are connected): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','inputport');
+  $el->setAttribute('name','inputport');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['inputport']);
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','inputport2');
+  $el->setAttribute('name','inputport2');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['inputport2']);
+  $form->appendChild($doc->createElement('br'));
+  // output port:
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','outputport');
+  $el->appendChild($doc->createTextNode('output ports (to which your headphones are connected): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','outputport1');
+  $el->setAttribute('name','outputport1');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['outputport1']);
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','outputport2');
+  $el->setAttribute('name','outputport2');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['outputport2']);
+  $form->appendChild($doc->createElement('br'));
+  // source distance:
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','srcdist');
+  $el->appendChild($doc->createTextNode('distance between sources (in case of you send more than one channel): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','srcdist');
+  $el->setAttribute('name','srcdist');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','0');
+  $el->setAttribute('step','0.01');
+  $el->setAttribute('value',$devprop['srcdist']);
+  $form->appendChild($doc->createElement('br'));
+  // ego monitor:
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','egogain');
+  $el->appendChild($doc->createTextNode('ego monitor gain in dB: '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','egogain');
+  $el->setAttribute('name','egogain');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','-30');
+  $el->setAttribute('max','10');
+  $el->setAttribute('step','0.1');
+  $el->setAttribute('value',$devprop['egogain']);
+  $form->appendChild($doc->createElement('br'));
+  // reverb:
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('name','reverb');
+  $el->setAttribute('id','reverb');
+  $el->setAttribute('type','checkbox');
+  if( $devprop['reverb'] )
+    $el->setAttribute('checked','');
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','reverb');
+  $el->appendChild($doc->createTextNode('render reverb '));
+  $form->appendChild($doc->createElement('br'));
+  // raw mode:
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('name','rawmode');
+  $el->setAttribute('id','rawmode');
+  $el->setAttribute('type','checkbox');
+  if( $devprop['rawmode'] )
+    $el->setAttribute('checked','');
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','rawmode');
+  $el->appendChild($doc->createTextNode('raw mode - no virtual acoustics '));
+  $form->appendChild($doc->createElement('br'));
+  $form->appendChild($doc->createElement('hr'));
+  $el = $form->appendChild($doc->createElement('div'));
+  $el->setAttribute('class','devproptitle');
+  $el->appendChild($doc->createTextNode('Network settings:'));
+  // jitter (send):
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','jittersend');
+  $el->appendChild($doc->createTextNode('sender jitter (affects buffer length of others): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','jittersend');
+  $el->setAttribute('name','jittersend');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','2');
+  $el->setAttribute('max','30');
+  $el->setAttribute('step','1');
+  $el->setAttribute('value',$devprop['jittersend']);
+  $form->appendChild($doc->createElement('br'));
+  // jitter (receive):
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','jitterreceive');
+  $el->appendChild($doc->createTextNode('receiver jitter (affects your own buffer length): '));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','jitterreceive');
+  $el->setAttribute('name','jitterreceive');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','2');
+  $el->setAttribute('max','30');
+  $el->setAttribute('step','1');
+  $el->setAttribute('value',$devprop['jitterreceive']);
+  $form->appendChild($doc->createElement('br'));
+  // peer-to-peer:
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('name','peer2peer');
+  $el->setAttribute('id','peer2peer');
+  $el->setAttribute('type','checkbox');
+  if( $devprop['peer2peer'] )
+    $el->setAttribute('checked','');
+  $el = $form->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','peer2peer');
+  $el->appendChild($doc->createTextNode('peer-to-peer mode '));
+  $form->appendChild($doc->createElement('br'));
+  // save:
+  $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
+  $el = $form->appendChild($doc->createElement('input'));
+  $el->setAttribute('name','setdevprop');
+  $el->setAttribute('type','hidden');
   echo $doc->saveHTML() . "\n";
 }
 

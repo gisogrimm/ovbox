@@ -15,6 +15,9 @@ body {
     padding: 8px;
     overflow: auto;
 }
+div {
+    overflow: auto;
+}
 .room {
     background-color: #A7A7A790;
     margin: 10px;

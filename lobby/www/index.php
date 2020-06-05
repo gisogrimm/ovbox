@@ -46,51 +46,63 @@ if( $user == 'admin' ){
     if( isset($_GET['addgroup']) ){
         add_group($_GET['addgroup']);
         header( "Location: /#groups" );
+        die();
     }
     if( isset($_GET['rmgroup']) ){
         rm_group($_GET['rmgroup']);
         header( "Location: /#groups" );
+        die();
     }
     if( isset($_GET['addusertogroup']) ){
         add_user_to_group($_GET['newuser'],$_GET['addusertogroup']);
         header( "Location: /#groups" );
+        die();
     }
     if( isset($_GET['removeuserfromgroup']) ){
         remove_user_from_group($_GET['groupuser'],$_GET['removeuserfromgroup']);
         header( "Location: /#groups" );
+        die();
     }
     if( isset($_GET['setgrpstyle'])){
         modify_group_prop( $_GET['setgrpstyle'], 'style', $_GET['grpstyle']);
         header( "Location: /#groups" );
+        die();
     }
     if( isset($_GET['moduser']) ){
         modify_user_prop( $_GET['moduser'], 'seesall', isset($_GET['seesall']));
         modify_user_prop( $_GET['moduser'], 'maingroup', $_GET['maingroup']);
         header( "Location: /#users" );
+        die();
     }
     if( isset($_GET['setdeviceowner']) ){
         modify_device_prop( $_GET['setdeviceowner'], 'owner', $_GET['owner'] );
-        header( "Location: /" );
+        header( "Location: /#devices" );
+        die();
     }
     if( isset($_GET['setdevicelabel']) ){
         modify_device_prop( $_GET['setdevicelabel'], 'label', $_GET['label'] );
-        header( "Location: /" );
+        header( "Location: /#devices" );
+        die();
     }
     if( isset($_GET['rmdevice']) ){
         rm_device( $_GET['rmdevice'] );
-        header( "Location: /" );
+        header( "Location: /#devices" );
+        die();
     }
     if( isset($_GET['setroomowner']) ){
         modify_room_prop( $_GET['setroomowner'], 'owner', $_GET['owner'] );
-        header( "Location: /" );
+        header( "Location: /#rooms" );
+        die();
     }
     if( isset($_GET['setroomlabel']) ){
         modify_room_prop( $_GET['setroomlabel'], 'label', $_GET['label'] );
-        header( "Location: /" );
+        header( "Location: /#rooms" );
+        die();
     }
     if( isset($_GET['rmroom']) ){
         rm_room( $_GET['rmroom'] );
-        header( "Location: /" );
+        header( "Location: /#rooms" );
+        die();
     }
     print_head( $user );
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
@@ -159,6 +171,7 @@ if( isset($_GET['setdevprop']) ){
         $prop = get_properties( $device, 'device' );
         $prop['reverb'] = isset($_GET['reverb']);
         $prop['peer2peer'] = isset($_GET['peer2peer']);
+        $prop['rawmode'] = isset($_GET['rawmode']);
         set_getprop($prop,'jittersend');
         set_getprop($prop,'jitterreceive');
         set_getprop($prop,'label');
@@ -235,37 +248,7 @@ if ( empty( $device ) ) {
 } else {
     $devprop = get_properties( $device, 'device' );
     html_show_user( $user, $device, $devprop );
-    html_device_selector( $user, $device );
-    echo '<form class="devprop" id="devsettings" style="display: none;"><div class="devproptitle">Device settings:</div>' . "\n";
-    // device properties:
-    echo '<label for="label">device label (appears in rooms and the mixer of the others): </label><br>';
-    echo '<input id="label" name="label" type="text" value="'.$devprop['label'].'" pattern="[a-zA-Z0-9]*"><br>' . "\n";
-    echo '<label for="inputport">input ports (to which your microphones/instruments are connected): </label><br>';
-    echo '<input id="inputport" name="inputport" type="text" value="'.$devprop['inputport'].'">' . "\n";
-    echo '<input id="inputport2" name="inputport2" type="text" value="'.$devprop['inputport2'].'"><br>' . "\n";
-    echo '<label for="outputport1">output ports (to which your headphones are connected): </label><br>';
-    echo '<input id="outputport1" name="outputport1" type="text" value="'.$devprop['outputport1'].'">' . "\n";
-    echo '<input id="outputport2" name="outputport2" type="text" value="'.$devprop['outputport2'].'"><br>' . "\n";
-    echo '<label for="srcdist">distance between sources (in case of you send more than one channel): </label><br>';
-    echo '<input id="srcdist" name="srcdist" type="number" min="0" step="0.01" value="'.$devprop['srcdist'].'"><br>' . "\n";
-    echo '<label for="egogain">ego monitor gain in dB: </label><br>';
-    echo '<input id="egogain" name="egogain" type="number" min="-30" max="10" step="0.1" value="'.$devprop['egogain'].'"><br>' . "\n";
-    echo '<label for="jittersend">sender jitter (affects buffer length of others): </label><br>';
-    echo '<input id="jittersend" name="jittersend" type="number" min="2" max="30" value="'.$devprop['jittersend'].'"><br>' . "\n";
-    echo '<label for="jitterreceive">receiver jitter (affects your own buffer length): </label><br>';
-    echo '<input id="jitterreceive" name="jitterreceive" type="number" min="2" max="30" value="'.$devprop['jitterreceive'].'"><br>' . "\n";
-    echo '<input id="breverb" name="reverb" type="checkbox"';
-    if( $devprop['reverb'] )
-        echo ' checked';
-    echo '><label for="breverb">render reverb</label><br>';
-    echo '<input id="bp2p" name="peer2peer" type="checkbox"';
-    if( $devprop['peer2peer'] )
-        echo ' checked';
-    echo '><label for="bp2p">peer-to-peer mode</label><br>';
-    echo '<button>Save</button>'."\n";
-    echo '<input type="hidden" name="setdevprop" value="">';
-    // end device properties.
-    echo '</form>';
+    html_show_device( $user, $device, $devprop );
     echo '<p>Rooms: (<a href="http://' . $_SERVER['HTTP_HOST'] . '">refresh</a>)</p>' . "\n";
     foreach( get_rooms() as $room){
         html_show_room( $room, $device, $devprop, $room == $devprop['room'], $user, $userprop, $usergroups );
