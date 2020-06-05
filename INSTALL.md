@@ -18,7 +18,7 @@ Now you should be able to login via ssh, with
 ````
 ssh pi@raspberrypi
 ````
-The default password is `raspberry`. This needs to be changed, e.g., to `ovbox2020`. To change the password, type `passwd`.
+The default password is `raspberry`. This needs to be changed after first boot; to change the password, type `passwd`.
 
 At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take several hours to run. To use the installer script, type these commands as user pi:
 ````
