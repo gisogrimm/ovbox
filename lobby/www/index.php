@@ -28,7 +28,7 @@ if ($user == 'device') {
             $devhash = $_GET['hash'];
         $host = '';
         if( isset($_GET['host']) )
-            $devhash = $_GET['host'];
+            $host = $_GET['host'];
         get_tascar_cfg( $device, $devhash );
         // touch device file:
         modify_device_prop( $device, 'access', time() );
