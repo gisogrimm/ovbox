@@ -45,6 +45,11 @@ namespace webCURL {
 std::string get_device_info(std::string url, const std::string& device,
                             std::string& hash)
 {
+  char chost[1024];
+  memset(chost,0,1024);
+  std::string hostname;
+  if( 0 == gethostname(chost,1023) )
+    hostname = chost;
   CURLcode res;
   std::string retv;
   struct webCURL::MemoryStruct chunk;
@@ -53,6 +58,8 @@ std::string get_device_info(std::string url, const std::string& device,
   chunk.size = 0;       /* no data at this point */
 
   url += "?dev=" + device + "&hash=" + hash;
+  if( hostname.size() > 0 )
+    url += "&host=" + hostname;
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_USERPWD, "device:device");
   /* send all data to this function  */
@@ -137,7 +144,7 @@ int main(int argc, char** argv)
     FILE* h_pipe(NULL);
     while(!quit_app) {
       std::string tsc = get_device_info(lobby, device, hash);
-      if(tsc.size()) {
+      if((tsc.size()>10) && (tsc.substr(0,5)=="<?xml")) {
         // close current TASCAR session:
         if(h_pipe)
           fclose(h_pipe);

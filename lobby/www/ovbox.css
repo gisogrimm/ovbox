@@ -103,3 +103,21 @@ tr {
     border-radius: 15px;
     overflow: auto;
 }
+a.mixer {
+    background-color: #909990;
+    border-radius: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    line-height: 2.4em;
+    overflow: auto;
+}
+div.mixer {
+    background-color: #9fae9d90;
+    border-radius: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    line-height: 2.4em;
+    overflow: auto;
+}

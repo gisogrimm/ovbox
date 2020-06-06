@@ -21,10 +21,10 @@ httpserver = http.createServer(function (req, res) {
     res.write(hoscss);
     res.write('</style><title>ORLANDOviols consort box</title>\n</head><body>\n');
     res.write('<h1>ORLANDOviols consort box ('+devname+')</h1>\n<div id="mixer">mixer</div>\n');
-    res.write('<div class="netctl" id="netctl"><p>Network settings</p>\n');
-    res.write('<p><input type="checkbox" class="checkbox" id="peer2peer" name="peer2peer"><label for="peer2peer"> Peer-to-peer mode</label></p>\n');
-    res.write('<p><input type="checkbox" class="checkbox" id="duplicates" name="duplicates"><label for="duplicates"> Send packages twice</label></p>\n');
-    res.write('</div>');
+    //res.write('<div class="netctl" id="netctl"><p>Network settings</p>\n');
+    //res.write('<p><input type="checkbox" class="checkbox" id="peer2peer" name="peer2peer"><label for="peer2peer"> Peer-to-peer mode</label></p>\n');
+    //res.write('<p><input type="checkbox" class="checkbox" id="duplicates" name="duplicates"><label for="duplicates"> Send packages twice</label></p>\n');
+    //res.write('</div>');
     res.write('<script src="http://'+os.hostname()+':8080/socket.io/socket.io.js"></script>\n');
     res.write('<script>\n');
     res.write('var socket = io("http://'+os.hostname()+':8080");\n');

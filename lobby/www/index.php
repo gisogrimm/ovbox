@@ -26,9 +26,13 @@ if ($user == 'device') {
         $devhash = '';
         if( isset($_GET['hash']) )
             $devhash = $_GET['hash'];
+        $host = '';
+        if( isset($_GET['host']) )
+            $devhash = $_GET['host'];
         get_tascar_cfg( $device, $devhash );
         // touch device file:
         modify_device_prop( $device, 'access', time() );
+        modify_device_prop( $device, 'host', $host );
     }
     die();
 }
@@ -233,18 +237,18 @@ if ( empty( $device ) ) {
     
 print_head( $user, $style );
 
+$devs = list_unclaimed_devices();
+if( !empty($devs) ){
+    echo '<div class="devclaim">';
+    echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
+    foreach( $devs as $dev ){
+        echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
+    }
+    echo "</div>";
+}
 
 if ( empty( $device ) ) {
     echo "<p>You are logged in as user {$user}. You have no registered device.</p>";
-    $devs = list_unclaimed_devices();
-    if( !empty($devs) ){
-        echo '<div class="devclaim">';
-        echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
-        foreach( $devs as $dev ){
-            echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
-        }
-        echo "</div>";
-    }
 } else {
     $devprop = get_properties( $device, 'device' );
     html_show_user( $user, $device, $devprop );

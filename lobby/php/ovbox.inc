@@ -14,6 +14,7 @@ function defaults( $type )
     'label'=>'',
     'owner'=>'',
     'egogain'=>0,
+    'host'=>'',
     'inputport'=>'system:capture_1',
     'inputport2'=>'',
     'jitterreceive'=>5,
@@ -131,7 +132,7 @@ function print_head( $user = "", $style = "" )
   }
   echo '</style>';
   //echo '<script>location.href="/";</script>';
-  echo '<meta http-equiv="refresh" content="300; url=/"/>';
+  //echo '<meta http-equiv="refresh" content="300; url=/"/>';
   echo '<script>function toggledisplay(id,msg){var x=document.getElementById(id);if(x.style.display==="none"){x.style.display="block";event.target.value=\'hide \'+msg;}else{x.style.display="none";event.target.value=\'show \'+msg;}}</script>';
   echo '<meta name="viewport" content="width=device-width, initial-scale=1"/>';
   echo '</head><body>';
@@ -433,6 +434,8 @@ function get_tascar_cfg( $device, $devhash )
   $scene = $doc->createElement("scene");
   if( ! $localdevprop['rawmode'] )
     $session->appendChild($scene);
+  else
+    $seesion->setAttribute('srv_port','9879');
   $modules = $doc->createElement("modules");
   $session->appendChild($modules);
   // add receiver:
@@ -642,22 +645,8 @@ function html_device_selector( $user, $currentdevice )
   $devs = list_unclaimed_devices();
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
-  if( !empty($devs) ){
-    $el = $root->appendChild($doc->createElement('div'))->setAttribute('class','devclaim');
-    $el->appendChild($doc->createTextNode('Unclaimed active devices exist. If your device is active now, you may claim one of these devices: '));
-    foreach( $devs as $dev ){
-      $form = $el->appendChild($doc->createElement('form'));
-      $inp = $form->appendChild($doc->createElement('input'));
-      $inp->setAttribute('type','hidden');
-      $inp->setAttribute('name','claim');
-      $inp->setAttribute('value',$dev);
-      $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode($dev));;
-    }
-  }
   $div = $root->appendChild($doc->createElement('div'));
   $select = $div->appendChild($doc->createElement('select'));
-  //$select->setAttribute('id','devselect');
-  //$select->setAttribute('name','devselect');
   $select->setAttribute('oninput','location.href=\'?devselect=\'+event.target.value;');
   $select->appendChild($doc->createElement('option'))->appendChild($doc->createTextNode(' -- please select a device -- '));
   foreach( owned_devices( $user ) as $dev=>$dprop ){
@@ -1463,6 +1452,18 @@ function html_show_device( $user, $device, $devprop )
   $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('name','setdevprop');
   $el->setAttribute('type','hidden');
+  if( (!empty($devprop['host'])) && ($devprop['age']<20) && (!$devprop['rawmode']) ){
+    // device is active and we know the host name:
+    $div = $root->appendChild($doc->createElement('div'));
+    $a = $div->appendChild($doc->createElement('a'));
+    $a->setAttribute('href','http://'.$devprop['host'].':8080/');
+    $a->setAttribute('target','_blank');
+    $a->setAttribute('rel','noopener noreferrer');
+    $a->setAttribute('class','mixer');
+    $div->setAttribute('class','mixer');
+    $a->appendChild($doc->createTextNode('open mixer'));
+    $div->appendChild($doc->createTextNode(' (works only when your browser is in the same network as your device)'));
+  }
   echo $doc->saveHTML() . "\n";
 }
 
