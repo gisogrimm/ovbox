@@ -228,6 +228,12 @@ if( isset($_GET['claim']) ){
     header( "Location: /" );
 }
 
+if( isset($_GET['unclaim']) ){
+    if( $devprop['owner'] = $user )
+        modify_device_prop( $device, 'owner', '');
+    header( "Location: /" );
+}
+
 if ( empty( $device ) ) {
     foreach( owned_devices($user) as $dev=>$dprop ){
         header( "Location: /?devselect=" . $dev );
@@ -240,9 +246,9 @@ print_head( $user, $style );
 $devs = list_unclaimed_devices();
 if( !empty($devs) ){
     echo '<div class="devclaim">';
-    echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: \n";
+    echo "Unclaimed active devices exist. If your device is active now, you may claim one of these devices: <br/>\n";
     foreach( $devs as $dev ){
-        echo '<form><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
+        echo '<form style="display: inline;"><input type="hidden" name="claim" value="'.$dev.'"/><button>'.$dev."</button></form>\n ";
     }
     echo "</div>";
 }

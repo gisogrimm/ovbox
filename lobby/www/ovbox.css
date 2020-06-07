@@ -109,7 +109,7 @@ a.mixer {
     margin-top: 8px;
     margin-bottom: 8px;
     padding: 8px;
-    line-height: 2.4em;
+    line-height: 2.2em;
     overflow: auto;
 }
 div.mixer {
@@ -118,6 +118,5 @@ div.mixer {
     margin-top: 8px;
     margin-bottom: 8px;
     padding: 8px;
-    line-height: 2.4em;
     overflow: auto;
 }

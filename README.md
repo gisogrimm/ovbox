@@ -95,6 +95,10 @@ lots of rooms to play music), see [vision.md](doc/vision.md) (this is
 not a vision anymore). If you would like to get access to our "House
 of Consort", please contact us via email.
 
+## User manual
+
+A user manual for the complete system can be found on the [wiki](https://github.com/gisogrimm/ovbox/wiki).
+
 ## Starting the tools
 
 On our boxes, TASCAR is not only used for virtual acoustic simulation,

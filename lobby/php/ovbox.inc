@@ -269,7 +269,7 @@ function list_unclaimed_devices()
 {
   $devs = array();
   foreach( list_devices() as $dev=>$devprop){
-    if( ($devprop['age'] < 120) && empty($devprop['owner']) ){
+    if( ($devprop['age'] < 20) && empty($devprop['owner']) ){
       $devs[] = $dev;
     }
   }
@@ -1449,10 +1449,17 @@ function html_show_device( $user, $device, $devprop )
   $form->appendChild($doc->createElement('br'));
   // save:
   $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
+  $inp = $form->appendChild($doc->createElement('input'));
+  $inp->setAttribute('type','button');
+  $inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('onclick','location.href=\'?unclaim\';');
+  $inp->setAttribute('value','not my device');
+  
+
   $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('name','setdevprop');
   $el->setAttribute('type','hidden');
-  if( (!empty($devprop['host'])) && ($devprop['age']<20) && (!$devprop['rawmode']) ){
+  if( (!empty($devprop['host'])) && (!empty($devprop['room'])) && ($devprop['age']<20) && (!$devprop['rawmode']) ){
     // device is active and we know the host name:
     $div = $root->appendChild($doc->createElement('div'));
     $a = $div->appendChild($doc->createElement('a'));
