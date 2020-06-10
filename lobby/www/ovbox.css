@@ -79,12 +79,14 @@ tr {
     border-radius: 7px;
     color: #000000;
     font-weight: bold;
+    white-space: nowrap;
 } 
 .psvmember {
     background-color: #d6d6d6;
     color: #666666;
     padding: 5px;
     border-radius: 7px;
+    white-space: nowrap;
 }
 .roomsettingstoggle {
     float: right;
@@ -119,4 +121,13 @@ div.mixer {
     margin-bottom: 8px;
     padding: 8px;
     overflow: auto;
+}
+.kick {
+    margin: 0px;
+    padding: 0px;
+    color: #700000;
+    font-weight: bold;
+}
+.latency {
+    font-size: x-small;
 }

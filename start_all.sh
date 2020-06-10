@@ -8,6 +8,7 @@ CODIR=$(dirname `which $0`)
     git pull || (sleep 20 ; git pull)
     # compile binary tools:
     make -C udpmirror
+    make -C headtracker
     # read hostname-specific configuration:
     . get_boxname.sh
     # start the audio system, including all network tools:

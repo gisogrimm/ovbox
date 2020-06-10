@@ -33,6 +33,7 @@ function defaults( $type )
     'label'=>'',
     'owner'=>'',
     'group'=>'',
+    'lat'=>array(),
     'host'=>'',
     'lock'=>false,
     'pin'=>0,
@@ -66,7 +67,7 @@ function postproc_prop( &$prop, $type )
     $prop['label'] = preg_replace('/[^a-zA-Z0-9-_]*/','',$prop['label']);
   }
   if( $type == 'room' ){
-    if( empty($prop['label']))
+    if( empty($prop['label']) && (!empty($prop['name'])))
       $prop['label'] = $prop['name'];
     unset($prop['name']);
     $dim = explode(" ",$prop['size']);
@@ -352,6 +353,16 @@ function update_room( $host, $port, $name, $pin )
   set_properties( $room, 'room', $dprop );
 }
 
+function update_room_lat( $host, $port, $src, $dest, $lat, $jit )
+{
+  $room = $host . ':' . $port;
+  $dprop = get_room_prop( $room );
+  $latdb = $dprop['lat'];
+  $latdb[$src.'-'.$dest] = array('lat'=>$lat,'jit'=>$jit,'access'=>time());
+  $dprop['lat'] = $latdb;
+  set_properties( $room, 'room', $dprop );
+}
+
 function get_devices_in_room( $room )
 {
   $devices = array();
@@ -432,10 +443,11 @@ function get_tascar_cfg( $device, $devhash )
   $session->setAttribute("license","CC0");
   $session->setAttribute("levelmeter_tc","0.5");
   $scene = $doc->createElement("scene");
-  if( ! $localdevprop['rawmode'] )
+  if( ! $localdevprop['rawmode'] ){
     $session->appendChild($scene);
-  else
-    $seesion->setAttribute('srv_port','9879');
+  }else{
+    $session->setAttribute('srv_port','0');
+  }
   $modules = $doc->createElement("modules");
   $session->appendChild($modules);
   // add receiver:
@@ -498,12 +510,28 @@ function get_tascar_cfg( $device, $devhash )
             if ( $dev == $device )
               $inport = $devprop['inputport'];
             $snd = xml_add_sound( $source, $doc, array('x'=>$dx, 'y'=>$dy, 'z'=>$dz, 'connect'=>$inport, 'gain'=>$gain) );
+            if ( $dev == $device ){
+              $plugs = $snd->appendChild($doc->createElement('plugins'));
+              $sndf = $plugs->appendChild($doc->createElement('sndfile'));
+              $sndf->setAttribute('name','akkord_up_48.wav');
+              $sndf->setAttribute('level','60');
+              $sndf->setAttribute('triggered','true');
+              $sndf->setAttribute('transport','false');
+            }
           }
           if( !empty($devprop['inputport2']) ){
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport2'];
             $snd = xml_add_sound( $source, $doc, array('x'=>$dx, 'y'=>-$dy, 'z'=>$dz, 'connect'=>$inport, 'gain'=>$gain) );
+            if ( $dev == $device ){
+              $plugs = $snd->appendChild($doc->createElement('plugins'));
+              $sndf = $plugs->appendChild($doc->createElement('sndfile'));
+              $sndf->setAttribute('name','akkord_up_48.wav');
+              $sndf->setAttribute('level','60');
+              $sndf->setAttribute('triggered','true');
+              $sndf->setAttribute('transport','false');
+            }
           }
           $xmlpos = $doc->createElement("position");
           $source->appendChild($xmlpos);
@@ -614,6 +642,8 @@ function get_tascar_cfg( $device, $devhash )
       $mod->setAttribute("command","node bridge.js");
       if( ! $localdevprop['rawmode'] )
       $modules->appendChild($mod);
+      $cmd = $modules->appendChild($doc->createElement('system'));
+      $cmd->setAttribute('command','../headtracker/headtracker');
       $success = true;
     }
   }
@@ -852,27 +882,68 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $rprop['lock'] = false;
     }
     ksort($roomdev);
+    $mychair = -1;
     foreach( $roomdev as $chair => $dev ){
-      $devuser = get_properties($dev, 'device');
-      $lab = $devuser['label'];
+      if( $dev == $device )
+        $mychair = $chair;
+    }
+    foreach( $roomdev as $chair => $dev ){
+      $rdevprop = get_properties($dev, 'device');
+      $latdisp = '';
+      if( $deviceprop['peer2peer'] && $rdevprop['peer2peer'] ){
+        $latkey = $chair.'-'.$mychair;
+        if( array_key_exists($latkey,$rprop['lat']) ){
+          // only display values from last 15 minutes:
+          if( time()-$rprop['lat'][$latkey]['access'] < 900 ){
+            $latdisp = sprintf(' %1.1fms ',
+            0.5*$rprop['lat'][$latkey]['lat']+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+          }
+        }
+      }else{
+        $latkey1 = $chair.'-200';
+        $latkey2 = $mychair.'-200';
+        if( array_key_exists($chair.'-200',$rprop['lat']) && array_key_exists($mychair.'-200',$rprop['lat']) && ($dev != $device)){
+          // only display values from last 15 minutes:
+          if( time()-$rprop['lat'][$latkey1]['access'] < 900 ){
+            $latdisp = sprintf(' %1.1fms ',
+            0.5*($rprop['lat'][$latkey1]['lat']+$rprop['lat'][$latkey2]['lat'])+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+          }
+        }
+      }
+      $lab = $rdevprop['label'];
       $bclass = "psvmember";
-      if( $devuser['age'] < 20 )
+      if( $rdevprop['age'] < 20 )
         $bclass = "actmember";
       $mtype = 'span';
       if( ($dev != $device) && $inroom )
         $mtype = 'a';
-      $mem = $doc->createElement($mtype);
+      //$mem = $doc->createElement($mtype);
+      $mem = $doc->createElement('span');
       $memb->appendChild($mem);
       $mem->setAttribute('class',$bclass);
       if ( $dev == $device )
-        $mem->setAttribute('style','border: 2px solid #000000;');
+        $mem->setAttribute('style','border: 3px solid #000000;');
+      $memlink = $mem->appendChild($doc->createElement($mtype));
+      $memlink->setAttribute('class',$bclass);
       if( $mtype == 'a')
-        $mem->setAttribute('href','?swapdev='.urlencode($dev));
-      //echo htmlspecialchars($devuser) . ' ' . $chair;
+        $memlink->setAttribute('href','?swapdev='.urlencode($dev));
       if( empty($lab) )
         $lab = $dev;
-      $mem->appendChild($doc->createTextNode( htmlspecialchars($lab) ));
+      $memlink->appendChild($doc->createTextNode( htmlspecialchars($lab) ));
+      if( !empty($latdisp) ){
+        $span = $mem->appendChild($doc->createElement('span'));
+        $span->setAttribute('class','latency');
+        $span->appendChild($doc->createTextNode($latdisp));
+      }
       $memb->appendChild($doc->createTextNode(' '));
+      if( ($rprop['owner'] == $user) || ($rdevprop['owner'] == $user) ){
+        $kick = $mem->appendChild($doc->createElement('input'));
+        $kick->setAttribute('value','X');
+        $kick->setAttribute('class','kick');
+        $kick->setAttribute('type','button');
+        $kick->setAttribute('title','Kick this device out of my room.');
+        $kick->setAttribute('onclick','location.href=\'?kick='.urlencode($dev).'\';');
+      }
     }
     $ctl = $doc->createElement('div');
     $root->appendChild($ctl);
@@ -908,7 +979,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
         $a = $doc->createElement('a');
         $ctl->appendChild($a);
         $a->setAttribute('href','?clearroom='.urlencode($room));
-        $a->appendChild($doc->createTextNode('kick'));
+        $a->appendChild($doc->createTextNode('kick all'));
       }
       $tog = $doc->createElement('input');
       $ctl->appendChild($tog);
@@ -1216,6 +1287,7 @@ function html_admin_groups()
       $inp->setAttribute('name','groupuser');
       $inp->setAttribute('value',$us);
       $inp = $form->appendChild($doc->createElement('button'));
+      $inp->setAttribute('class','kick');
       $inp->appendChild($doc->createTextNode('X'));
       $td->appendChild($doc->createTextNode(' '));
     }

@@ -2,6 +2,7 @@
 #include "common.h"
 #include "udpsocket.h"
 #include <condition_variable>
+#include <queue>
 #include <signal.h>
 #include <string.h>
 #include <thread>
@@ -10,6 +11,17 @@
 #include <curl/curl.h>
 
 CURL* curl;
+
+class latreport_t {
+public:
+  latreport_t() : src(0), dest(0), tmean(0), jitter(0){};
+  latreport_t(callerid_t src_, callerid_t dest_, double tmean_, double jitter_)
+      : src(src_), dest(dest_), tmean(tmean_), jitter(jitter_){};
+  callerid_t src;
+  callerid_t dest;
+  double tmean;
+  double jitter;
+};
 
 // period time of participant list announcement, in ping periods:
 #define PARTICIPANTANNOUNCEPERIOD 20
@@ -44,6 +56,9 @@ private:
   secret_t secret;
   std::string roomname;
   std::string lobbyurl;
+
+  std::queue<latreport_t> latfifo;
+  std::mutex latfifomtx;
 };
 
 udpreceiver_t::udpreceiver_t(int portno_, int prio)
@@ -90,6 +105,10 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
                                      uint32_t lost)
 {
   if(lmean > 0) {
+    {
+      std::lock_guard<std::mutex> lk(latfifomtx);
+      latfifo.push(latreport_t(cid, 200, lmean, lmax - lmean));
+    }
     char ctmp[1024];
     sprintf(ctmp, "latency %d min=%1.2fms, mean=%1.2fms, max=%1.2fms", cid,
             lmin, lmean, lmax);
@@ -128,6 +147,19 @@ void udpreceiver_t::announce_service()
     }
     --cnt;
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
+    while(!latfifo.empty()) {
+      latreport_t lr(latfifo.front());
+      latfifo.pop();
+      // register at lobby:
+      sprintf(cpost, "?latreport=%d&src=%d&dest=%d&lat=%1.1f&jit=%1.1f", portno,
+              lr.src, lr.dest, lr.tmean, lr.jitter);
+      std::string url(lobbyurl);
+      url += cpost;
+      curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+      curl_easy_setopt(curl, CURLOPT_USERPWD, "room:room");
+      curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+      curl_easy_perform(curl);
+    }
   }
 }
 
@@ -208,6 +240,11 @@ void udpreceiver_t::srv()
         case PORT_PEERLATREP:
           if(un == 6 * sizeof(double)) {
             double* data((double*)msg);
+            {
+              std::lock_guard<std::mutex> lk(latfifomtx);
+              latfifo.push(
+                  latreport_t(rcallerid, data[0], data[2], data[3] - data[2]));
+            }
             char ctmp[1024];
             sprintf(ctmp,
                     "peerlat %d-%g min=%1.2fms, mean=%1.2fms, max=%1.2fms",

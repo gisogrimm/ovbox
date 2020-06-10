@@ -42,6 +42,15 @@ if ($user == 'room') {
     if( isset($_GET['port']) && isset($_GET['name']) && isset($_GET['pin']) ) {
         update_room( $_SERVER['REMOTE_ADDR'], $_GET['port'], $_GET['name'], $_GET['pin'] );
     }
+    if( isset($_GET['latreport']) && isset($_GET['src']) && isset($_GET['dest']) && isset($_GET['lat']) && isset($_GET['jit']) ){
+        update_room_lat(
+            $_SERVER['REMOTE_ADDR'],
+            $_GET['latreport'],
+            $_GET['src'],
+            $_GET['dest'],
+            $_GET['lat'],
+            $_GET['jit']);
+    }
     die();
 }
 
@@ -147,6 +156,7 @@ if( isset($_GET['enterroom']) ) {
     if( !empty( $device ) )
         device_enter_room( $device, $_GET['enterroom'] );
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['swapdev']) ){
@@ -154,6 +164,7 @@ if( isset($_GET['swapdev']) ){
         room_swap_devices( $device, $_GET['swapdev'] );
     }
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['lockroom']) ){
@@ -161,6 +172,21 @@ if( isset($_GET['lockroom']) ){
         lock_room( $_GET['lockroom'], $device, $_GET['lck'] );
     }
     header( "Location: /" );
+    die();
+}
+
+if( isset($_GET['kick']) ){
+    $rdev = $_GET['kick'];
+    if( !empty($rdev) ){
+        $rdevprop = get_properties( $rdev, 'device' );
+        if( !empty($rdevprop['room']) ){
+            $rprop = get_properties( $rdevprop['room'], 'room' );
+            if( ($rprop['owner'] == $user) || ($rdevprop['owner'] == $user) )
+                modify_device_prop( $rdev, 'room', '');
+        }
+    }
+    header( "Location: /" );
+    die();
 }
 
 function set_getprop( &$prop, $key )
@@ -188,6 +214,7 @@ if( isset($_GET['setdevprop']) ){
         set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['setroom']) ){
@@ -207,6 +234,7 @@ if( isset($_GET['setroom']) ){
         set_properties( $room, 'room', $rprop );
     }
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['clearroom']) ){
@@ -219,6 +247,7 @@ if( isset($_GET['clearroom']) ){
         }
     }
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['claim']) ){
@@ -226,12 +255,14 @@ if( isset($_GET['claim']) ){
     if( in_array( $_GET['claim'], $devs ) )
         modify_device_prop( $_GET['claim'], 'owner', $user );
     header( "Location: /" );
+    die();
 }
 
 if( isset($_GET['unclaim']) ){
     if( $devprop['owner'] = $user )
         modify_device_prop( $device, 'owner', '');
     header( "Location: /" );
+    die();
 }
 
 if ( empty( $device ) ) {
