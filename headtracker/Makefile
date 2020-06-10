@@ -4,7 +4,7 @@ BINFILES = headtracker
 
 all: $(BINFILES)
 
-headtracker: LDLIBS+=-llo -ltascardmx -ltascar
+headtracker: LDLIBS+=-llo
 
 clean:
 	rm -f *~ $(BINFILES) *.o

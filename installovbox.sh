@@ -13,6 +13,7 @@ test -e tascar || git clone https://github.com/gisogrimm/tascar.git
 )
 sudo adduser ov
 sudo adduser ov audio
+sudo adduser ov dialout
 
 # get autorun file:
 rm -f autorun

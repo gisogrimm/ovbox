@@ -517,6 +517,11 @@ function get_tascar_cfg( $device, $devhash )
               $sndf->setAttribute('level','60');
               $sndf->setAttribute('triggered','true');
               $sndf->setAttribute('transport','false');
+              $sndf = $plugs->appendChild($doc->createElement('sndfile'));
+              $sndf->setAttribute('name','akkord_down_48.wav');
+              $sndf->setAttribute('level','60');
+              $sndf->setAttribute('triggered','true');
+              $sndf->setAttribute('transport','false');
             }
           }
           if( !empty($devprop['inputport2']) ){
@@ -528,6 +533,11 @@ function get_tascar_cfg( $device, $devhash )
               $plugs = $snd->appendChild($doc->createElement('plugins'));
               $sndf = $plugs->appendChild($doc->createElement('sndfile'));
               $sndf->setAttribute('name','akkord_up_48.wav');
+              $sndf->setAttribute('level','60');
+              $sndf->setAttribute('triggered','true');
+              $sndf->setAttribute('transport','false');
+              $sndf = $plugs->appendChild($doc->createElement('sndfile'));
+              $sndf->setAttribute('name','akkord_down_48.wav');
               $sndf->setAttribute('level','60');
               $sndf->setAttribute('triggered','true');
               $sndf->setAttribute('transport','false');
