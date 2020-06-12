@@ -7,7 +7,24 @@ built upon open source software and open or standardized hardware.
 
 ![consortbox](doc/consortbox.jpg)
 
+## Installation instructions
+
+For installation instructions see file [INSTALL.md](INSTALL.md).
+
+Once your installation is ready you may wish to get an account at box.orlandoviols.com - in that case please contact us via e-mail.
+
+## User manual
+
+A user manual for the complete system can be found on the [wiki](https://github.com/gisogrimm/ovbox/wiki).
+
 ## Tested hardware components
+
+Here are the shopping lists we use - obviously these can be obtained from any electronics/music store:
+
+[Raspberry Pi etc.](https://www.reichelt.de/my/1693204) (approx. 67 EUR)
+
+[Sound card, mic, etc.](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 185 EUR)
+
 
 Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
 Ubuntu LTS (20.04, 18.04, 16.04)
@@ -18,13 +35,6 @@ other class compliant USB sound card
 basic condenser mic, headphones, cables
 
 optionally: a small head tracking device based on MPU6050+ESP8266
-
-Here are the shopping lists we use - obviously these can be obtained from any electronics/music store:
-
-[Raspberry Pi etc.](https://www.reichelt.de/my/1693204)
-
-[Sound card, mic, etc.](https://www.thomann.de/de/wishlist_4u_788b06e69103.html)
-
 
 ## Software components
 
@@ -41,11 +51,6 @@ TASCAR (virtual acoustic engine)
 [http://tascar.org/](http://tascar.org/)
 
 a self-written UDP tunnel and multiplexer (see folder udpmirror)
-
-For installation instructions see file [INSTALL.md](INSTALL.md).
-
-Once your installation is ready you may wish to get an account at box.orlandoviols.com - in that case please contact us via e-mail.
-
 
 ## Performance
 
@@ -95,9 +100,6 @@ lots of rooms to play music), see [vision.md](doc/vision.md) (this is
 not a vision anymore). If you would like to get access to our "House
 of Consort", please contact us via email.
 
-## User manual
-
-A user manual for the complete system can be found on the [wiki](https://github.com/gisogrimm/ovbox/wiki).
 
 ## Starting the tools
 

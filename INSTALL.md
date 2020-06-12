@@ -1,6 +1,8 @@
 # Installation instructions
 
-The installation instructions are probably incomplete, however, they may give a rough idea of the steps involved.
+The installation instructions are probably incomplete, however, they may
+give a rough idea of the steps involved. Any comments and improvements are
+welcome!
 
 ## Download and install raspbian
 
@@ -8,17 +10,31 @@ Download the Raspberry Pi OS image. The 'Lite' version is sufficient, since the 
 
 [https://www.raspberrypi.org/downloads/raspberry-pi-os/](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
 
-To enable ssh access in a headless environment, follow these instructions:
+If you use the 'Raspberry Pi Imager', choose 'Raspberry Pi OS (other)', 
+then  'Raspberry Pi OS Lite (32-bit)'.
+
+### a) headless installation
+
+To enable ssh access in a headless environment (no screen connected to the Pi), follow these instructions:
 [https://www.raspberrypi.org/documentation/remote-access/ssh/](https://www.raspberrypi.org/documentation/remote-access/ssh/). Essentially you need to create a file `ssh` in the `/boot` partition, e.g. with
 ````
 touch /your/path/to/boot/ssh
 ````
+After writing the image to the disk, you may need to re-insert the SD-card before you can create that file.
 
+The next step is to insert the SD-card into the Raspberry Pi and boot it. Your PC and the Raspberry Pi should be in the same network.
 Now you should be able to login via ssh, with
 ````
 ssh pi@raspberrypi
 ````
 The default password is `raspberry`. This needs to be changed after first boot; to change the password, type `passwd`.
+
+### b) installation via screen
+
+Connect a screen (you will need a micro-HDMI cable) and a keyboard. 
+Login as user 'pi'.
+
+## ovbox installer script
 
 At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take several hours to run. To use the installer script, type these commands as user pi:
 ````
@@ -37,7 +53,11 @@ If everything went well, approximately 1 minute after powering on the device you
 
 Alternatively, you may follow the manual installation instructions below.
 
-##  Install tools
+## Manual step-by-step instructions
+
+The manual installation instructions may be outdated. We recommend to use the [installer script](https://github.com/gisogrimm/ovbox/blob/master/installovbox.sh), or check its content for details on the step-by-step instructions.
+
+###  Install tools
 
 Install zita-njbridge, jackd2, node-js and OSC library:
 
@@ -72,13 +92,14 @@ These steps may take some time.
 On an x86 Ubuntu PC, you may follow the instructions on [http://install.tascar.org](http://install.tascar.org) instead.
 
 
-## Create user
+### Create user
 
 Create a user without superuser priviledges but belonging to the audio group:
 
 ````
 sudo adduser ov
 sudo adduser ov audio
+sudo adduser ov dialout
 ````
 
 Provide real-time priviledges to the new user:
@@ -92,13 +113,13 @@ And add these lines:
 @audio - memlock unlimited
 ````
 
-## Repository
+### Repository
 
 Create a fork of this repository, or create your own repo. We use the git repository to update the settings in the headless remote boxes upon reboot.
 
 
 
-## Add shutdown button to the device
+### Add shutdown button to the device
 
 If you activate an overlay file system (see below), this step is not needed. However, when using an overlay file system, the startup time of the device will be significantly longer, because the tool set will be updated and compiled upon every boot.
 
@@ -109,7 +130,7 @@ Since the Raspberry 3 B+ does not have a power button, it is required to add a b
 The python script crashes sometimes, thus we execute it in an endless loop (see below, section autostart). This script is run from the user `pi` for correct priviledges.
 
 
-## Setup autostart
+### Setup autostart
 
 We added entries to /etc/rc.local to autostart the processes, by adding these lines **before** the `exit 0` line:
 
@@ -172,7 +193,7 @@ as user ov, and similarly as user pi:
 chmod a+x autorun
 ````
 
-## Configure sound card
+### Configure sound card
 
 The sound is started in the script `start_audio.sh`. This script is managed by the git repository. It is configured to always use the second sound card. To change the sound device or device settings, you may override the `JACKCMD` variable in a script `ovbox` in the `cfg` directory (assuming that your device has the hostname `ovbox`, otherwise name it according to your host name). In that script add the line
 
@@ -180,6 +201,6 @@ The sound is started in the script `start_audio.sh`. This script is managed by t
 export JACKCMD="jackd --sync -P 40 -d alsa -d hw:YourCard -r 48000 -p 96 -n 2"
 ````
 
-## Finalizing setup
+### Finalizing setup
 
 Once everything is setup correctly, you should protect your SD card against failure when powering the system down. You should activate the overlay file system, which can be achieved via `sudo rasbpi-config`.
