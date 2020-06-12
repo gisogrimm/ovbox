@@ -21,9 +21,9 @@ A user manual for the complete system can be found on the [wiki](https://github.
 
 Here are the shopping lists we use - obviously these can be obtained from any electronics/music store:
 
-[Raspberry Pi etc.](https://www.reichelt.de/my/1693204) (approx. 67 EUR)
+Reichelt: [Raspberry Pi etc.](https://www.reichelt.de/my/1693204) (approx. 67 EUR)
 
-[Sound card, mic, etc.](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 185 EUR)
+Thomann: [Sound card, mic, etc.](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 185 EUR)
 
 
 Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
