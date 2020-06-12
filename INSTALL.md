@@ -36,7 +36,7 @@ Login as user 'pi'.
 
 ## ovbox installer script
 
-At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take several hours to run. To use the installer script, type these commands as user pi:
+At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take about one hour to run. To use the installer script, type these commands as user pi:
 ````
 wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 . installovbox.sh
