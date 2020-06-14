@@ -62,8 +62,6 @@ function postproc_prop( &$prop, $type )
   if( $type == 'device' ){
     if( empty($prop['label']) && (!empty($prop['owner'])))
       $prop['label'] = $prop['owner'];
-    if( empty($prop['label']))
-      $prop['label'] = $device;
     $prop['label'] = preg_replace('/[^a-zA-Z0-9-_]*/','',$prop['label']);
   }
   if( $type == 'room' ){
@@ -101,7 +99,7 @@ function get_properties( $id, $type )
     $prop = array_merge($prop, json_decode( file_get_contents( $fname ), true ));
   postproc_prop( $prop, $type );
   return $prop;
-}  
+}
 
 function set_properties( $id, $type, $dprop )
 {
@@ -114,7 +112,7 @@ function print_head( $user = "", $style = "" )
   $css = '';
   $title = 'House of Consort';
   if( !empty($style) ){
-    
+
     $sprop = get_properties( $style, 'style' );
     $css = $sprop['css'];
     $title = $sprop['pagetitle'];
@@ -363,13 +361,18 @@ function update_room_lat( $host, $port, $src, $dest, $lat, $jit )
   set_properties( $room, 'room', $dprop );
 }
 
-function get_devices_in_room( $room )
+function issender( $devprop )
+{
+  return (!empty($devprop['inputport']))||(!empty($devprop['inputport2']));
+}
+
+function get_devices_in_room( $room, $senderonly = false )
 {
   $devices = array();
   foreach( glob( '../db/*.device') as $dev){
     $device = basename($dev,'.device');
     $prop = get_properties( $device, 'device' );
-    if( $room == $prop['room'] ){
+    if( ($room == $prop['room']) && ((!$senderonly) || issender($prop)) ){
       if( array_key_exists( 'chair', $prop ) )
         $devices[$prop['chair']] = $device;
       else
@@ -436,6 +439,7 @@ function get_tascar_cfg( $device, $devhash )
   $cuccess = false;
   $waitports = '';
   $localdevprop = get_properties( $device, 'device' );
+  $amsender = issender($localdevprop);
   // create TASCAR document:
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
@@ -443,6 +447,7 @@ function get_tascar_cfg( $device, $devhash )
   $session->setAttribute("license","CC0");
   $session->setAttribute("levelmeter_tc","0.5");
   $scene = $doc->createElement("scene");
+  $scene->setAttribute('guiscale','25');
   if( ! $localdevprop['rawmode'] ){
     $session->appendChild($scene);
   }else{
@@ -469,22 +474,33 @@ function get_tascar_cfg( $device, $devhash )
     if( !empty($localdevprop['outputport2']))
       $session->appendChild($conn);
   }
-  // room specific setup:    
+  // room specific setup:
   if ( !empty( $localdevprop['room'] ) ){
     $room = $localdevprop['room'];
     $roomprop = get_room_prop( $room );
     $mychair = -1;
     if( $roomprop['age'] < 3600 ) {
-      // add users
-      $roomdev = get_devices_in_room( $room );
+      // get all sending devives:
+      $roomdev = get_devices_in_room( $room, true );
+      // sort by chair number:
       ksort($roomdev);
-      $daz = 360/count($roomdev)*(pi()/180);
-      $az = 0;
+      // if I am sending sit in circle, otherwise use 120 degree stage
+      $stagewidth = 160;
+      $az = -80;
+      if( $amsender ){
+        $stagewidth = 360;
+        $az = 0;
+      }
+      $daz = $stagewidth/count($roomdev)*(pi()/180);
+      $az = $az*(pi()/180)-0.5*$daz;
+      error_log('num_dev = '.count($roomdev));
+      error_log('az0 = '.(180*$az/pi()));
+      error_log('daz = '.(180*$daz/pi()));
       $radius = 1.2;
       foreach( $roomdev as $chair => $dev ){
         $az = $az+$daz;
         $pos_x = sprintf("%1.3f",$radius * cos( $az ));
-        $pos_y = sprintf("%1.3f",$radius * sin( $az ));
+        $pos_y = sprintf("%1.3f",-$radius * sin( $az ));
         // get configuration of player device:
         $devprop = get_properties( $dev, 'device' );
         $numsource = !empty($devprop['inputport']) + !empty($devprop['inputport2']);
@@ -548,7 +564,7 @@ function get_tascar_cfg( $device, $devhash )
           $xmlpos->appendChild($doc->createTextNode("0 ".$pos_x." ".$pos_y." 0"));
           $xmlrot = $doc->createElement("orientation");
           $source->appendChild($xmlrot);
-          $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*($az+pi()))." 0 0"));
+          $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*(-$az+pi()))." 0 0"));
           if ( $dev == $device ){
             $mychair = $chair;
             // set receiver position:
@@ -557,7 +573,7 @@ function get_tascar_cfg( $device, $devhash )
             $xmlpos->appendChild($doc->createTextNode("0 ".$pos_x." ".$pos_y." 0"));
             $xmlrot = $doc->createElement("orientation");
             $rec->appendChild($xmlrot);
-            $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*($az+pi()))." 0 0"));
+            $xmlrot->appendChild($doc->createTextNode("0 ".(180/pi()*(-$az+pi()))." 0 0"));
           }
         }
       }
@@ -883,9 +899,12 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $span->appendChild($doc->createTextNode(' group \''.$rprop['group'].'\''));
     if( !empty($rprop['owner']) )
       $span->appendChild($doc->createTextNode(', managed by '.$rprop['owner']));
-    $memb = $doc->createElement('div');
-    $root->appendChild($memb);
+    $memb = $root->appendChild($doc->createElement('div'));
     $memb->setAttribute('class','rmembers');
+    $senders = $memb->appendChild($doc->createElement('span'));
+    $senders->setAttribute('class','roomsender');
+    $listeners = $memb->appendChild($doc->createElement('span'));
+    $listeners->setAttribute('class','roomlistener');
     $roomdev = get_devices_in_room( $room );
     if( $rprop['lock'] && empty($roomdev) ){
       modify_room_prop( $room, 'lock', false );
@@ -897,8 +916,10 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       if( $dev == $device )
         $mychair = $chair;
     }
+    $amsender = issender($deviceprop);
     foreach( $roomdev as $chair => $dev ){
       $rdevprop = get_properties($dev, 'device');
+      $issender = issender($rdevprop);
       $latdisp = '';
       if( $deviceprop['peer2peer'] && $rdevprop['peer2peer'] ){
         $latkey = $chair.'-'.$mychair;
@@ -921,18 +942,31 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
         }
       }
       $lab = $rdevprop['label'];
-      $bclass = "psvmember";
+      $tagsuffix = 'member';
+      if( !$issender )
+        $tagsuffix = 'listener';
+      $bclass = 'psv';
       if( $rdevprop['age'] < 20 )
-        $bclass = "actmember";
+        $bclass = 'act';
+      $bclass = $bclass . $tagsuffix;
       $mtype = 'span';
-      if( ($dev != $device) && $inroom )
+      if( ($dev != $device) && $inroom && $issender && $amsender )
         $mtype = 'a';
-      //$mem = $doc->createElement($mtype);
       $mem = $doc->createElement('span');
-      $memb->appendChild($mem);
+      if( $issender ){
+        $senders->appendChild($mem);
+        $senders->appendChild($doc->createTextNode(' '));
+      }else{
+        $listeners->appendChild($mem);
+        $listeners->appendChild($doc->createTextNode(' '));
+      }
       $mem->setAttribute('class',$bclass);
-      if ( $dev == $device )
-        $mem->setAttribute('style','border: 3px solid #000000;');
+      if ( $dev == $device ){
+        if( $amsender )
+          $mem->setAttribute('style','border: 3px solid #000000;');
+        else
+          $mem->setAttribute('style','border: 2px solid #606060;');
+      }
       $memlink = $mem->appendChild($doc->createElement($mtype));
       $memlink->setAttribute('class',$bclass);
       if( $mtype == 'a')
@@ -945,7 +979,6 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
         $span->setAttribute('class','latency');
         $span->appendChild($doc->createTextNode($latdisp));
       }
-      $memb->appendChild($doc->createTextNode(' '));
       if( ($rprop['owner'] == $user) || ($rdevprop['owner'] == $user) ){
         $kick = $mem->appendChild($doc->createElement('input'));
         $kick->setAttribute('value','X');
@@ -1128,7 +1161,11 @@ function html_admin_db($type)
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
   $root->appendChild($doc->createElement('a'))->setAttribute('name',$type.'s');
-  $root->appendChild($doc->createElement('h2'))->appendChild($doc->createTextNode($type.'s:'));
+  $h = $root->appendChild($doc->createElement('h2'));
+  $h->appendChild($doc->createTextNode($type.'s: '));
+  $s = $h->appendChild($doc->createElement('span'));
+  $s->setAttribute('style','font-size: small;');
+  $s->appendChild($doc->createTextNode('('.count($devs).')'));
   $tab = $root->appendChild($doc->createElement('table'));
   $tr = $tab->appendChild($doc->createElement('tr'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode($type));
@@ -1145,7 +1182,7 @@ function html_admin_db($type)
       $age = sprintf('%1.1fh',$dprop['age']/3600);
     if( $dprop['age'] > 3*24*3600 )
       $age = sprintf('%1.1fd',$dprop['age']/(3600*24));
-    
+
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($age));
     // user:
     $td = $tr->appendChild($doc->createElement('td'));
@@ -1179,7 +1216,7 @@ function html_admin_db($type)
     $td = $tr->appendChild($doc->createElement('td'));
     $form = $td->appendChild($doc->createElement('form'));
     $inp = $form->appendChild($doc->createElement('input'));
-    $inp->setAttribute('type','hidden');
+    $inp->setAttribute('type','checkbox');
     $inp->setAttribute('name','rm'.$type);
     $inp->setAttribute('value',$dev);
     $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Delete'));
@@ -1189,12 +1226,16 @@ function html_admin_db($type)
 
 function html_admin_users()
 {
+  $users = list_users();
   $doc = new DOMDocument('1.0');
   $root = $doc->createElement('div');
   $doc->appendChild($root);
   $root->appendChild($doc->createElement('a'))->setAttribute('name','users');
   $el = $root->appendChild($doc->createElement('h2'));
-  $el->appendChild($doc->createTextNode('Users:'));
+  $el->appendChild($doc->createTextNode('users: '));
+  $s = $el->appendChild($doc->createElement('span'));
+  $s->setAttribute('style','font-size: small;');
+  $s->appendChild($doc->createTextNode('('.count($users).')'));
   $tab = $root->appendChild($doc->createElement('table'));
   $tr = $tab->appendChild($doc->createElement('tr'));
   $th = $tr->appendChild($doc->createElement('th'));
@@ -1202,7 +1243,6 @@ function html_admin_users()
   $th = $tr->appendChild($doc->createElement('th'));
   $th->appendChild($doc->createTextNode('settings'));
   $tab->appendChild($doc->createTextNode("\n"));
-  $users = list_users();
   foreach($users as $us){
     $uprop = get_properties($us,'user');
     $tr = $tab->appendChild($doc->createElement('tr'));
@@ -1224,7 +1264,7 @@ function html_admin_users()
     $inp = $form->appendChild($doc->createElement('label'));
     $inp->setAttribute('for','seesall');
     $inp->appendChild($doc->createTextNode(' sees public rooms '));
-    
+
     $inp = $form->appendChild($doc->createElement('select'));
     $inp->setAttribute('name','maingroup');
     $opt = $inp->appendChild($doc->createElement('option'));
@@ -1248,12 +1288,18 @@ function html_admin_users()
 
 function html_admin_groups()
 {
+  $users = list_users();
+  $grps = list_groups();
+  $styles = list_styles();
   $doc = new DOMDocument('1.0');
   $root = $doc->createElement('div');
   $doc->appendChild($root);
   $root->appendChild($doc->createElement('a'))->setAttribute('name','groups');
   $el = $root->appendChild($doc->createElement('h2'));
-  $el->appendChild($doc->createTextNode('Groups:'));
+  $el->appendChild($doc->createTextNode('groups: '));
+  $s = $el->appendChild($doc->createElement('span'));
+  $s->setAttribute('style','font-size: small;');
+  $s->appendChild($doc->createTextNode('('.count($grps).')'));
   $form = $root->appendChild($doc->createElement('form'));
   $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('name','addgroup');
@@ -1270,9 +1316,6 @@ function html_admin_groups()
   $th = $tr->appendChild($doc->createElement('th'));
   $th->appendChild($doc->createTextNode('style'));
   $tab->appendChild($doc->createTextNode("\n"));
-  $users = list_users();
-  $grps = list_groups();
-  $styles = list_styles();
   foreach($grps as $group){
     $gprop = get_properties( $group, 'group' );
     $grpusers = get_group_users( $group );
@@ -1313,7 +1356,7 @@ function html_admin_groups()
         $opt->appendChild($doc->createTextNode($us));
       }
     }
-    
+
     $td = $tr->appendChild($doc->createElement('td'));
     $inp = $td->appendChild($doc->createElement('select'));
     $inp->setAttribute('oninput','location.href=\'?setgrpstyle='.urlencode($group).'&grpstyle=\'+event.target.value;');
@@ -1536,7 +1579,7 @@ function html_show_device( $user, $device, $devprop )
   $inp->setAttribute('class','roomsettingstoggle');
   $inp->setAttribute('onclick','location.href=\'?unclaim\';');
   $inp->setAttribute('value','not my device');
-  
+
 
   $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('name','setdevprop');

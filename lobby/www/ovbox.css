@@ -1,5 +1,5 @@
-html { 
-    background: url(houseofconsort.jpg) no-repeat center center fixed; 
+html {
+    background: url(houseofconsort.jpg) no-repeat center center fixed;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
@@ -80,13 +80,30 @@ tr {
     color: #000000;
     font-weight: bold;
     white-space: nowrap;
-} 
+}
 .psvmember {
     background-color: #d6d6d6;
     color: #666666;
     padding: 5px;
     border-radius: 7px;
     white-space: nowrap;
+}
+.actlistener {
+    background-color: #4096d6;
+    padding: 5px;
+    border-radius: 0px;
+    color: #000000;
+    font-weight: bold;
+    white-space: nowrap;
+    font-size: small;
+}
+.psvlistener {
+    background-color: #abc4d6;
+    color: #666666;
+    padding: 5px;
+    border-radius: 0px;
+    white-space: nowrap;
+    font-size: small;
 }
 .roomsettingstoggle {
     float: right;
