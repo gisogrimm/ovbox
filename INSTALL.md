@@ -42,20 +42,18 @@ wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 . installovbox.sh
 ````
 Please mind the space between the dot and `installovbox.sh`.
-Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Type Enter when the TASCAR installer asks to install files.
+Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Enter a password for user `ov` when asked for it. All names/room numbers etc can left empty, by pressing Enter. Finally, the system will restart.
 
-Finally, restart the system with
-````
-sudo shutdown -r now
-````
 If everything went well, approximately 1 minute after powering on the device you should hear an announcement via headphones. You may shutdown the device by simply unplugging the power.
 
 
-Alternatively, you may follow the manual installation instructions below.
 
 ## Manual step-by-step instructions
 
-The manual installation instructions may be outdated. We recommend to use the [installer script](https://github.com/gisogrimm/ovbox/blob/master/installovbox.sh), or check its content for details on the step-by-step instructions.
+Instead of using the installer, you may follow the manual installation
+instructions below. However, these instructions may be outdated. We
+recommend to use the [installer script](https://github.com/gisogrimm/ovbox/blob/master/installovbox.sh), or to check its content for details on the
+step-by-step instructions.
 
 ###  Install tools
 
