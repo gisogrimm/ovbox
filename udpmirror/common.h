@@ -47,6 +47,7 @@ typedef uint32_t secret_t;
 typedef uint8_t callerid_t;
 typedef uint16_t port_t;
 typedef int16_t sequence_t;
+typedef uint8_t epmode_t;
 #define POS_CALLERID sizeof(secret_t)
 #define POS_PORT (POS_CALLERID + sizeof(callerid_t))
 #define POS_SEQ (POS_PORT + sizeof(port_t))

@@ -31,7 +31,7 @@ class ovbox_udpsocket_t : public udpsocket_t {
 public:
   ovbox_udpsocket_t(secret_t secret);
   void send_ping(callerid_t cid, const endpoint_t& ep);
-  void send_registration(callerid_t cid, bool peer2peer, port_t port);
+  void send_registration(callerid_t cid, epmode_t, port_t port);
   char* recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len, callerid_t& cid,
                      port_t& destport, sequence_t& seq, endpoint_t& addr);
   void set_secret(secret_t s) { secret = s; };

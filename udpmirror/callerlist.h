@@ -13,13 +13,19 @@
 // timeout of caller actvity, in ping periods:
 #define TIMEOUT 30
 
+#define B_PEER2PEER 1
+#define B_DOWNMIXONLY 2
+#define B_DONOTSEND 4
+
 class ep_desc_t {
 public:
   ep_desc_t();
   endpoint_t ep;
   uint32_t timeout;
   bool announced;
-  bool peer2peer;
+  epmode_t mode;
+  // bool peer2peer;
+  // bool downmixonly;
   double pingt_min;
   double pingt_max;
   double pingt_sum;
@@ -43,7 +49,7 @@ protected:
                                 double lmax, uint32_t received,
                                 uint32_t lost){};
   void cid_setpingtime(callerid_t cid, double pingtime);
-  void cid_register(callerid_t cid, const endpoint_t& ep, bool peer2peer,
+  void cid_register(callerid_t cid, const endpoint_t& ep, epmode_t mode,
                     const std::string& rver);
   uint32_t get_num_clients();
   std::vector<ep_desc_t> endpoints;

@@ -202,10 +202,12 @@ if( isset($_GET['setdevprop']) ){
         $prop['reverb'] = isset($_GET['reverb']);
         $prop['peer2peer'] = isset($_GET['peer2peer']);
         $prop['rawmode'] = isset($_GET['rawmode']);
+        $prop['donotsend'] = isset($_GET['donotsend']);
         set_getprop($prop,'jittersend');
         set_getprop($prop,'jitterreceive');
         set_getprop($prop,'label');
         set_getprop($prop,'egogain');
+        set_getprop($prop,'rvbgain');
         set_getprop($prop,'inputport');
         set_getprop($prop,'inputport2');
         set_getprop($prop,'srcdist');

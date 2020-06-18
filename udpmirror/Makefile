@@ -30,8 +30,6 @@ $(BINFILES): common.o udpsocket.o callerlist.o
 
 jackwaitforport: LDLIBS+=-ljack
 
-ovboxclient: LDLIBS+=-llo
-
 clean:
 	rm -f *~ $(BINFILES) *.o
 

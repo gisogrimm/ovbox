@@ -13,7 +13,9 @@ ep_desc_t::ep_desc_t()
   seq = 0;
   num_lost = 0;
   num_received = 0;
-  peer2peer = true;
+  mode = B_PEER2PEER;
+  //peer2peer = true;
+  //downmixonly = false;
   version = "";
 }
 
@@ -30,13 +32,13 @@ endpoint_list_t::~endpoint_list_t()
 }
 
 void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
-                                   bool peer2peer, const std::string& rver)
+                                   epmode_t mode, const std::string& rver)
 {
   if(cid < MAXEP) {
     endpoints[cid].ep = ep;
-    if(peer2peer != endpoints[cid].peer2peer)
+    if(mode != endpoints[cid].mode)
       endpoints[cid].announced = false;
-    endpoints[cid].peer2peer = peer2peer;
+    endpoints[cid].mode = mode;
     endpoints[cid].timeout = TIMEOUT;
     endpoints[cid].version = rver;
   }

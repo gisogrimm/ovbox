@@ -2,8 +2,6 @@
 #include "common.h"
 #include "udpsocket.h"
 #include <condition_variable>
-#include <lo/lo.h>
-#include <lo/lo_cpp.h>
 #include <map>
 #include <thread>
 
@@ -11,16 +9,14 @@ class udpreceiver_t : public endpoint_list_t {
 public:
   udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
                 int32_t portoffset, int prio, secret_t secret,
-                callerid_t callerid, bool peer2peer, bool send_duplicates,
-                port_t loport);
+                callerid_t callerid, bool peer2peer, bool donotsend,
+                bool downmixonly, port_t loport);
   ~udpreceiver_t();
   void run();
   void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
-  void set_p2p(bool p) { peer2peer = p; };
-  void set_duplicates(bool p) { send_duplicates = p; };
 
 private:
   void sendsrv();
@@ -39,32 +35,24 @@ private:
   std::thread sendthread;
   std::thread recthread;
   std::thread pingthread;
-  bool peer2peer;
-  bool send_duplicates;
-  lo::ServerThread lost;
-  lo::Address ctlif;
+  epmode_t mode;
 };
 
 udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
                              port_t recport, int32_t portoffset, int prio,
                              secret_t secret, callerid_t callerid,
-                             bool peer2peer_, bool send_duplicates_,
-                             port_t loport)
+                             bool peer2peer_, bool donotsend_,
+                             bool downmixonly_, port_t loport)
     : prio(prio), secret(secret), remote_server(secret), toport(destport),
       recport(recport), portoffset(portoffset), callerid(callerid),
-      runsession(true), peer2peer(peer2peer_),
-      send_duplicates(send_duplicates_), lost(loport),
-      ctlif("127.0.0.1", "9000")
+      runsession(true), mode(0)
 {
-  if(!lost.is_valid())
-    throw ErrMsg("Unable to create OSC server at port " +
-                 std::to_string(loport) + ".");
-  lost.add_method("/peer2peer", "i",
-                  [this](lo_arg** argv, int) { this->set_p2p(argv[0]->i); });
-  lost.add_method("/duplicates", "i", [this](lo_arg** argv, int) {
-    this->set_duplicates(argv[0]->i);
-  });
-  lost.start();
+  if(peer2peer_)
+    mode |= B_PEER2PEER;
+  if(downmixonly_)
+    mode |= B_DOWNMIXONLY;
+  if(donotsend_)
+    mode |= B_DONOTSEND;
   remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
   sendthread = std::thread(&udpreceiver_t::sendsrv, this);
@@ -79,10 +67,11 @@ udpreceiver_t::~udpreceiver_t()
 
 void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
 {
-  log(recport, "new connection for " + std::to_string(cid) + " from " +
-                   ep2str(ep.ep) + " in " +
-                   (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v" +
-                   ep.version);
+  log(recport,
+      "new connection for " + std::to_string(cid) + " from " + ep2str(ep.ep) +
+          " in " + ((ep.mode & B_PEER2PEER) ? "peer-to-peer" : "server") +
+          "-mode" + ((ep.mode & B_DOWNMIXONLY) ? " downmixonly" : "") +
+          ((ep.mode & B_DONOTSEND) ? " donotsend" : "") + " v" + ep.version);
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -124,23 +113,16 @@ void udpreceiver_t::handle_endpoint_list_update(callerid_t cid,
 // ping service
 void udpreceiver_t::pingservice()
 {
-  uint32_t ctlifcnt(10);
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
     // send registration to server:
-    remote_server.send_registration(callerid, peer2peer, toport);
+    remote_server.send_registration(callerid, mode, toport);
     // send ping to other peers:
     for(auto ep : endpoints) {
       if(ep.timeout) {
         remote_server.send_ping(callerid, ep.ep);
       }
     }
-    if(!ctlifcnt) {
-      ctlifcnt = 10;
-      ctlif.send("/peer2peer", "i", peer2peer);
-      ctlif.send("/duplicates", "i", send_duplicates);
-    }
-    --ctlifcnt;
   }
 }
 
@@ -226,14 +208,12 @@ void udpreceiver_t::recsrv()
       ++seq;
       size_t un =
           packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
-      bool sendtoserver(!peer2peer);
-      if(peer2peer) {
+      bool sendtoserver(!(mode & B_PEER2PEER));
+      if(mode & B_PEER2PEER) {
         for(auto ep : endpoints)
           if(ep.timeout) {
-            if(ep.peer2peer) {
+            if((ep.mode & B_PEER2PEER) && (!(ep.mode & B_DONOTSEND))) {
               remote_server.send(msg, un, ep.ep);
-              if(send_duplicates)
-                remote_server.send(msg, un, ep.ep);
             } else {
               sendtoserver = true;
             }
@@ -241,8 +221,6 @@ void udpreceiver_t::recsrv()
       }
       if(sendtoserver) {
         remote_server.send(msg, un, toport);
-        if(send_duplicates)
-          remote_server.send(msg, un, toport);
       }
     }
   }
@@ -270,17 +248,25 @@ int main(int argc, char** argv)
     secret_t secret(1234);
     callerid_t callerid(0);
     bool peer2peer(false);
-    bool sendduplicates(false);
+    bool donotsend(false);
+    bool downmixonly(false);
     std::string desthost("localhost");
-    const char* options = "c:d:p:o:qr:hvl:2s:";
-    struct option long_options[] = {
-        {"callerid", 1, 0, 'c'},       {"dest", 1, 0, 'd'},
-        {"rtprio", 1, 0, 'r'},         {"secret", 1, 0, 's'},
-        {"quiet", 0, 0, 'q'},          {"port", 1, 0, 'p'},
-        {"peer2peer", 1, 0, '2'},      {"portoffset", 1, 0, 'o'},
-        {"listenport", 1, 0, 'l'},     {"verbose", 0, 0, 'v'},
-        {"help", 0, 0, 'h'},           {"ctlport", 1, 0, 'x'},
-        {"sendduplicates", 0, 0, 'y'}, {0, 0, 0, 0}};
+    const char* options = "c:d:p:o:qr:hvl:2s:mn";
+    struct option long_options[] = {{"callerid", 1, 0, 'c'},
+                                    {"dest", 1, 0, 'd'},
+                                    {"rtprio", 1, 0, 'r'},
+                                    {"secret", 1, 0, 's'},
+                                    {"quiet", 0, 0, 'q'},
+                                    {"port", 1, 0, 'p'},
+                                    {"peer2peer", 0, 0, '2'},
+                                    {"portoffset", 1, 0, 'o'},
+                                    {"listenport", 1, 0, 'l'},
+                                    {"verbose", 0, 0, 'v'},
+                                    {"help", 0, 0, 'h'},
+                                    {"ctlport", 1, 0, 'x'},
+                                    {"downmixonly", 0, 0, 'm'},
+                                    {"donotsend", 0, 0, 'n'},
+                                    {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
     while((opt = getopt_long(argc, argv, options, long_options,
@@ -295,8 +281,11 @@ int main(int argc, char** argv)
       case 'd':
         desthost = optarg;
         break;
-      case 'y':
-        sendduplicates = true;
+      case 'n':
+        donotsend = true;
+        break;
+      case 'm':
+        downmixonly = true;
         break;
       case 'p':
         destport = atoi(optarg);
@@ -328,7 +317,7 @@ int main(int argc, char** argv)
       }
     }
     udpreceiver_t rec(desthost, destport, recport, portoffset, prio, secret,
-                      callerid, peer2peer, sendduplicates, loport);
+                      callerid, peer2peer, donotsend, downmixonly, loport);
     rec.run();
   }
   catch(const std::exception& e) {

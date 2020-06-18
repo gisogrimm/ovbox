@@ -148,3 +148,6 @@ div.mixer {
 .latency {
     font-size: x-small;
 }
+.expert {
+    background-color: #77777750;
+}

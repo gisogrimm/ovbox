@@ -89,10 +89,11 @@ void udpreceiver_t::quitwatch()
 
 void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
 {
-  log(portno, "new connection for " + std::to_string(cid) + " from " +
-                  ep2str(ep.ep) + " in " +
-                  (ep.peer2peer ? "peer-to-peer" : "server") + "-mode v" +
-                  ep.version);
+  log(portno,
+      "new connection for " + std::to_string(cid) + " from " + ep2str(ep.ep) +
+          " in " + ((ep.mode & B_PEER2PEER) ? "peer-to-peer" : "server") +
+          "-mode" + ((ep.mode & B_DOWNMIXONLY) ? " downmixonly" : "") +
+          ((ep.mode & B_DONOTSEND) ? " donotsend" : "") + " v" + ep.version);
 }
 
 void udpreceiver_t::announce_connection_lost(callerid_t cid)
@@ -187,7 +188,7 @@ void udpreceiver_t::ping_and_callerlist_service()
             if(endpoints[epl].timeout) {
               // endpoint is alive, send info of epl to cid:
               size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID,
-                                 endpoints[epl].peer2peer,
+                                 endpoints[epl].mode,
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
               socket.send(buffer, n, endpoints[cid].ep);
@@ -219,8 +220,11 @@ void udpreceiver_t::srv()
       if(destport > MAXSPECIALPORT) {
         for(callerid_t ep = 0; ep != MAXEP; ++ep) {
           if((ep != rcallerid) && (endpoints[ep].timeout > 0) &&
-             ((!endpoints[ep].peer2peer) ||
-              (!endpoints[rcallerid].peer2peer))) {
+             (!(endpoints[ep].mode & B_DONOTSEND)) &&
+             ((!(endpoints[ep].mode & B_PEER2PEER)) ||
+              (!(endpoints[rcallerid].mode & B_PEER2PEER))) &&
+             ((!(endpoints[ep].mode & B_DOWNMIXONLY)) ||
+              (rcallerid == MAXEP - 1))) {
             socket.send(buffer, n, endpoints[ep].ep);
           }
         }
