@@ -213,6 +213,9 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'srcdist');
         set_getprop($prop,'outputport1');
         set_getprop($prop,'outputport2');
+        set_getprop($prop,'xportsrc');
+        set_getprop($prop,'xportdest');
+        set_getprop($prop,'xdest');
         set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );

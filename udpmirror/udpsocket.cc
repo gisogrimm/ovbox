@@ -49,7 +49,7 @@ void udpsocket_t::destination(const char* host)
         server->h_length);
 }
 
-port_t udpsocket_t::bind(port_t port)
+port_t udpsocket_t::bind(port_t port, bool loopback )
 {
   int optval = 1;
   setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval,
@@ -60,7 +60,9 @@ port_t udpsocket_t::bind(port_t port)
   /* Clear structure */
   my_addr.sin_family = AF_INET;
   my_addr.sin_port = htons((unsigned short)port);
-
+  if( loopback ){
+    my_addr.sin_addr.s_addr = 0x0100007f;
+  }
   if(::bind(sockfd, (struct sockaddr*)&my_addr, sizeof(endpoint_t)) == -1)
     throw ErrMsg("Binding the socket to port " + std::to_string(port) +
                      " failed: ",

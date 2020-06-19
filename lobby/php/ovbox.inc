@@ -21,8 +21,11 @@ function defaults( $type )
     'jittersend'=>5,
     'outputport1'=>'system:playback_1',
     'outputport2'=>'system:playback_2',
+    'xportsrc'=>'',
+    'xportdest'=>'',
     'peer2peer'=>true,
     'donotsend'=>false,
+    'xdest'=>'',
     'pos'=>'0 0 0',
     'rawmode'=>false,
     'reverb'=>true,
@@ -253,18 +256,6 @@ function list_db($type)
 function list_devices()
 {
   return list_db('device');
-}
-
-function list_rooms()
-{
-  $rooms = array();
-  foreach( glob( '../db/*.room') as $roomf){
-    $room = basename($roomf,'.room');
-    $prop = get_room_prop($room);
-    $rooms[] = array('room'=>$room,'age'=>$prop['age']);
-  }
-  uasort( $rooms, "agesort" );
-  return $rooms;
 }
 
 function list_unclaimed_devices()
@@ -607,6 +598,11 @@ function get_tascar_cfg( $device, $devhash )
         $p2p = ' -2';
       if( $localdevprop['donotsend'] )
         $p2p = $p2p.' --donotsend';
+      if( !empty($localdevprop['xdest']) ){
+        $xdest = explode(' ',$localdevprop['xdest']);
+        foreach( $xdest as $xs )
+          $p2p = $p2p . ' -x ' . $xs;
+      }
       $mod->setAttribute("command","../udpmirror/ovboxclient --rtprio=30 -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
@@ -680,6 +676,11 @@ function get_tascar_cfg( $device, $devhash )
       $modules->appendChild($mod);
       $cmd = $modules->appendChild($doc->createElement('system'));
       $cmd->setAttribute('command','../headtracker/headtracker');
+      if( !(empty($localdevprop['xportsrc'])|| empty($localdevprop['xportdest'])) ){
+        $conn = $session->appendChild($doc->createElement('connect'));
+        $conn->setAttribute('src',$localdevprop['xportsrc']);
+        $conn->setAttribute('dest',$localdevprop['xportdest']);
+      }
       $success = true;
     }
   }
@@ -1201,6 +1202,8 @@ function html_admin_db($type)
     $opt = $inp->appendChild($doc->createElement('option'));
     $opt->setAttribute('value','');
     $opt->appendChild($doc->createTextNode(' -- unclaimed -- '));
+    if( $dprop['owner'] == '' )
+      $opt->setAttribute('selected','');
     $users = list_users();
     foreach($users as $us){
       $opt = $inp->appendChild($doc->createElement('option'));
@@ -1505,6 +1508,22 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('type','text');
   $el->setAttribute('value',$devprop['outputport2']);
   $div->appendChild($doc->createElement('br'));
+  // extra ports:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','xport');
+  $el->appendChild($doc->createTextNode('extra ports (source, destination): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','xportsrc');
+  $el->setAttribute('name','xportsrc');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['xportsrc']);
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','xportdest');
+  $el->setAttribute('name','xportdest');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['xportdest']);
+  $div->appendChild($doc->createElement('br'));
   // source distance:
   $el = $div->appendChild($doc->createElement('label'));
   $el->setAttribute('for','srcdist');
@@ -1624,6 +1643,16 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('for','donotsend');
   $el->appendChild($doc->createTextNode('alternative data source, do not send to this device '));
   $div->appendChild($doc->createElement('br'));
+  // extra destinations:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','xdest');
+  $el->appendChild($doc->createTextNode('additional local network destinations (space separated): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','xdest');
+  $el->setAttribute('name','xdest');
+  $el->setAttribute('type','text');
+  $el->setAttribute('value',$devprop['xdest']);
   // save:
   $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
   $inp = $form->appendChild($doc->createElement('input'));

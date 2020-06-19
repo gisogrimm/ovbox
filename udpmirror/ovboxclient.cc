@@ -3,6 +3,8 @@
 #include "udpsocket.h"
 #include <condition_variable>
 #include <map>
+#include <netdb.h>
+#include <strings.h>
 #include <thread>
 
 class udpreceiver_t : public endpoint_list_t {
@@ -10,13 +12,14 @@ public:
   udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
                 int32_t portoffset, int prio, secret_t secret,
                 callerid_t callerid, bool peer2peer, bool donotsend,
-                bool downmixonly, port_t loport);
+                bool downmixonly);
   ~udpreceiver_t();
   void run();
   void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
+  void add_destination(const std::string& dest);
 
 private:
   void sendsrv();
@@ -27,6 +30,7 @@ private:
   secret_t secret;
   ovbox_udpsocket_t remote_server;
   udpsocket_t local_server;
+  std::vector<endpoint_t> xdest;
   port_t toport;
   port_t recport;
   int32_t portoffset;
@@ -42,7 +46,7 @@ udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
                              port_t recport, int32_t portoffset, int prio,
                              secret_t secret, callerid_t callerid,
                              bool peer2peer_, bool donotsend_,
-                             bool downmixonly_, port_t loport)
+                             bool downmixonly_)
     : prio(prio), secret(secret), remote_server(secret), toport(destport),
       recport(recport), portoffset(portoffset), callerid(callerid),
       runsession(true), mode(0)
@@ -55,6 +59,7 @@ udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
     mode |= B_DONOTSEND;
   remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
+  //local_server.destination("ovbox");
   sendthread = std::thread(&udpreceiver_t::sendsrv, this);
   recthread = std::thread(&udpreceiver_t::recsrv, this);
   pingthread = std::thread(&udpreceiver_t::pingservice, this);
@@ -63,6 +68,21 @@ udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
 udpreceiver_t::~udpreceiver_t()
 {
   runsession = false;
+}
+
+void udpreceiver_t::add_destination(const std::string& dest)
+{
+  endpoint_t serv_addr;
+  struct hostent* server;
+  server = gethostbyname(dest.c_str());
+  if(server == NULL)
+    throw ErrMsg("No such host: " + std::string(hstrerror(h_errno)));
+  bzero((char*)&serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr,
+        server->h_length);
+  xdest.push_back(serv_addr);
+  log(recport, ep2str(xdest.back()));
 }
 
 void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
@@ -148,8 +168,16 @@ void udpreceiver_t::sendsrv()
             sequence_t dseq(seq - endpoints[rcallerid].seq);
             if(dseq != 0) {
               local_server.send(msg, un, destport + portoffset);
+              for(auto xd : xdest) {
+		xd.sin_port = htons(destport);
+		local_server.send(msg, un, xd);
+		//DEBUG(ep2str(xd));
+		//DEBUG(un);
+                //DEBUG(local_server.send(msg, un, xd));
+              }
               ++endpoints[rcallerid].num_received;
               if(dseq < 0) {
+                // report sequence error:
                 size_t un =
                     packmsg(buffer, BUFSIZE, secret, callerid, PORT_SEQREP, 0,
                             (char*)(&rcallerid), sizeof(rcallerid));
@@ -196,7 +224,7 @@ void udpreceiver_t::sendsrv()
 void udpreceiver_t::recsrv()
 {
   try {
-    local_server.bind(recport);
+    local_server.bind(recport, true);
     set_thread_prio(prio);
     char buffer[BUFSIZE];
     char msg[BUFSIZE];
@@ -244,14 +272,14 @@ int main(int argc, char** argv)
     int recport(9000);
     int portoffset(0);
     int prio(55);
-    int loport(9876);
     secret_t secret(1234);
     callerid_t callerid(0);
     bool peer2peer(false);
     bool donotsend(false);
     bool downmixonly(false);
+    std::vector<std::string> xdest;
     std::string desthost("localhost");
-    const char* options = "c:d:p:o:qr:hvl:2s:mn";
+    const char* options = "c:d:p:o:qr:hvl:2s:mnx:";
     struct option long_options[] = {{"callerid", 1, 0, 'c'},
                                     {"dest", 1, 0, 'd'},
                                     {"rtprio", 1, 0, 'r'},
@@ -263,9 +291,9 @@ int main(int argc, char** argv)
                                     {"listenport", 1, 0, 'l'},
                                     {"verbose", 0, 0, 'v'},
                                     {"help", 0, 0, 'h'},
-                                    {"ctlport", 1, 0, 'x'},
                                     {"downmixonly", 0, 0, 'm'},
                                     {"donotsend", 0, 0, 'n'},
+                                    {"xdest", 1, 0, 'x'},
                                     {0, 0, 0, 0}};
     int opt(0);
     int option_index(0);
@@ -294,7 +322,7 @@ int main(int argc, char** argv)
         recport = atoi(optarg);
         break;
       case 'x':
-        loport = atoi(optarg);
+        xdest.push_back(optarg);
         break;
       case 'o':
         portoffset = atoi(optarg);
@@ -317,7 +345,11 @@ int main(int argc, char** argv)
       }
     }
     udpreceiver_t rec(desthost, destport, recport, portoffset, prio, secret,
-                      callerid, peer2peer, donotsend, downmixonly, loport);
+                      callerid, peer2peer, donotsend, downmixonly);
+    for(auto xs : xdest) {
+      log(recport, "adding destination " + xs);
+      rec.add_destination(xs);
+    }
     rec.run();
   }
   catch(const std::exception& e) {

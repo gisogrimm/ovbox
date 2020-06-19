@@ -10,16 +10,22 @@
 
 typedef struct sockaddr_in endpoint_t;
 
+std::string addr2str(const struct in_addr& addr);
+std::string ep2str(const endpoint_t& ep);
+
+std::string getmacaddr();
+
 class udpsocket_t {
 public:
   udpsocket_t();
   ~udpsocket_t();
-  port_t bind(port_t port);
+  port_t bind(port_t port, bool loopback = false);
   void destination(const char* host);
   size_t send(const char* buf, size_t len, int portno);
   size_t send(const char* buf, size_t len, const endpoint_t& ep);
   size_t recvfrom(char* buf, size_t len, endpoint_t& addr);
   void close();
+  const std::string addrname() const { return ep2str(serv_addr); };
 
 private:
   int sockfd;
@@ -39,11 +45,6 @@ public:
 protected:
   secret_t secret;
 };
-
-std::string addr2str(const struct in_addr& addr);
-std::string ep2str(const endpoint_t& ep);
-
-std::string getmacaddr();
 
 #endif
 
