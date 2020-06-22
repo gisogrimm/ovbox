@@ -5,7 +5,9 @@ The ovbox is a remote collaboration box developed by the ensemble
 during the lockdown due to Covid19 pandemia. This box is completely
 built upon open source software and open or standardized hardware.
 
-![consortbox](doc/consortbox.jpg)
+![consortbox](doc/ovbox.jpg)
+
+We are contributing to the [digital stage](https://digital-stage.org/) project. It is our aim to achieve full compatibility of the ovbox with the digital stage system.
 
 ## Installation instructions
 
