@@ -213,9 +213,11 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'srcdist');
         set_getprop($prop,'outputport1');
         set_getprop($prop,'outputport2');
-        set_getprop($prop,'xportsrc');
-        set_getprop($prop,'xportdest');
+        set_getprop($prop,'xport');
         set_getprop($prop,'xdest');
+        set_getprop($prop,'playbackgain');
+        set_getprop($prop,'mastergain');
+        set_getprop($prop,'rectype');
         set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );
@@ -266,6 +268,15 @@ if( isset($_GET['claim']) ){
 if( isset($_GET['unclaim']) ){
     if( $devprop['owner'] = $user )
         modify_device_prop( $device, 'owner', '');
+    header( "Location: /" );
+    die();
+}
+
+if( isset($_GET['devreset']) ){
+    if( $devprop['owner'] = $user ){
+        rm_device( $device );
+        modify_device_prop( $device, 'owner', $user);
+    }
     header( "Location: /" );
     die();
 }

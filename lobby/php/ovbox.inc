@@ -21,8 +21,7 @@ function defaults( $type )
     'jittersend'=>5,
     'outputport1'=>'system:playback_1',
     'outputport2'=>'system:playback_2',
-    'xportsrc'=>'',
-    'xportdest'=>'',
+    'xport'=>'{}',
     'peer2peer'=>true,
     'donotsend'=>false,
     'xdest'=>'',
@@ -30,8 +29,11 @@ function defaults( $type )
     'rawmode'=>false,
     'reverb'=>true,
     'rvbgain'=>0,
+    'mastergain'=>0,
+    'playbackgain'=>0,
     'room'=>'',
-    'srcdist'=>1.2,
+    'srcdist'=>0.7,
+    'rectype'=>'ortf',
   );
   $defaults['room'] = array(
     'access'=>0,
@@ -451,10 +453,12 @@ function get_tascar_cfg( $device, $devhash )
   $session->appendChild($modules);
   // add receiver:
   $rec = $doc->createElement("receiver");
-  $rec->setAttribute("type","ortf");
-  $rec->setAttribute('angle','140');
-  $rec->setAttribute('f6db','12000');
-  $rec->setAttribute('fmin','3000');
+  $rec->setAttribute('type',$localdevprop['rectype']);
+  if( $localdevprop['rectype'] == 'ortf' ){
+    $rec->setAttribute('angle','140');
+    $rec->setAttribute('f6db','12000');
+    $rec->setAttribute('fmin','3000');
+  }
   $rec->setAttribute("name","master");
   $rec->setAttribute("delaycomp","0.05");
   $scene->appendChild($rec);
@@ -519,6 +523,7 @@ function get_tascar_cfg( $device, $devhash )
           }else{
             $source->setAttribute("name",$devprop['label']);
           }
+          $gain = $gain + $devprop['playbackgain'];
           $dy = $devprop['srcdist'] * ($numsource > 1) * 0.5;
           if( !empty($devprop['inputport']) ){
             $inport = '';
@@ -676,11 +681,13 @@ function get_tascar_cfg( $device, $devhash )
       $modules->appendChild($mod);
       $cmd = $modules->appendChild($doc->createElement('system'));
       $cmd->setAttribute('command','../headtracker/headtracker');
-      if( !(empty($localdevprop['xportsrc'])|| empty($localdevprop['xportdest'])) ){
+      $xport = json_decode($localdevprop['xport']);
+      foreach( $xport as $xpsrc=>$xpdest ){
         $conn = $session->appendChild($doc->createElement('connect'));
-        $conn->setAttribute('src',$localdevprop['xportsrc']);
-        $conn->setAttribute('dest',$localdevprop['xportdest']);
+        $conn->setAttribute('src',$xpsrc);
+        $conn->setAttribute('dest',$xpdest);
       }
+      $rec->setAttribute('gain',$localdevprop['mastergain']);
       $success = true;
     }
   }
@@ -1511,18 +1518,29 @@ function html_show_device( $user, $device, $devprop )
   // extra ports:
   $el = $div->appendChild($doc->createElement('label'));
   $el->setAttribute('for','xport');
-  $el->appendChild($doc->createTextNode('extra ports (source, destination): '));
+  $el->appendChild($doc->createTextNode('extra ports (json expression, e.g., {"Giso:out_1":"ardour:Giso/in"}): '));
   $div->appendChild($doc->createElement('br'));
   $el = $div->appendChild($doc->createElement('input'));
-  $el->setAttribute('id','xportsrc');
-  $el->setAttribute('name','xportsrc');
+  $el->setAttribute('size','40');
+  $el->setAttribute('id','xport');
+  $el->setAttribute('name','xport');
   $el->setAttribute('type','text');
-  $el->setAttribute('value',$devprop['xportsrc']);
-  $el = $div->appendChild($doc->createElement('input'));
-  $el->setAttribute('id','xportdest');
-  $el->setAttribute('name','xportdest');
-  $el->setAttribute('type','text');
-  $el->setAttribute('value',$devprop['xportdest']);
+  $el->setAttribute('value',$devprop['xport']);
+  $div->appendChild($doc->createElement('br'));
+  // receiver type:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','rectype');
+  $el->appendChild($doc->createTextNode('receiver type: '));
+  $el = $div->appendChild($doc->createElement('select'));
+  $el->setAttribute('id','rectype');
+  $el->setAttribute('name','rectype');
+  foreach( array('ortf','hrtf') as $rectype ){
+    $opt = $el->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value',$rectype);
+    if( $devprop['rectype'] == $rectype )
+      $opt->setAttribute('selected','');
+    $opt->appendChild($doc->createTextNode($rectype));
+  }
   $div->appendChild($doc->createElement('br'));
   // source distance:
   $el = $div->appendChild($doc->createElement('label'));
@@ -1536,7 +1554,35 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('min','0');
   $el->setAttribute('step','0.01');
   $el->setAttribute('value',$devprop['srcdist']);
-  //$form->appendChild($doc->createElement('br'));
+  $div->appendChild($doc->createElement('br'));
+  // playback gain:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','playbackgain');
+  $el->appendChild($doc->createTextNode('playback gain in dB (equivalent to changing the input gain): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','playbackgain');
+  $el->setAttribute('name','playbackgain');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','-20');
+  $el->setAttribute('max','20');
+  $el->setAttribute('step','0.1');
+  $el->setAttribute('value',$devprop['playbackgain']);
+  $div->appendChild($doc->createElement('br'));
+  // master gain:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','playbackgain');
+  $el->appendChild($doc->createTextNode('master gain in dB (equivalent to changing the headphone gain): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','mastergain');
+  $el->setAttribute('name','mastergain');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','-20');
+  $el->setAttribute('max','20');
+  $el->setAttribute('step','0.1');
+  $el->setAttribute('value',$devprop['mastergain']);
+  $div->appendChild($doc->createElement('br'));
   // ego monitor:
   $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','egogain');
@@ -1566,14 +1612,14 @@ function html_show_device( $user, $device, $devprop )
   $div = add_expert_div($form,$doc);
   $el = $div->appendChild($doc->createElement('label'));
   $el->setAttribute('for','devrvbgain');
-  $el->appendChild($doc->createTextNode('ego monitor gain in dB: '));
+  $el->appendChild($doc->createTextNode('extra reverb gain in dB: '));
   $div->appendChild($doc->createElement('br'));
   $el = $div->appendChild($doc->createElement('input'));
   $el->setAttribute('id','devrvbgain');
   $el->setAttribute('name','rvbgain');
   $el->setAttribute('type','number');
-  $el->setAttribute('min','-10');
-  $el->setAttribute('max','10');
+  $el->setAttribute('min','-20');
+  $el->setAttribute('max','20');
   $el->setAttribute('step','0.1');
   $el->setAttribute('value',$devprop['rvbgain']);
   $div->appendChild($doc->createElement('br'));
@@ -1632,27 +1678,27 @@ function html_show_device( $user, $device, $devprop )
   $el->appendChild($doc->createTextNode('peer-to-peer mode '));
   $form->appendChild($doc->createElement('br'));
   // do not send:
-  $div = add_expert_div($form, $doc );
-  $el = $div->appendChild($doc->createElement('input'));
-  $el->setAttribute('name','donotsend');
-  $el->setAttribute('id','donotsend');
-  $el->setAttribute('type','checkbox');
-  if( $devprop['donotsend'] )
-    $el->setAttribute('checked','');
-  $el = $div->appendChild($doc->createElement('label'));
-  $el->setAttribute('for','donotsend');
-  $el->appendChild($doc->createTextNode('alternative data source, do not send to this device '));
-  $div->appendChild($doc->createElement('br'));
+  //$div = add_expert_div($form, $doc );
+  //$el = $div->appendChild($doc->createElement('input'));
+  //$el->setAttribute('name','donotsend');
+  //$el->setAttribute('id','donotsend');
+  //$el->setAttribute('type','checkbox');
+  //if( $devprop['donotsend'] )
+  //  $el->setAttribute('checked','');
+  //$el = $div->appendChild($doc->createElement('label'));
+  //$el->setAttribute('for','donotsend');
+  //$el->appendChild($doc->createTextNode('alternative data source, do not send to this device '));
+  //$div->appendChild($doc->createElement('br'));
   // extra destinations:
-  $el = $div->appendChild($doc->createElement('label'));
-  $el->setAttribute('for','xdest');
-  $el->appendChild($doc->createTextNode('additional local network destinations (space separated): '));
-  $div->appendChild($doc->createElement('br'));
-  $el = $div->appendChild($doc->createElement('input'));
-  $el->setAttribute('id','xdest');
-  $el->setAttribute('name','xdest');
-  $el->setAttribute('type','text');
-  $el->setAttribute('value',$devprop['xdest']);
+  //$el = $div->appendChild($doc->createElement('label'));
+  //$el->setAttribute('for','xdest');
+  //$el->appendChild($doc->createTextNode('additional local network destinations (space separated): '));
+  //$div->appendChild($doc->createElement('br'));
+  //$el = $div->appendChild($doc->createElement('input'));
+  //$el->setAttribute('id','xdest');
+  //$el->setAttribute('name','xdest');
+  //$el->setAttribute('type','text');
+  //$el->setAttribute('value',$devprop['xdest']);
   // save:
   $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
   $inp = $form->appendChild($doc->createElement('input'));
@@ -1660,6 +1706,11 @@ function html_show_device( $user, $device, $devprop )
   $inp->setAttribute('class','roomsettingstoggle');
   $inp->setAttribute('onclick','location.href=\'?unclaim\';');
   $inp->setAttribute('value','not my device');
+  $inp = $form->appendChild($doc->createElement('input'));
+  $inp->setAttribute('type','button');
+  //$inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('onclick','location.href=\'?devreset\';');
+  $inp->setAttribute('value','reset settings');
 
 
   $el = $form->appendChild($doc->createElement('input'));

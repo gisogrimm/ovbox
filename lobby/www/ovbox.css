@@ -150,4 +150,8 @@ div.mixer {
 }
 .expert {
     background-color: #77777750;
+    border: 2px solid #a02020;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    padding: 2px;
 }
