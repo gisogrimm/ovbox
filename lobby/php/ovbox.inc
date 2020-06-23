@@ -440,12 +440,15 @@ function get_tascar_cfg( $device, $devhash )
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
   $doc->appendChild($session);
-  $session->setAttribute("license","CC0");
+  $session->setAttribute('name',$device);
+  $session->setAttribute('license','CC0');
   $session->setAttribute("levelmeter_tc","0.5");
-  $scene = $doc->createElement("scene");
+  $scene = $doc->createElement('scene');
+  $scene->setAttribute('name',$device);
   $scene->setAttribute('guiscale','25');
   if( ! $localdevprop['rawmode'] ){
     $session->appendChild($scene);
+    $session->setAttribute('srv_port','9871');
   }else{
     $session->setAttribute('srv_port','0');
   }
@@ -465,12 +468,12 @@ function get_tascar_cfg( $device, $devhash )
   // master connections
   if( ! $localdevprop['rawmode'] ){
     $conn = $doc->createElement("connect");
-    $conn->setAttribute("src","render.scene:master_l");
+    $conn->setAttribute("src",'render.'.$device.':master_l');
     $conn->setAttribute("dest",$localdevprop['outputport1']);
     if( !empty($localdevprop['outputport1']))
       $session->appendChild($conn);
     $conn = $doc->createElement("connect");
-    $conn->setAttribute("src","render.scene:master_r");
+    $conn->setAttribute("src",'render.'.$device.':master_r');
     $conn->setAttribute("dest",$localdevprop['outputport2']);
     if( !empty($localdevprop['outputport2']))
       $session->appendChild($conn);
@@ -521,7 +524,7 @@ function get_tascar_cfg( $device, $devhash )
             $dx = 0.2;
             $gain = $devprop['egogain'];
           }else{
-            $source->setAttribute("name",$devprop['label']);
+            $source->setAttribute("name",$devprop['label'].'_'.$chair);
           }
           $gain = $gain + $devprop['playbackgain'];
           $dy = $devprop['srcdist'] * ($numsource > 1) * 0.5;
@@ -624,21 +627,21 @@ function get_tascar_cfg( $device, $devhash )
             $chan = $chan . ',2';
           // zita
           $mod = $doc->createElement("system");
-          $mod->setAttribute("command","zita-n2j --chan ".$chan." --jname " . $devuser . " --buf " . $buff . " 0.0.0.0 " . $iport);
-          $mod->setAttribute("onunload","killall zita-n2j");
+          $mod->setAttribute('command','zita-n2j --chan '.$chan.' --jname ' . $devuser . '_'.$chair.' --buf ' . $buff . ' 0.0.0.0 ' . $iport);
+          $mod->setAttribute('onunload','killall zita-n2j');
           $modules->appendChild($mod);
           // connection
           for($k=0;$k<$numsource;$k++){
-            $conn = $doc->createElement("connect");
-            $port = $devuser . ":out_".($k+1);
+            $conn = $doc->createElement('connect');
+            $port = $devuser . '_'.$chair.':out_'.($k+1);
             $waitports = $waitports . ' ' . $port;
-            $conn->setAttribute("src",$port);
+            $conn->setAttribute('src',$port);
             if( $localdevprop['rawmode'] ){
-              $conn->setAttribute("dest",$localdevprop['outputport'.($k+1)]);
+              $conn->setAttribute('dest',$localdevprop['outputport'.($k+1)]);
               if( !empty($localdevprop['outputport'.($k+1)]))
                 $session->appendChild($conn);
             }else{
-              $conn->setAttribute("dest","render.scene:" . $devuser . ".".$k.".0");
+              $conn->setAttribute('dest','render.'.$device.':' . $devuser . '_'.$chair.'.'.$k.'.0');
               $session->appendChild($conn);
             }
           }
@@ -646,37 +649,37 @@ function get_tascar_cfg( $device, $devhash )
       }
       $numsource = !empty($localdevprop['inputport']) + !empty($localdevprop['inputport2']);
       if( $numsource > 0 ){
-        $mod = $doc->createElement("system");
-        //<system command=\"zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 ${oport}\" onunload=\"killall zita-j2n\"/>"
-        $mod->setAttribute("command","zita-j2n --chan ".$numsource." --jname sender --16bit 127.0.0.1 " . $myport);
-        $mod->setAttribute("onunload","killall zita-j2n");
+        $mod = $doc->createElement('system');
+        //<system command=\'zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 ${oport}\' onunload=\'killall zita-j2n\'/>'
+        $mod->setAttribute('command','zita-j2n --chan '.$numsource.' --jname sender --16bit 127.0.0.1 ' . $myport);
+        $mod->setAttribute('onunload','killall zita-j2n');
         $modules->appendChild($mod);
         if( !empty($localdevprop['inputport']) ){
-          $conn = $doc->createElement("connect");
-          $conn->setAttribute("src",$localdevprop['inputport']);
-          $port = "sender:in_1";
+          $conn = $doc->createElement('connect');
+          $conn->setAttribute('src',$localdevprop['inputport']);
+          $port = 'sender:in_1';
           $waitports = $waitports . ' ' . $port;
-          $conn->setAttribute("dest",$port);
+          $conn->setAttribute('dest',$port);
           $session->appendChild($conn);
         }
         if( !empty($localdevprop['inputport2']) ){
-          $conn = $doc->createElement("connect");
-          $conn->setAttribute("src",$localdevprop['inputport2']);
-          $port = "sender:in_".$numsource;
+          $conn = $doc->createElement('connect');
+          $conn->setAttribute('src',$localdevprop['inputport2']);
+          $port = 'sender:in_'.$numsource;
           $waitports = $waitports . ' ' . $port;
-          $conn->setAttribute("dest",$port);
+          $conn->setAttribute('dest',$port);
           $session->appendChild($conn);
         }
       }
-      $mod = $doc->createElement("system");
-      //$mod->setAttribute("command","sleep 2;sleep 2");
-      $mod->setAttribute("command","../udpmirror/jackwaitforport" . $waitports . ";sleep 1");
+      $mod = $doc->createElement('system');
+      //$mod->setAttribute('command','sleep 2;sleep 2');
+      $mod->setAttribute('command','../udpmirror/jackwaitforport' . $waitports . ';sleep 1');
       $modules->appendChild($mod);
-      $mod = $doc->createElement("touchosc");
+      $mod = $doc->createElement('touchosc');
       if( ! $localdevprop['rawmode'] )
         $modules->appendChild($mod);
-      $mod = $doc->createElement("system");
-      $mod->setAttribute("command","node bridge.js");
+      $mod = $doc->createElement('system');
+      $mod->setAttribute('command','node bridge.js');
       if( ! $localdevprop['rawmode'] )
       $modules->appendChild($mod);
       $cmd = $modules->appendChild($doc->createElement('system'));
@@ -693,21 +696,21 @@ function get_tascar_cfg( $device, $devhash )
   }
   if( !$success ){
     // add announcement source
-    $source = $doc->createElement("source");
+    $source = $doc->createElement('source');
     $scene->appendChild($source);
-    $source->setAttribute("name","announce");
+    $source->setAttribute('name','announce');
     $egosound = xml_add_sound($source, $doc, array('x'=>4) );
-    $plugs = $doc->createElement("plugins");
+    $plugs = $doc->createElement('plugins');
     $egosound->appendChild($plugs);
-    $sndfile = $doc->createElement("sndfile");
+    $sndfile = $doc->createElement('sndfile');
     $plugs->appendChild($sndfile);
-    $sndfile->setAttribute("name","announce.flac");
-    $sndfile->setAttribute("level","57");
-    $sndfile->setAttribute("transport","false");
-    $sndfile->setAttribute("loop","0");
+    $sndfile->setAttribute('name','announce.flac');
+    $sndfile->setAttribute('level','57');
+    $sndfile->setAttribute('transport','false');
+    $sndfile->setAttribute('loop','0');
   }
   $tsc = $doc->saveXML();
-  $hash = hash("md5",$tsc);
+  $hash = hash('md5',$tsc);
   if( $hash != $devhash ){
     echo $hash . "\n";
     echo $tsc;
@@ -880,7 +883,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
   $rprop = get_room_prop( $room );
   if( ($rprop['age'] < 3600) &&
   ((!$rprop['private']) || ($rprop['owner']==$user)) &&
-  ($userprop['seesall'] || ($rprop['owner']==$user)) &&
+  ($userprop['seesall'] || ($rprop['owner']==$user) || in_array($rprop['group'],$usergroups)) &&
   (empty($rprop['group']) || (in_array($rprop['group'],$usergroups)))
   ) {
     // only show active rooms
