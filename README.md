@@ -32,7 +32,7 @@ Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
 Ubuntu LTS (20.04, 18.04, 16.04)
 
 Scarlett Solo (recommended), TASCAM US2x2, Mackie Onyx 2-2, or any
-other class compliant USB sound card
+other class compliant USB sound card. We also tested the low-cost USB microphone 'Superlux E205U', which works, however, on the Raspberry it produces a clearly audible tonal noise due to low quality USB power.
 
 basic condenser mic, headphones, cables
 
@@ -223,4 +223,7 @@ filters is:
 |                  | 48          | 233 samples |  4.9 ms |
 | Mackie Onyx 2-2  | 96          | 587 samples | 12.2 ms |
 |                  | 48          | 364 samples |  7.6 ms |
+|                  |             |             |         |
+| Superlux E205U   | 96          | 618 samples | 12.9 ms |
+|                  | 48          | 372 samples |  7.8 ms |
 
