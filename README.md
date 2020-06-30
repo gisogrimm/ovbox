@@ -105,6 +105,10 @@ of Consort", please contact us via email.
 
 ## Starting the tools
 
+Normally the tools are started automatically after booting the system.
+For debugging for when installed on a desktop PC, you may want to start
+them manually.
+
 On our boxes, TASCAR is not only used for virtual acoustic simulation,
 but also for the whole session management. Essentially, on each client
 these commands are started:
@@ -130,7 +134,7 @@ as a headless system, you should deactivate audio card reservation by
 setting the environment variable `JACK_NO_AUDIO_RESERVATION=1`:
 
 ````
-JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:US2x2 -r 48000 -p 96 -n 2
+JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:1 -r 48000 -p 96 -n 2
 ````
 
 Alternatively you may compile your own jackd with dbus deactivated.
