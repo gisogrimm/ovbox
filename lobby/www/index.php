@@ -214,7 +214,7 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'outputport1');
         set_getprop($prop,'outputport2');
         set_getprop($prop,'xport');
-        set_getprop($prop,'xdest');
+        set_getprop($prop,'secrec');
         set_getprop($prop,'playbackgain');
         set_getprop($prop,'mastergain');
         set_getprop($prop,'rectype');

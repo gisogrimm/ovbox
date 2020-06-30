@@ -25,5 +25,6 @@ int main(int argc, char** argv)
     }
   }
   jack_client_close(jc);
+  usleep(100000);
   return 0;
 }

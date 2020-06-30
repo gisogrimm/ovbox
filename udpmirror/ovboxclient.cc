@@ -7,33 +7,41 @@
 #include <strings.h>
 #include <thread>
 
-class udpreceiver_t : public endpoint_list_t {
+class ovboxclient_t : public endpoint_list_t {
 public:
-  udpreceiver_t(const std::string& desthost, port_t destport, port_t recport,
-                int32_t portoffset, int prio, secret_t secret,
+  ovboxclient_t(const std::string& desthost, port_t destport, port_t recport,
+                port_t portoffset, int prio, secret_t secret,
                 callerid_t callerid, bool peer2peer, bool donotsend,
                 bool downmixonly);
-  ~udpreceiver_t();
+  ~ovboxclient_t();
   void run();
   void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
   void announce_connection_lost(callerid_t cid);
   void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
                         uint32_t received, uint32_t lost);
-  void add_destination(const std::string& dest);
+  void add_destination(port_t dest);
 
 private:
   void sendsrv();
   void recsrv();
   void pingservice();
   void handle_endpoint_list_update(callerid_t cid, const endpoint_t& ep);
+  // real time priority:
   const int prio;
+  // PIN code to connect to server:
   secret_t secret;
+  // data relay server address:
   ovbox_udpsocket_t remote_server;
+  // local UDP receiver:
   udpsocket_t local_server;
-  std::vector<endpoint_t> xdest;
+  // additional port offsets to send data to locally:
+  std::vector<port_t> xdest;
   port_t toport;
   port_t recport;
-  int32_t portoffset;
+  // port offset for primary port, added to nominal port, e.g., in case of local
+  // setup:
+  port_t portoffset;
+  // client/caller identification (aka 'chair' in the lobby system):
   callerid_t callerid;
   bool runsession;
   std::thread sendthread;
@@ -42,8 +50,8 @@ private:
   epmode_t mode;
 };
 
-udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
-                             port_t recport, int32_t portoffset, int prio,
+ovboxclient_t::ovboxclient_t(const std::string& desthost, port_t destport,
+                             port_t recport, port_t portoffset, int prio,
                              secret_t secret, callerid_t callerid,
                              bool peer2peer_, bool donotsend_,
                              bool downmixonly_)
@@ -59,33 +67,22 @@ udpreceiver_t::udpreceiver_t(const std::string& desthost, port_t destport,
     mode |= B_DONOTSEND;
   remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
-  //local_server.destination("ovbox");
-  sendthread = std::thread(&udpreceiver_t::sendsrv, this);
-  recthread = std::thread(&udpreceiver_t::recsrv, this);
-  pingthread = std::thread(&udpreceiver_t::pingservice, this);
+  sendthread = std::thread(&ovboxclient_t::sendsrv, this);
+  recthread = std::thread(&ovboxclient_t::recsrv, this);
+  pingthread = std::thread(&ovboxclient_t::pingservice, this);
 }
 
-udpreceiver_t::~udpreceiver_t()
+ovboxclient_t::~ovboxclient_t()
 {
   runsession = false;
 }
 
-void udpreceiver_t::add_destination(const std::string& dest)
+void ovboxclient_t::add_destination(port_t dest)
 {
-  endpoint_t serv_addr;
-  struct hostent* server;
-  server = gethostbyname(dest.c_str());
-  if(server == NULL)
-    throw ErrMsg("No such host: " + std::string(hstrerror(h_errno)));
-  bzero((char*)&serv_addr, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr,
-        server->h_length);
-  xdest.push_back(serv_addr);
-  log(recport, ep2str(xdest.back()));
+  xdest.push_back(dest);
 }
 
-void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
+void ovboxclient_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
 {
   log(recport,
       "new connection for " + std::to_string(cid) + " from " + ep2str(ep.ep) +
@@ -94,12 +91,12 @@ void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
           ((ep.mode & B_DONOTSEND) ? " donotsend" : "") + " v" + ep.version);
 }
 
-void udpreceiver_t::announce_connection_lost(callerid_t cid)
+void ovboxclient_t::announce_connection_lost(callerid_t cid)
 {
   log(recport, "connection for " + std::to_string(cid) + " lost.");
 }
 
-void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
+void ovboxclient_t::announce_latency(callerid_t cid, double lmin, double lmean,
                                      double lmax, uint32_t received,
                                      uint32_t lost)
 {
@@ -125,13 +122,13 @@ void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
   remote_server.send(buffer, n, toport);
 }
 
-void udpreceiver_t::handle_endpoint_list_update(callerid_t cid,
+void ovboxclient_t::handle_endpoint_list_update(callerid_t cid,
                                                 const endpoint_t& ep)
 {
 }
 
 // ping service
-void udpreceiver_t::pingservice()
+void ovboxclient_t::pingservice()
 {
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
@@ -147,7 +144,7 @@ void udpreceiver_t::pingservice()
 }
 
 // this thread receives messages from the server:
-void udpreceiver_t::sendsrv()
+void ovboxclient_t::sendsrv()
 {
   try {
     set_thread_prio(prio);
@@ -168,13 +165,8 @@ void udpreceiver_t::sendsrv()
             sequence_t dseq(seq - endpoints[rcallerid].seq);
             if(dseq != 0) {
               local_server.send(msg, un, destport + portoffset);
-              for(auto xd : xdest) {
-		xd.sin_port = htons(destport);
-		local_server.send(msg, un, xd);
-		//DEBUG(ep2str(xd));
-		//DEBUG(un);
-                //DEBUG(local_server.send(msg, un, xd));
-              }
+              for(auto xd : xdest)
+                local_server.send(msg, un, destport + xd);
               ++endpoints[rcallerid].num_received;
               if(dseq < 0) {
                 // report sequence error:
@@ -221,7 +213,7 @@ void udpreceiver_t::sendsrv()
 }
 
 // this thread receives local UDP messages and handles them:
-void udpreceiver_t::recsrv()
+void ovboxclient_t::recsrv()
 {
   try {
     local_server.bind(recport, true);
@@ -258,7 +250,7 @@ void udpreceiver_t::recsrv()
   }
 }
 
-void udpreceiver_t::run()
+void ovboxclient_t::run()
 {
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -277,7 +269,7 @@ int main(int argc, char** argv)
     bool peer2peer(false);
     bool donotsend(false);
     bool downmixonly(false);
-    std::vector<std::string> xdest;
+    std::vector<int> xdest;
     std::string desthost("localhost");
     const char* options = "c:d:p:o:qr:hvl:2s:mnx:";
     struct option long_options[] = {{"callerid", 1, 0, 'c'},
@@ -322,7 +314,7 @@ int main(int argc, char** argv)
         recport = atoi(optarg);
         break;
       case 'x':
-        xdest.push_back(optarg);
+        xdest.push_back(atoi(optarg));
         break;
       case 'o':
         portoffset = atoi(optarg);
@@ -344,10 +336,9 @@ int main(int argc, char** argv)
         break;
       }
     }
-    udpreceiver_t rec(desthost, destport, recport, portoffset, prio, secret,
+    ovboxclient_t rec(desthost, destport, recport, portoffset, prio, secret,
                       callerid, peer2peer, donotsend, downmixonly);
     for(auto xs : xdest) {
-      log(recport, "adding destination " + xs);
       rec.add_destination(xs);
     }
     rec.run();

@@ -24,7 +24,7 @@ function defaults( $type )
     'xport'=>'{}',
     'peer2peer'=>true,
     'donotsend'=>false,
-    'xdest'=>'',
+    'secrec'=>0,
     'pos'=>'0 0 0',
     'rawmode'=>false,
     'reverb'=>true,
@@ -252,6 +252,7 @@ function list_db($type)
     $devs[$device] = $prop;
   }
   uasort( $devs, "agesort" );
+  //ksort( $devs );
   return $devs;
 }
 
@@ -606,11 +607,8 @@ function get_tascar_cfg( $device, $devhash )
         $p2p = ' -2';
       if( $localdevprop['donotsend'] )
         $p2p = $p2p.' --donotsend';
-      if( !empty($localdevprop['xdest']) ){
-        $xdest = explode(' ',$localdevprop['xdest']);
-        foreach( $xdest as $xs )
-          $p2p = $p2p . ' -x ' . $xs;
-      }
+      if( $localdevprop['secrec'] > 0 )
+        $p2p = $p2p . ' -x 100';
       $mod->setAttribute("command","../udpmirror/ovboxclient --rtprio=30 -s ".$roomprop['pin']." -d ". $roomurl[0] . " -p " . $roomurl[1] . " -c " . $mychair . " -l " . $myport . $p2p);
       $mod->setAttribute("onunload","killall ovboxclient ../udpmirror/ovboxclient");
       $modules->appendChild($mod);
@@ -626,10 +624,22 @@ function get_tascar_cfg( $device, $devhash )
           if( $numsource > 1 )
             $chan = $chan . ',2';
           // zita
-          $mod = $doc->createElement("system");
+          $mod = $modules->appendChild($doc->createElement('system'));
           $mod->setAttribute('command','zita-n2j --chan '.$chan.' --jname ' . $devuser . '_'.$chair.' --buf ' . $buff . ' 0.0.0.0 ' . $iport);
           $mod->setAttribute('onunload','killall zita-n2j');
-          $modules->appendChild($mod);
+          if( $localdevprop['secrec'] > 0 ){
+            $mod = $modules->appendChild($doc->createElement('system'));
+            $port = 'n2j_'.$chair.'_sec';
+            $mod->setAttribute('command','zita-n2j --chan '.$chan.' --jname '.$port.' --buf ' . ($buff+$localdevprop['secrec']) . ' 0.0.0.0 ' . ($iport+100));
+            $waitports = $waitports . ' ' . $port.':out_1';
+            if( $numsource > 1 )
+              $waitports = $waitports . ' ' . $port.':out_2';
+            $mod = $modules->appendChild($doc->createElement('route'));
+            $mod->setAttribute('name',$devuser . '_'.$chair.'_sec');
+            $mod->setAttribute('channels',$numsource);
+            $mod->setAttribute('gain',$devprop['playbackgain']);
+            $mod->setAttribute('connect',$port.':out_[12]');
+          }
           // connection
           for($k=0;$k<$numsource;$k++){
             $conn = $doc->createElement('connect');
@@ -669,6 +679,27 @@ function get_tascar_cfg( $device, $devhash )
           $waitports = $waitports . ' ' . $port;
           $conn->setAttribute('dest',$port);
           $session->appendChild($conn);
+        }
+        if( $localdevprop['secrec'] > 0 ){
+          $mod = $modules->appendChild($doc->createElement('route'));
+          $mod->setAttribute('name','egodelayed');
+          $mod->setAttribute('channels',$numsource);
+          $plgs = $mod->appendChild($doc->createElement('plugins'));
+          $del = $plgs->appendChild($doc->createElement('delay'));
+          $del->setAttribute('delay',0.001*($localdevprop['secrec']+$localdevprop['jitterreceive']+$localdevprop['jittersend']));
+          $mod->setAttribute('gain',$localdevprop['playbackgain']);
+          if( !empty($localdevprop['inputport']) ){
+            $conn = $doc->createElement('connect');
+            $conn->setAttribute('src',$localdevprop['inputport']);
+            $conn->setAttribute('dest', 'egodelayed:in.0');
+            $session->appendChild($conn);
+          }
+          if( !empty($localdevprop['inputport2']) ){
+            $conn = $doc->createElement('connect');
+            $conn->setAttribute('src',$localdevprop['inputport2']);
+            $conn->setAttribute('dest','egodelayed:in.'.($numsource-1));
+            $session->appendChild($conn);
+          }
         }
       }
       $mod = $doc->createElement('system');
@@ -1693,15 +1724,19 @@ function html_show_device( $user, $device, $devprop )
   //$el->appendChild($doc->createTextNode('alternative data source, do not send to this device '));
   //$div->appendChild($doc->createElement('br'));
   // extra destinations:
-  //$el = $div->appendChild($doc->createElement('label'));
-  //$el->setAttribute('for','xdest');
-  //$el->appendChild($doc->createTextNode('additional local network destinations (space separated): '));
-  //$div->appendChild($doc->createElement('br'));
-  //$el = $div->appendChild($doc->createElement('input'));
-  //$el->setAttribute('id','xdest');
-  //$el->setAttribute('name','xdest');
-  //$el->setAttribute('type','text');
-  //$el->setAttribute('value',$devprop['xdest']);
+  $div = add_expert_div($form, $doc );
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','secrec');
+  $el->appendChild($doc->createTextNode('additional local receiver delay for secondary receiver (0 for no secondary receiver): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','secrec');
+  $el->setAttribute('name','secrec');
+  $el->setAttribute('type','number');
+  $el->setAttribute('min','0');
+  $el->setAttribute('max','100');
+  $el->setAttribute('step','1');
+  $el->setAttribute('value',$devprop['secrec']);
   // save:
   $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
   $inp = $form->appendChild($doc->createElement('input'));
