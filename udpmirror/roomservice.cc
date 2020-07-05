@@ -140,6 +140,7 @@ void udpreceiver_t::announce_service()
       curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
       curl_easy_setopt(curl, CURLOPT_USERPWD, "room:room");
       curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+      curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 );
       res = curl_easy_perform(curl);
       if(res == 0)
         cnt = 3000;
