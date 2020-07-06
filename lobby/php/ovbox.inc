@@ -98,6 +98,26 @@ function postproc_prop( &$prop, $type )
   }
 }
 
+
+function get_client_ip() {
+    $ipaddress = '';
+    if (filter_var($_SERVER['HTTP_CLIENT_IP'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+    else if(filter_var($_SERVER['HTTP_X_FORWARDED_FOR'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    else if(filter_var($_SERVER['HTTP_X_FORWARDED'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+    else if(filter_var($_SERVER['HTTP_FORWARDED_FOR'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+    else if(filter_var($_SERVER['HTTP_FORWARDED'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['HTTP_FORWARDED'];
+    else if(filter_var($_SERVER['REMOTE_ADDR'],FILTER_VALIDATE_IP,FILTER_FLAG_IPV4))
+      $ipaddress = $_SERVER['REMOTE_ADDR'];
+    else
+      $ipaddress = 'UNKNOWN';
+    return $ipaddress;
+}
+
 function get_properties( $id, $type )
 {
   $fname = '../db/'.$id.'.'.$type;
@@ -441,6 +461,7 @@ function get_tascar_cfg( $device, $devhash )
   $doc = new DOMDocument();
   $session = $doc->createElement("session");
   $doc->appendChild($session);
+  $session->setAttribute('duration','36000');
   $session->setAttribute('name',$device);
   $session->setAttribute('license','CC0');
   $session->setAttribute("levelmeter_tc","0.5");

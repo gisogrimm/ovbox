@@ -39,12 +39,15 @@ if ($user == 'device') {
 
 // room update:
 if ($user == 'room') {
+    $clientip = get_client_ip();
     if( isset($_GET['port']) && isset($_GET['name']) && isset($_GET['pin']) ) {
-        update_room( $_SERVER['REMOTE_ADDR'], $_GET['port'], $_GET['name'], $_GET['pin'] );
+        // update database entry:
+        update_room( $clientip, $_GET['port'], $_GET['name'], $_GET['pin'] );
     }
     if( isset($_GET['latreport']) && isset($_GET['src']) && isset($_GET['dest']) && isset($_GET['lat']) && isset($_GET['jit']) ){
+        // update latency report from room service:
         update_room_lat(
-            $_SERVER['REMOTE_ADDR'],
+            $clientip,
             $_GET['latreport'],
             $_GET['src'],
             $_GET['dest'],
