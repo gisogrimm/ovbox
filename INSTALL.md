@@ -41,19 +41,63 @@ At this point you may try to use our installer script. If everything goes well, 
 wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 . installovbox.sh
 ````
-Please mind the space between the dot and `installovbox.sh`.
-Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Enter a password for user `ov` when asked for it. All names/room numbers etc can left empty, by pressing Enter. Finally, the system will restart.
 
-If everything went well and if the sound card is connected, approximately 1 minute after powering on the device you should hear an announcement via headphones. You may shutdown the device by simply unplugging the power.
+Please mind the space between the dot and `installovbox.sh`.  Your
+input is required sometimes. Type "yes" when asked if realtime
+priority should be activated. Enter a password for user `ov` when
+asked for it. All names/room numbers etc can left empty, by pressing
+Enter. Finally, the system will restart.
+
+If everything went well and if the sound card is connected,
+approximately 1 minute after powering on the device you should hear an
+announcement via headphones. You may shutdown the device by simply
+unplugging the power.
 
 **Warning**: The installer script activates the overlay file system to
-prevent a damage of the SD card when powering off the system. This means
-that all changes you make after installation will be lost. The overlay file system can be deactivated with:
+prevent a damage of the SD card when powering off the system. This
+means that all changes you make after installation will be lost. The
+overlay file system can be deactivated with:
+
 ````
 sudo raspi-config nonint disable_overlayfs
 ````
+
 After applying changes it can be reactivated with:
+
 ````
 sudo raspi-config nonint enable_overlayfs
 sudo shutdown -r now
 ````
+
+## Installation on an Ubuntu LTS desktop PC
+
+If you plan to install the 'ovbox' system on a x86 64 bit Ubuntu LTS
+system (other debian based systems may also work), it is not
+recommended to use the installer described above. Instead, first
+install the TASCAR engine following the instructions at
+[http://install.tascar.org/](http://install.tascar.org/). Then, in a
+terminal, type:
+
+````
+sudo apt update
+sudo apt install --assume-yes git zita-njbridge liblo-dev nodejs libcurl4-openssl-dev build-essential
+git clone http://github.com/gisogrimm/ovbox
+make -C ovbox
+````
+
+On the desktop, to start the system, first start jack (e.g., using
+qjackctl) with your preferred audio device. Then type:
+
+````
+cd ovbox/cfg
+../udpmirror/devconfigclient
+````
+
+You may now use the jack ports with your preferred audio
+software. Please note that ports may disappear and re-appear after
+remote configuration of your system or any of your peers. To ensure
+persistent port connections you may use the 'extra ports' field in the
+'expert settings' of the 'device settings' dialog.
+
+A graphical desktop client and installer for all commonly used
+operating systems is planned as part of the digital stage project.
