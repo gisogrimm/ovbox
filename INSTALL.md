@@ -45,3 +45,15 @@ Please mind the space between the dot and `installovbox.sh`.
 Your input is required sometimes. Type "yes" when asked if realtime priority should be activated. Enter a password for user `ov` when asked for it. All names/room numbers etc can left empty, by pressing Enter. Finally, the system will restart.
 
 If everything went well and if the sound card is connected, approximately 1 minute after powering on the device you should hear an announcement via headphones. You may shutdown the device by simply unplugging the power.
+
+**Warning**: The installer script activates the overlay file system to
+prevent a damage of the SD card when powering off the system. This means
+that all changes you make after installation will be lost. The overlay file system can be deactivated with:
+````
+sudo raspi-config nonint disable_overlayfs
+````
+After applying changes it can be reactivated with:
+````
+sudo raspi-config nonint enable_overlayfs
+sudo shutdown -r now
+````
