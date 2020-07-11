@@ -1,0 +1,55 @@
+html {
+    background: #000000;
+}
+
+body {
+    background: linear-gradient(45deg,rgba(242,5,68,1) 0%,rgba(11,45,113,1) 100%);
+    color: #ffffff;
+}
+.room {
+    border: 3px solid #f02b60;
+    border-radius: 10px;
+}
+.myroom {
+    background-color: #a7afb790;
+    border: 10px solid #f02b60;
+    border-radius: 10px;
+}
+.rmembers {
+    background-color: #cdd4e090;
+    border-radius: 6px;
+}
+.devprop {
+    border-radius: 10px;
+}
+.actmember {
+    border-radius: 4px;
+} 
+.psvmember {
+    border-radius: 4px;
+}
+.devclaim {
+    border-radius: 10px;
+}
+.actmember {
+    background-color: #f02b60;
+    border-radius: 12px;
+}
+a {
+    color: #b5b5b5;
+}
+a:hover {
+    color: #ffffff;
+}
+.uibutton {
+    padding: 12px;
+    background-color: #f02b60;
+    color: #ffffff;
+    font-weight: bold;
+    border: 0px solid;
+    border-radius: 7px;
+}
+.devprop {
+    background: #60606090;
+    border-color: #909090;
+}

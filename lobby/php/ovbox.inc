@@ -192,9 +192,15 @@ function print_foot($style = '')
 
 function get_rooms()
 {
-  $rooms = [];
-  foreach( glob( '../db/*.room') as $room){
-    $rooms[] = basename($room,'.room');
+  $allrooms = list_db('room');
+  $rooms = array();
+  foreach( $allrooms as $room=>$rprop){
+    if( !empty($rprop['group']) )
+      $rooms[] = $room;
+  }
+  foreach( $allrooms as $room=>$rprop){
+    if( empty($rprop['group']) )
+      $rooms[] = $room;
   }
   return $rooms;
 }
@@ -776,6 +782,7 @@ function html_device_selector( $user, $currentdevice )
   $root = $doc->appendChild($doc->createElement('div'));
   $div = $root->appendChild($doc->createElement('div'));
   $select = $div->appendChild($doc->createElement('select'));
+  $select->setAttribute('class','uibutton');
   $select->setAttribute('oninput','location.href=\'?devselect=\'+event.target.value;');
   $select->appendChild($doc->createElement('option'))->appendChild($doc->createTextNode(' -- please select a device -- '));
   foreach( owned_devices( $user ) as $dev=>$dprop ){
@@ -790,7 +797,7 @@ function html_device_selector( $user, $currentdevice )
   }
   $inp = $div->appendChild($doc->createElement('input'));
   $inp->setAttribute('type','button');
-  $inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('class','roomsettingstoggle uibutton');
   $inp->setAttribute('onclick','toggledisplay(\'devsettings\',\'device settings\');');
   $inp->setAttribute('value','show device settings');
   echo $doc->saveHTML();
@@ -1100,7 +1107,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $tog = $doc->createElement('input');
       $ctl->appendChild($tog);
       $tog->setAttribute('type','button');
-      $tog->setAttribute('class','roomsettingstoggle');
+      $tog->setAttribute('class','roomsettingstoggle uibutton');
       $tog->setAttribute('onclick','toggledisplay("'.$room.'ctl","room settings");');
       $tog->setAttribute('value','show room settings');
       $rp = $doc->createElement('div');
@@ -1488,7 +1495,7 @@ function html_show_user( $user, $device, $devprop )
 
   $inp = $p->appendChild($doc->createElement('input'));
   $inp->setAttribute('type','button');
-  $inp->setAttribute('class','roomsettingstoggle');
+  $inp->setAttribute('class','roomsettingstoggle uibutton');
   $inp->setAttribute('onclick','toggledisplay(\'groupinfo\',\'group info\');');
   $inp->setAttribute('value','show group info');
   echo $doc->saveHTML() . "\n";
