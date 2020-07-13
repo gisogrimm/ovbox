@@ -193,6 +193,7 @@ function print_foot($style = '')
 function get_rooms()
 {
   $allrooms = list_db('room');
+  ksort($allrooms);
   $rooms = array();
   foreach( $allrooms as $room=>$rprop){
     if( !empty($rprop['group']) )
