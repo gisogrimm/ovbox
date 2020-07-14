@@ -34,6 +34,10 @@ function defaults( $type )
     'room'=>'',
     'srcdist'=>0.7,
     'rectype'=>'ortf',
+    'jackdevice'=>-1,
+    'jackrate'=>48000,
+    'jackperiod'=>96,
+    'jackbuffers'=>2,
   );
   $defaults['room'] = array(
     'access'=>0,
@@ -460,7 +464,7 @@ function xml_add_sound( &$source, $doc, $attrs )
 
 function get_tascar_cfg( $device, $devhash )
 {
-  $cuccess = false;
+  $success = false;
   $waitports = '';
   $localdevprop = get_properties( $device, 'device' );
   $amsender = issender($localdevprop);
@@ -1511,6 +1515,21 @@ function add_expert_div( &$el, &$doc )
   return $div;
 }
 
+function add_input_element( &$parent, &$doc, &$devprop, $prop, $type, $label )
+{
+  $el = $parent->appendChild($doc->createElement('label'));
+  $el->setAttribute('for',$prop);
+  $el->appendChild($doc->createTextNode($label));
+  $parent->appendChild($doc->createElement('br'));
+  $el = $parent->appendChild($doc->createElement('input'));
+  $el->setAttribute('id',$prop);
+  $el->setAttribute('name',$prop);
+  $el->setAttribute('type',$type);
+  $el->setAttribute('value',$devprop[$prop]);
+  $parent->appendChild($doc->createElement('br'));
+  return $el;
+}
+
 function html_show_device( $user, $device, $devprop )
 {
   html_device_selector( $user, $device );
@@ -1544,7 +1563,15 @@ function html_show_device( $user, $device, $devprop )
   $form->appendChild($doc->createElement('hr'));
   $el = $form->appendChild($doc->createElement('div'));
   $el->setAttribute('class','devproptitle');
+  // Audio settings:
   $el->appendChild($doc->createTextNode('Audio settings:'));
+  $div = add_expert_div($form,$doc);
+  // jack device:
+  $el = add_input_element( $div, $doc, $devprop, 'jackdevice', 'number','jack device number (-1 = jack is started externally, 0 = onboard device, 1 = first external sound card): ');
+  $el->setAttribute('min',-1);
+  $el = add_input_element( $div, $doc, $devprop, 'jackrate', 'number','jack sampling rate in Hz: ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackperiod', 'number','jack period size in samples: ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackbuffers', 'number','jack number of buffers: ');
   // input port:
   $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','inputport');

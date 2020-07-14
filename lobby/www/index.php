@@ -20,19 +20,27 @@ if( empty($user) )
 // device update:
 if ($user == 'device') {
     $device = '';
-    if( isset($_GET['dev']) )
+    if( isset($_GET['dev']) ){
         $device = $_GET['dev'];
-    if( !empty($device) ){
-        $devhash = '';
-        if( isset($_GET['hash']) )
-            $devhash = $_GET['hash'];
-        $host = '';
-        if( isset($_GET['host']) )
-            $host = $_GET['host'];
-        get_tascar_cfg( $device, $devhash );
-        // touch device file:
-        modify_device_prop( $device, 'access', time() );
-        modify_device_prop( $device, 'host', $host );
+        if( !empty($device) ){
+            $devhash = '';
+            if( isset($_GET['hash']) )
+                $devhash = $_GET['hash'];
+            $host = '';
+            if( isset($_GET['host']) )
+                $host = $_GET['host'];
+            get_tascar_cfg( $device, $devhash );
+            // touch device file:
+            modify_device_prop( $device, 'access', time() );
+            modify_device_prop( $device, 'host', $host );
+        }
+    }
+    if( isset($_GET['devinit']) ){
+        $device = $_GET['devinit'];
+        if( !empty($device) ){
+            $dprop = get_properties($device,'device');
+            echo json_encode( $dprop );
+        }
     }
     die();
 }
@@ -221,6 +229,10 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'playbackgain');
         set_getprop($prop,'mastergain');
         set_getprop($prop,'rectype');
+        set_getprop($prop,'jackdevice');
+        set_getprop($prop,'jackrate');
+        set_getprop($prop,'jackperiod');
+        set_getprop($prop,'jackbuffers');
         set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );

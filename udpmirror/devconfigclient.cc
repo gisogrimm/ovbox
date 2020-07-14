@@ -1,3 +1,4 @@
+#include "RSJparser.tcc"
 #include "common.h"
 #include "udpsocket.h"
 #include <curl/curl.h>
@@ -11,6 +12,13 @@
 
 CURL* curl;
 static bool quit_app(false);
+
+struct jacksettings_t {
+  int device;
+  int rate;
+  int period;
+  int buffers;
+};
 
 namespace webCURL {
 
@@ -46,9 +54,9 @@ std::string get_device_info(std::string url, const std::string& device,
                             std::string& hash)
 {
   char chost[1024];
-  memset(chost,0,1024);
+  memset(chost, 0, 1024);
   std::string hostname;
-  if( 0 == gethostname(chost,1023) )
+  if(0 == gethostname(chost, 1023))
     hostname = chost;
   CURLcode res;
   std::string retv;
@@ -58,7 +66,7 @@ std::string get_device_info(std::string url, const std::string& device,
   chunk.size = 0;       /* no data at this point */
 
   url += "?dev=" + device + "&hash=" + hash;
-  if( hostname.size() > 0 )
+  if(hostname.size() > 0)
     url += "&host=" + hostname;
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_USERPWD, "device:device");
@@ -93,6 +101,46 @@ std::string get_device_info(std::string url, const std::string& device,
     first = false;
   }
   return retv;
+}
+
+jacksettings_t get_device_init(std::string url, const std::string& device)
+{
+  CURLcode res;
+  std::string retv;
+  struct webCURL::MemoryStruct chunk;
+  chunk.memory =
+      (char*)malloc(1); /* will be grown as needed by the realloc above */
+  chunk.size = 0;       /* no data at this point */
+
+  url += "?devinit=" + device;
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(curl, CURLOPT_USERPWD, "device:device");
+  /* send all data to this function  */
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, webCURL::WriteMemoryCallback);
+  /* we pass our 'chunk' struct to the callback function */
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+
+  /* some servers don't like requests that are made without a user-agent
+     field, so we provide one */
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+
+  /* get it! */
+  res = curl_easy_perform(curl);
+
+  /* check for errors */
+  if(res == CURLE_OK) {
+    retv.insert(0, chunk.memory, chunk.size);
+    // printf("%lu bytes retrieved\n", (unsigned long)chunk.size);
+  }
+  free(chunk.memory);
+  // parse retv
+  RSJresource my_json(retv);
+  jacksettings_t jacks;
+  jacks.device = my_json["jackdevice"].as<int>(-1);
+  jacks.rate = my_json["jackrate"].as<int>(48000);
+  jacks.period = my_json["jackperiod"].as<int>(96);
+  jacks.buffers = my_json["jackbuffers"].as<int>(2);
+  return jacks;
 }
 
 static void sighandler(int sig)
@@ -142,9 +190,18 @@ int main(int argc, char** argv)
               << std::endl;
     std::string hash;
     FILE* h_pipe(NULL);
+    FILE* h_pipe_jack(NULL);
+    jacksettings_t jacks(get_device_init(lobby, device));
+    if(jacks.device >= 0) {
+      char cmd[1024];
+      sprintf(cmd, "jackd --sync -P 40 -d alsa -d hw:%d -r %d -p %d -n %d",
+              jacks.device, jacks.rate, jacks.period, jacks.buffers);
+      h_pipe_jack = popen(cmd, "w");
+      sleep(4);
+    }
     while(!quit_app) {
       std::string tsc = get_device_info(lobby, device, hash);
-      if((tsc.size()>10) && (tsc.substr(0,5)=="<?xml")) {
+      if((tsc.size() > 10) && (tsc.substr(0, 5) == "<?xml")) {
         // close current TASCAR session:
         if(h_pipe)
           fclose(h_pipe);
@@ -162,6 +219,9 @@ int main(int argc, char** argv)
     if(h_pipe)
       fclose(h_pipe);
     h_pipe = NULL;
+    if(h_pipe_jack)
+      fclose(h_pipe_jack);
+    h_pipe_jack = NULL;
     curl_easy_cleanup(curl);
     curl_global_cleanup();
   }

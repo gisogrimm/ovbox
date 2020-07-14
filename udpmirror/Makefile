@@ -20,6 +20,7 @@ common.o: common.cc common.h
 udpsocket.o: udpsocket.cc udpsocket.h common.h
 callerlist.o: callerlist.cc callerlist.h udpsocket.h common.h
 roomservice ovboxclient devconfigclient: LDLIBS = -lcurl
+devconfigclient: RSJparser.tcc
 
 
 $(DUP): LDLIBS+=-lboost_system -lpthread
