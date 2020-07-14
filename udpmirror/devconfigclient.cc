@@ -194,8 +194,9 @@ int main(int argc, char** argv)
     jacksettings_t jacks(get_device_init(lobby, device));
     if(jacks.device >= 0) {
       char cmd[1024];
-      sprintf(cmd, "jackd --sync -P 40 -d alsa -d hw:%d -r %d -p %d -n %d",
+      sprintf(cmd, "JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:%d -r %d -p %d -n %d",
               jacks.device, jacks.rate, jacks.period, jacks.buffers);
+      std::cout << cmd << std::endl;
       h_pipe_jack = popen(cmd, "w");
       sleep(4);
     }
@@ -219,8 +220,11 @@ int main(int argc, char** argv)
     if(h_pipe)
       fclose(h_pipe);
     h_pipe = NULL;
-    if(h_pipe_jack)
+    if(h_pipe_jack){
+      h_pipe = popen("killall jackd","w");
       fclose(h_pipe_jack);
+      fclose(h_pipe);
+    }
     h_pipe_jack = NULL;
     curl_easy_cleanup(curl);
     curl_global_cleanup();

@@ -34,7 +34,7 @@ function defaults( $type )
     'room'=>'',
     'srcdist'=>0.7,
     'rectype'=>'ortf',
-    'jackdevice'=>-1,
+    'jackdevice'=>1,
     'jackrate'=>48000,
     'jackperiod'=>96,
     'jackbuffers'=>2,
