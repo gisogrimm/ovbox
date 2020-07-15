@@ -41,6 +41,14 @@ if ($user == 'device') {
             $dprop = get_properties($device,'device');
             echo json_encode( $dprop );
         }
+        /* PUT data comes in on the stdin stream */
+        $putdata = fopen("php://input", "r");
+        $jsdev = '';
+        while ($data = fread($putdata,1024))
+            $jsdev = $jsdev . $data;
+        fclose($putdata);
+        $jsdev = json_decode($jsdev,true);
+        modify_device_prop( $device, 'alsadevs', $jsdev );
     }
     die();
 }

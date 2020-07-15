@@ -1,6 +1,7 @@
 #include "RSJparser.tcc"
 #include "common.h"
 #include "udpsocket.h"
+#include <alsa/asoundlib.h>
 #include <curl/curl.h>
 #include <fstream>
 #include <signal.h>
@@ -10,11 +11,53 @@
 #include <string>
 #include <unistd.h>
 
+struct snddevname_t {
+  std::string dev;
+  std::string desc;
+};
+
+std::vector<snddevname_t> listdev()
+{
+  std::vector<snddevname_t> retv;
+  char** hints;
+  int err;
+  char** n;
+  char* name;
+  char* desc;
+
+  /* Enumerate sound devices */
+  err = snd_device_name_hint(-1, "pcm", (void***)&hints);
+  if(err != 0) {
+    return retv;
+  }
+  n = hints;
+  while(*n != NULL) {
+    name = snd_device_name_get_hint(*n, "NAME");
+    desc = snd_device_name_get_hint(*n, "DESC");
+    if(strncmp("hw:", name, 3) == 0) {
+      snddevname_t dname;
+      dname.dev = name;
+      dname.desc = desc;
+      if( dname.desc.find("\n") )
+	dname.desc.erase(dname.desc.find("\n"));
+      retv.push_back(dname);
+    }
+    if(name && strcmp("null", name))
+      free(name);
+    if(desc && strcmp("null", desc))
+      free(desc);
+    n++;
+  }
+  // Free hint buffer too
+  snd_device_name_free_hint((void**)hints);
+  return retv;
+}
+
 CURL* curl;
 static bool quit_app(false);
 
 struct jacksettings_t {
-  int device;
+  std::string device;
   int rate;
   int period;
   int buffers;
@@ -32,19 +75,16 @@ namespace webCURL {
   {
     size_t realsize = size * nmemb;
     struct MemoryStruct* mem = (struct MemoryStruct*)userp;
-
     char* ptr = (char*)realloc(mem->memory, mem->size + realsize + 1);
     if(ptr == NULL) {
       /* out of memory! */
       printf("not enough memory (realloc returned NULL)\n");
       return 0;
     }
-
     mem->memory = ptr;
     memcpy(&(mem->memory[mem->size]), contents, realsize);
     mem->size += realsize;
     mem->memory[mem->size] = 0;
-
     return realsize;
   }
 
@@ -75,10 +115,6 @@ std::string get_device_info(std::string url, const std::string& device,
   /* we pass our 'chunk' struct to the callback function */
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
 
-  /* some servers don't like requests that are made without a user-agent
-     field, so we provide one */
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-
   /* get it! */
   res = curl_easy_perform(curl);
 
@@ -105,6 +141,14 @@ std::string get_device_info(std::string url, const std::string& device,
 
 jacksettings_t get_device_init(std::string url, const std::string& device)
 {
+  std::vector<snddevname_t> alsadevs(listdev());
+  std::string jsdevs("{");
+  for( auto d : alsadevs )
+    jsdevs += "\"" + d.dev + "\":\"" + d.desc + "\",";
+  if( jsdevs.size() )
+    jsdevs.erase(jsdevs.end()-1);
+  jsdevs +="}";
+  std::cout << jsdevs << std::endl;
   CURLcode res;
   std::string retv;
   struct webCURL::MemoryStruct chunk;
@@ -123,6 +167,11 @@ jacksettings_t get_device_init(std::string url, const std::string& device)
   /* some servers don't like requests that are made without a user-agent
      field, so we provide one */
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+  /* some servers don't like requests that are made without a user-agent
+     field, so we provide one */
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsdevs.c_str());
 
   /* get it! */
   res = curl_easy_perform(curl);
@@ -136,7 +185,7 @@ jacksettings_t get_device_init(std::string url, const std::string& device)
   // parse retv
   RSJresource my_json(retv);
   jacksettings_t jacks;
-  jacks.device = my_json["jackdevice"].as<int>(-1);
+  jacks.device = my_json["jackdevice"].as<std::string>("hw:1");
   jacks.rate = my_json["jackrate"].as<int>(48000);
   jacks.period = my_json["jackperiod"].as<int>(96);
   jacks.buffers = my_json["jackbuffers"].as<int>(2);
@@ -192,10 +241,12 @@ int main(int argc, char** argv)
     FILE* h_pipe(NULL);
     FILE* h_pipe_jack(NULL);
     jacksettings_t jacks(get_device_init(lobby, device));
-    if(jacks.device >= 0) {
+    if(jacks.device != "manual") {
       char cmd[1024];
-      sprintf(cmd, "JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:%d -r %d -p %d -n %d",
-              jacks.device, jacks.rate, jacks.period, jacks.buffers);
+      sprintf(cmd,
+              "JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d %s "
+              "-r %d -p %d -n %d",
+              jacks.device.c_str(), jacks.rate, jacks.period, jacks.buffers);
       std::cout << cmd << std::endl;
       h_pipe_jack = popen(cmd, "w");
       sleep(4);
@@ -220,8 +271,8 @@ int main(int argc, char** argv)
     if(h_pipe)
       fclose(h_pipe);
     h_pipe = NULL;
-    if(h_pipe_jack){
-      h_pipe = popen("killall jackd","w");
+    if(h_pipe_jack) {
+      h_pipe = popen("killall jackd", "w");
       fclose(h_pipe_jack);
       fclose(h_pipe);
     }

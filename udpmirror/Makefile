@@ -31,6 +31,8 @@ $(BINFILES): common.o udpsocket.o callerlist.o
 
 jackwaitforport: LDLIBS+=-ljack
 
+devconfigclient: LDLIBS+=-lasound
+
 clean:
 	rm -f *~ $(BINFILES) *.o
 

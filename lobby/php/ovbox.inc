@@ -34,10 +34,11 @@ function defaults( $type )
     'room'=>'',
     'srcdist'=>0.7,
     'rectype'=>'ortf',
-    'jackdevice'=>1,
+    'jackdevice'=>'hw:1',
     'jackrate'=>48000,
     'jackperiod'=>96,
     'jackbuffers'=>2,
+    'alsadevs'=>array(),
   );
   $defaults['room'] = array(
     'access'=>0,
@@ -1535,6 +1536,7 @@ function html_show_device( $user, $device, $devprop )
   html_device_selector( $user, $device );
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
+
   $form = $root->appendChild($doc->createElement('form'));
   $form->setAttribute('class','devprop');
   $form->setAttribute('id','devsettings');
@@ -1561,17 +1563,46 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('value',$devprop['label']);
   $form->appendChild($doc->createElement('br'));
   $form->appendChild($doc->createElement('hr'));
+  // Audio settings:
   $el = $form->appendChild($doc->createElement('div'));
   $el->setAttribute('class','devproptitle');
-  // Audio settings:
   $el->appendChild($doc->createTextNode('Audio settings:'));
-  $div = add_expert_div($form,$doc);
+  $inp = $el->appendChild($doc->createElement('input'));
+  $inp->setAttribute('type','button');
+  $inp->setAttribute('class','roomsettingstoggle uibutton');
+  $inp->setAttribute('onclick','toggledisplay(\'sndcardsettings\',\'sound card settings\');');
+  $inp->setAttribute('value','show sound card settings');
+  // sound card settings:
+  $div = $form->appendChild($doc->createElement('div'));
+  $el = $div->appendChild($doc->createElement('div'));
+  $el->setAttribute('class','devproptitle');
+  $el->appendChild($doc->createTextNode('Sound card settings:'));
+  $div->setAttribute('class','devprop');
+  $div->setAttribute('id','sndcardsettings');
+  $div->setAttribute('style','display: none;');
+  $div->appendChild($doc->createTextNode('Changes in this section will be applied only after restarting your ov-client.'));
+  $div->appendChild($doc->createElement('br'));
+  $div->appendChild($doc->createTextNode('Sound card:'));
+  $div->appendChild($doc->createElement('br'));
   // jack device:
-  $el = add_input_element( $div, $doc, $devprop, 'jackdevice', 'number','jack device number (-1 = jack is started externally, 0 = onboard device, 1 = first external sound card): ');
-  $el->setAttribute('min',-1);
-  $el = add_input_element( $div, $doc, $devprop, 'jackrate', 'number','jack sampling rate in Hz: ');
-  $el = add_input_element( $div, $doc, $devprop, 'jackperiod', 'number','jack period size in samples: ');
-  $el = add_input_element( $div, $doc, $devprop, 'jackbuffers', 'number','jack number of buffers: ');
+  $el = $div->appendChild($doc->createElement('select'));
+  $el->setAttribute('id','jackdevice');
+  $el->setAttribute('name','jackdevice');
+  //
+  $alsadevs = array_merge( array('manual'=>'jack is started manually','hw:1'=>'device 1 (typically first USB device)'),$devprop['alsadevs']);
+  foreach( $alsadevs as $adev=>$desc ){
+    $opt = $el->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value',$adev);
+    $opt->appendChild($doc->createTextNode($desc . ' ('.$adev.')'));
+    if( $devprop['jackdevice'] == $adev )
+      $opt->setAttribute('selected','');
+  }
+  $div->appendChild($doc->createElement('br'));
+  //$el = add_input_element( $div, $doc, $devprop, 'jackdevice', 'number','jack device number (-1 = jack is started externally, 0 = onboard device, 1 = first external sound card): ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackrate', 'number','Sampling rate in Hz: ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackperiod', 'number','Period size in samples (typically 2ms, i.e. 96 for 48000 Hz Sampling rate): ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackbuffers', 'number','Number of buffers (typically 2): ');
+  $el->setAttribute('min',2);
   // input port:
   $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','inputport');
@@ -1646,11 +1677,11 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('value',$devprop['srcdist']);
   $div->appendChild($doc->createElement('br'));
   // playback gain:
-  $el = $div->appendChild($doc->createElement('label'));
+  $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','playbackgain');
   $el->appendChild($doc->createTextNode('playback gain in dB (equivalent to changing the input gain): '));
-  $div->appendChild($doc->createElement('br'));
-  $el = $div->appendChild($doc->createElement('input'));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('id','playbackgain');
   $el->setAttribute('name','playbackgain');
   $el->setAttribute('type','number');
@@ -1658,13 +1689,13 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('max','20');
   $el->setAttribute('step','0.1');
   $el->setAttribute('value',$devprop['playbackgain']);
-  $div->appendChild($doc->createElement('br'));
+  $form->appendChild($doc->createElement('br'));
   // master gain:
-  $el = $div->appendChild($doc->createElement('label'));
+  $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','playbackgain');
   $el->appendChild($doc->createTextNode('master gain in dB (equivalent to changing the headphone gain): '));
-  $div->appendChild($doc->createElement('br'));
-  $el = $div->appendChild($doc->createElement('input'));
+  $form->appendChild($doc->createElement('br'));
+  $el = $form->appendChild($doc->createElement('input'));
   $el->setAttribute('id','mastergain');
   $el->setAttribute('name','mastergain');
   $el->setAttribute('type','number');
@@ -1672,7 +1703,7 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('max','20');
   $el->setAttribute('step','0.1');
   $el->setAttribute('value',$devprop['mastergain']);
-  $div->appendChild($doc->createElement('br'));
+  $form->appendChild($doc->createElement('br'));
   // ego monitor:
   $el = $form->appendChild($doc->createElement('label'));
   $el->setAttribute('for','egogain');
