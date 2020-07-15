@@ -32,7 +32,8 @@ The default password is `raspberry`. This needs to be changed after first boot; 
 ### b) installation via screen
 
 Connect a screen (you will need a micro-HDMI cable) and a keyboard. 
-Login as user 'pi'.
+Login as user 'pi'. Please note that the audio device numbering may change
+when connecting an HDMI screen.
 
 ## ovbox installer script
 
@@ -50,8 +51,8 @@ Enter. Finally, the system will restart.
 
 If everything went well and if the sound card is connected,
 approximately 1 minute after powering on the device you should hear an
-announcement via headphones. You may shutdown the device by simply
-unplugging the power. Now you can claim the device in the web interface - see the [wiki](https://github.com/gisogrimm/ovbox/wiki#configuration-of-your-device) for details.
+announcement via headphones. Now you can claim the device in the web interface - see the [wiki](https://github.com/gisogrimm/ovbox/wiki#configuration-of-your-device) for details.  You may shutdown the
+device by simply unplugging the power.
 
 **Warning**: The installer script activates the overlay file system to
 prevent a damage of the SD card when powering off the system. This
