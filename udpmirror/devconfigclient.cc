@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     FILE* h_pipe(NULL);
     FILE* h_pipe_jack(NULL);
     jacksettings_t jacks(get_device_init(lobby, device));
-    if(jacks.device != "manual") {
+    if( (jacks.device.size() > 0) && (jacks.device != "manual") ) {
       char cmd[1024];
       sprintf(cmd,
               "JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d %s "
