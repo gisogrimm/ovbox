@@ -1516,7 +1516,7 @@ function add_expert_div( &$el, &$doc )
   return $div;
 }
 
-function add_input_element( &$parent, &$doc, &$devprop, $prop, $type, $label )
+function add_input_element( &$parent, &$doc, &$devprop, $prop, $type, $label, $endbr = true )
 {
   $el = $parent->appendChild($doc->createElement('label'));
   $el->setAttribute('for',$prop);
@@ -1527,7 +1527,8 @@ function add_input_element( &$parent, &$doc, &$devprop, $prop, $type, $label )
   $el->setAttribute('name',$prop);
   $el->setAttribute('type',$type);
   $el->setAttribute('value',$devprop[$prop]);
-  $parent->appendChild($doc->createElement('br'));
+  if( $endbr )
+    $parent->appendChild($doc->createElement('br'));
   return $el;
 }
 
@@ -1599,7 +1600,18 @@ function html_show_device( $user, $device, $devprop )
   }
   $div->appendChild($doc->createElement('br'));
   //$el = add_input_element( $div, $doc, $devprop, 'jackdevice', 'number','jack device number (-1 = jack is started externally, 0 = onboard device, 1 = first external sound card): ');
-  $el = add_input_element( $div, $doc, $devprop, 'jackrate', 'number','Sampling rate in Hz: ');
+  $el = add_input_element( $div, $doc, $devprop, 'jackrate', 'number','Sampling rate in Hz: ',false);
+  $el = $div->appendChild($doc->createElement('select'));
+  $el->setAttribute('onchange','document.getElementById(\'jackrate\').value=this.value');
+  $opts = array('22050','32000','44100','48000');
+  foreach($opts as $o){
+    $opt = $el->appendChild($doc->createElement('option'));
+    $opt->setAttribute('value',$o);
+    if( $o == $devprop['jackrate'] )
+      $opt->setAttribute('selected','');
+    $opt->appendChild($doc->createTextNode($o));
+  }
+  $div->appendChild($doc->createElement('br'));
   $el = add_input_element( $div, $doc, $devprop, 'jackperiod', 'number','Period size in samples (typically 2ms, i.e. 96 for 48000 Hz Sampling rate): ');
   $el = add_input_element( $div, $doc, $devprop, 'jackbuffers', 'number','Number of buffers (typically 2): ');
   $el->setAttribute('min',2);
