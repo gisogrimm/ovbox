@@ -50,6 +50,23 @@ if ($user == 'device') {
         $jsdev = json_decode($jsdev,true);
         modify_device_prop( $device, 'alsadevs', $jsdev );
     }
+    if( isset($_GET['ovclient']) ){
+        $device = $_GET['ovclient'];
+        if( !empty($device) ){
+            $devhash = '';
+            if( isset($_GET['hash']) )
+                $devhash = $_GET['hash'];
+            get_room_session( $device, $devhash );
+            modify_device_prop( $device, 'access', time() );
+            $putdata = fopen("php://input", "r");
+            $jsdev = '';
+            while ($data = fread($putdata,1024))
+                $jsdev = $jsdev . $data;
+            fclose($putdata);
+            $jsdev = json_decode($jsdev,true);
+            modify_device_prop( $device, 'alsadevs', $jsdev );
+        }
+    }
     die();
 }
 

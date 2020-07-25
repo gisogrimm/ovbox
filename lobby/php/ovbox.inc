@@ -979,9 +979,12 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $sup->appendChild($doc->createTextNode('60'));
       $span->appendChild($doc->createTextNode(': '.sprintf("%1.2f",$rprop['t60']).' s)'));
     }
-    if( empty($rprop['group']) )
-      $span->appendChild($doc->createTextNode(' public'));
-    else
+    if( empty($rprop['group']) ){
+      if( $rprop['private'] )
+        $span->appendChild($doc->createTextNode(' private'));
+      else
+        $span->appendChild($doc->createTextNode(' public'));
+    }else
       $span->appendChild($doc->createTextNode(' group \''.$rprop['group'].'\''));
     if( !empty($rprop['owner']) )
       $span->appendChild($doc->createTextNode(', managed by '.$rprop['owner']));
@@ -1866,6 +1869,60 @@ function html_show_device( $user, $device, $devprop )
     $div->appendChild($doc->createTextNode(' (works only when your browser is in the same network as your device)'));
   }
   echo $doc->saveHTML() . "\n";
+}
+
+function get_room_session( $device, $devhash )
+{
+  $devprop = get_properties($device,'device');
+  $dprop = array();
+  // relevant settings:
+  $dprop['label'] = $devprop['label'];
+  $dprop['egogain'] = $devprop['egogain'];
+  $dprop['jitter'] = array('send'=>$devprop['jittersend'],'receive'=>$devprop['jitterreceive']);
+  $inports = array();
+  if( !empty($devprop['inputport']) )
+    $inports[] = $devprop['inputport'];
+  if( !empty($devprop['inputport2']) )
+    $inports[] = $devprop['inputport2'];
+  $dprop['inputports']=$inports;
+  $dprop['outputports']=array($devprop['outputport1'],$devprop['outputport2']);
+  $dprop['xport'] = $devprop['xport'];
+  $dprop['peer2peer'] = $devprop['peer2peer'];
+  $dprop['renderreverb'] = $devprop['reverb'];
+  $dprop['rvbgain'] = $devprop['rvbgain'];
+  $dprop['mastergain'] = $devprop['mastergain'];
+  $dprop['playbackgain'] = $devprop['playbackgain'];
+  $dprop['srcdist'] = $devprop['srcdist'];
+  $dprop['rectype'] = $devprop['rectype'];
+  $dprop['secrec'] = $devprop['secrec'];
+  $dprop['rawmode'] = $devprop['rawmode'];
+  $audio = array();
+  $audio['driver'] = 'jack';
+  $audio['device'] = $devprop['jackdevice'];
+  $audio['srate'] = $devprop['jackrate'];
+  $audio['periodsize'] = $devprop['jackperiod'];
+  $audio['numperiods'] = $devprop['jackbuffers'];
+  $room = array();
+  $roomdev = array();
+  if( !empty($devprop['room']) ){
+    $roomprop = get_room_prop( $devprop['room'] );
+    if( $roomprop['age'] < 3600 ) {
+      $room['size'] = array('x'=>$roomprop['sx'],'y'=>$roomprop['sy'],'z'=>$roomprop['sz']);
+      $room['host'] = $roomprop['host'];
+      $room['port'] = $roomprop['port'];
+      $room['pin'] = $roomprop['pin'];
+      $room['reverb']= array('absorption'=>$roomprop['rvbabs'],'damping'=>$roomprop['rvbdamp'],'gain'=>$roomprop['rvbgain']);
+      // get all sending devives:
+      $roomdev = get_devices_in_room( $devprop['room'] );
+    }
+  }
+  $stagecfg = array('thisdevice'=>$dprop,'audiocfg'=>$audio,'room'=>$room,'roomdev'=>$roomdev);
+  $stagecfg = json_encode( $stagecfg );
+  $hash = hash('md5',$stagecfg);
+  if( $hash != $devhash ){
+    echo $hash . "\n";
+    echo $stagecfg;
+  }
 }
 
 /*
