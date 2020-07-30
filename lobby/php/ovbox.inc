@@ -25,7 +25,8 @@ function defaults( $type )
     'peer2peer'=>true,
     'donotsend'=>false,
     'secrec'=>0,
-    'pos'=>'0 0 0',
+    'position'=>array('x'=>0,'y'=>0,'z'=>0),
+    'orientation'=>array('z'=>0,'y'=>0,'x'=>0),
     'rawmode'=>false,
     'reverb'=>true,
     'rvbgain'=>0,
@@ -39,6 +40,7 @@ function defaults( $type )
     'jackperiod'=>96,
     'jackbuffers'=>2,
     'alsadevs'=>array(),
+    'message'=>'',
   );
   $defaults['room'] = array(
     'access'=>0,
@@ -211,6 +213,8 @@ function get_rooms()
   return $rooms;
 }
 
+
+
 function list_styles()
 {
   $styles = [];
@@ -240,6 +244,16 @@ function rm_room( $room )
 {
   $fname = '../db/' . $room . '.room';
   unlink($fname);
+}
+
+function rm_old_rooms()
+{
+  $allrooms = list_db('room');
+  foreach( $allrooms as $room => $rprop ){
+    if( $rprop['age'] > 24*3600 ){
+      rm_room($room);
+    }
+  }
 }
 
 function get_device( $user )
@@ -421,6 +435,26 @@ function get_free_chair( $room )
   return $k;
 }
 
+function set_dev_room_pos( $room )
+{
+  $roomdev = get_devices_in_room( $room );
+  ksort($roomdev);
+  $stagewidth = 360;
+  $az = 0;
+  $daz = $stagewidth/count($roomdev)*(pi()/180);
+  $az = $az*(pi()/180)-0.5*$daz;
+  $radius = 1.2;
+  foreach( $roomdev as $chair => $dev ){
+    $az = $az+$daz;
+    $pos_x = $radius * cos( $az );
+    $pos_y = -$radius * sin( $az );
+    $pos = array('x'=>$pos_x,'y'=>$pos_y,'z'=>0);
+    $rot = array('z'=>(180/pi()*(-$az+pi())),'y'=>0,'x'=>0);
+    modify_device_prop( $dev, 'position', $pos );
+    modify_device_prop( $dev, 'orientation', $rot );
+  }
+}
+
 function device_enter_room( $device, $room )
 {
   $othersinroom = get_devices_in_room( $room );
@@ -429,6 +463,7 @@ function device_enter_room( $device, $room )
     $dprop['room'] = $room;
     $dprop['chair'] = get_free_chair($room);
     set_properties( $device, 'device', $dprop );
+    set_dev_room_pos( $room );
   }
 }
 
@@ -448,6 +483,7 @@ function room_swap_devices( $dev1, $dev2 )
   if( ($chair1>=0) && ($chair2>=0) ){
     modify_device_prop( $dev1, 'chair', $chair2 );
     modify_device_prop( $dev2, 'chair', $chair1 );
+    set_dev_room_pos( $room );
   }
 }
 
@@ -783,9 +819,18 @@ function get_tascar_cfg( $device, $devhash )
 
 function html_device_selector( $user, $currentdevice )
 {
+  $dprop = get_properties($currentdevice,'device');
   $devs = list_unclaimed_devices();
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
+  if( !empty($dprop['message']) ){
+    $div = $root->appendChild($doc->createElement('div'));
+    $div->setAttribute('class','deverror');
+    $b = $div->appendChild($doc->createElement('b'));
+    $b->appendChild($doc->createTextNode('Device error:'));
+    $div->appendChild($doc->createElement('br'));
+    $div->appendChild($doc->createTextNode(htmlspecialchars($dprop['message'])));
+  }
   $div = $root->appendChild($doc->createElement('div'));
   $select = $div->appendChild($doc->createElement('select'));
   $select->setAttribute('class','uibutton');
@@ -1871,31 +1916,54 @@ function html_show_device( $user, $device, $devprop )
   echo $doc->saveHTML() . "\n";
 }
 
+function get_dev_stage_settings( $device )
+{
+  $d = array();
+  $dprop = get_properties($device,'device');
+  /// ID within the stage, typically a number from 0 to number of stage devices:
+  $d['id'] = $dprop['chair'];
+  /// Label of the stage device:
+  $d['label'] = $dprop['label'];
+  /// List of channels the device is providing:
+  $inports = array();
+  if( !empty($dprop['inputport']) )
+    $inports[] = array('sourceport'=>$dprop['inputport'],'gain'=>1);
+  if( !empty($dprop['inputport2']) )
+    $inports[] = array('sourceport'=>$dprop['inputport2'],'gain'=>1);
+  $k = -(count($inports)-1)*0.5;
+  foreach($inports as &$channel){
+    $channel['position'] = array('x'=>0,'y'=>$k*$dprop['srcdist'],'z'=>0);
+    $k = $k+1;
+  }
+  $d['channels'] = $inports;
+  /// Position of the stage device in the virtual space:
+  $d['position'] = $dprop['position'];
+  /// Orientation of the stage device in the virtual space, ZYX Euler angles:
+  $d['orientation'] = $dprop['orientation'];
+  /// Linear gain of the stage device:
+  $d['gain'] = pow(10.0,0.05*$dprop['playbackgain']);
+  /// Mute flag:
+  $d['mute'] = false;
+  return $d;
+}
+
 function get_room_session( $device, $devhash )
 {
   $devprop = get_properties($device,'device');
-  $dprop = array();
+  $rendersettings = get_dev_stage_settings( $device );
   // relevant settings:
-  $dprop['label'] = $devprop['label'];
-  $dprop['egogain'] = $devprop['egogain'];
-  $dprop['jitter'] = array('send'=>$devprop['jittersend'],'receive'=>$devprop['jitterreceive']);
-  $inports = array();
-  if( !empty($devprop['inputport']) )
-    $inports[] = $devprop['inputport'];
-  if( !empty($devprop['inputport2']) )
-    $inports[] = $devprop['inputport2'];
-  $dprop['inputports']=$inports;
-  $dprop['outputports']=array($devprop['outputport1'],$devprop['outputport2']);
-  $dprop['xport'] = $devprop['xport'];
-  $dprop['peer2peer'] = $devprop['peer2peer'];
-  $dprop['renderreverb'] = $devprop['reverb'];
-  $dprop['rvbgain'] = $devprop['rvbgain'];
-  $dprop['mastergain'] = $devprop['mastergain'];
-  $dprop['playbackgain'] = $devprop['playbackgain'];
-  $dprop['srcdist'] = $devprop['srcdist'];
-  $dprop['rectype'] = $devprop['rectype'];
-  $dprop['secrec'] = $devprop['secrec'];
-  $dprop['rawmode'] = $devprop['rawmode'];
+  $rendersettings['egogain'] = $devprop['egogain'];
+  $rendersettings['jitter'] = array('send'=>$devprop['jittersend'],'receive'=>$devprop['jitterreceive']);
+  $rendersettings['outputports']=array($devprop['outputport1'],$devprop['outputport2']);
+  $rendersettings['xport'] = $devprop['xport'];
+  $rendersettings['peer2peer'] = $devprop['peer2peer'];
+  $rendersettings['renderreverb'] = $devprop['reverb'];
+  $rendersettings['rvbgain'] = $devprop['rvbgain'];
+  $rendersettings['mastergain'] = pow(10.0,0.05*$devprop['mastergain']);
+  $rendersettings['rectype'] = $devprop['rectype'];
+  $rendersettings['secrec'] = $devprop['secrec'];
+  $rendersettings['rawmode'] = $devprop['rawmode'];
+  $rendersettings['stagedevid'] = 0;
   $audio = array();
   $audio['driver'] = 'jack';
   $audio['device'] = $devprop['jackdevice'];
@@ -1907,16 +1975,22 @@ function get_room_session( $device, $devhash )
   if( !empty($devprop['room']) ){
     $roomprop = get_room_prop( $devprop['room'] );
     if( $roomprop['age'] < 3600 ) {
+      $rendersettings['stagedevid'] = $devprop['chair'];
       $room['size'] = array('x'=>$roomprop['sx'],'y'=>$roomprop['sy'],'z'=>$roomprop['sz']);
-      $room['host'] = $roomprop['host'];
-      $room['port'] = $roomprop['port'];
+      $roomurl = explode( ":", $devprop['room'] );
+      
+      $room['host'] = $roomurl[0];
+      $room['port'] = $roomurl[1];
       $room['pin'] = $roomprop['pin'];
-      $room['reverb']= array('absorption'=>$roomprop['rvbabs'],'damping'=>$roomprop['rvbdamp'],'gain'=>$roomprop['rvbgain']);
+      $room['reverb']= array('absorption'=>$roomprop['rvbabs'],'damping'=>$roomprop['rvbdamp'],'gain'=>($roomprop['rvbgain']+$devprop['rvbgain']));
       // get all sending devives:
-      $roomdev = get_devices_in_room( $devprop['room'] );
+      $rdevs = get_devices_in_room( $devprop['room'] );
+      foreach( $rdevs as $rdev ){
+        $roomdev[] = get_dev_stage_settings( $rdev );
+      }
     }
   }
-  $stagecfg = array('thisdevice'=>$dprop,'audiocfg'=>$audio,'room'=>$room,'roomdev'=>$roomdev);
+  $stagecfg = array('rendersettings'=>$rendersettings,'audiocfg'=>$audio,'room'=>$room,'roomdev'=>$roomdev);
   $stagecfg = json_encode( $stagecfg );
   $hash = hash('md5',$stagecfg);
   if( $hash != $devhash ){

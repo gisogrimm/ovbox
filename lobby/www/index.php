@@ -50,6 +50,17 @@ if ($user == 'device') {
         $jsdev = json_decode($jsdev,true);
         modify_device_prop( $device, 'alsadevs', $jsdev );
     }
+    if( isset($_GET['ovclientmsg']) ){
+        $device = $_GET['ovclientmsg'];
+        if( !empty($device) ){
+            $putdata = fopen("php://input", "r");
+            $devmsg = '';
+            while ($data = fread($putdata,1024))
+                $devmsg = $devmsg . $data;
+            fclose($putdata);
+            modify_device_prop( $device, 'message', $devmsg );
+        }
+    }
     if( isset($_GET['ovclient']) ){
         $device = $_GET['ovclient'];
         if( !empty($device) ){
@@ -112,6 +123,11 @@ if( $user == 'admin' ){
         header( "Location: /#groups" );
         die();
     }
+    if( isset($_GET['rmoldrooms'])){
+        rm_old_rooms();
+        header( "Location: /#rooms" );
+        die();
+    }
     if( isset($_GET['setgrpstyle'])){
         modify_group_prop( $_GET['setgrpstyle'], 'style', $_GET['grpstyle']);
         header( "Location: /#groups" );
@@ -157,6 +173,7 @@ if( $user == 'admin' ){
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
     html_admin_db('device');
     html_admin_db('room');
+    echo '<form><input type="hidden" name="rmoldrooms"/><button>Remove inactive rooms</button></form>';
     html_admin_users();
     html_admin_groups();
     print_foot();
@@ -239,6 +256,7 @@ if( isset($_GET['setdevprop']) ){
         $prop['peer2peer'] = isset($_GET['peer2peer']);
         $prop['rawmode'] = isset($_GET['rawmode']);
         $prop['donotsend'] = isset($_GET['donotsend']);
+        $prop['message'] = '';
         set_getprop($prop,'jittersend');
         set_getprop($prop,'jitterreceive');
         set_getprop($prop,'label');

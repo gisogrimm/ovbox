@@ -14,6 +14,13 @@ body {
     padding: 8px;
     overflow: auto;
 }
+.deverror {
+    border: 8px solid #aa0000;
+    border-radius: 3px;
+    overflow: auto;
+    background-color: #A7A7A790;
+		padding: 4px;
+}
 div {
     overflow: auto;
 }
