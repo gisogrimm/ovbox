@@ -25,6 +25,13 @@ Here are the shopping lists we use - obviously these can be obtained from any el
 
 **Raspberry Pi etc.:** [Reichelt](https://www.reichelt.de/my/1693204) (approx. 67 EUR)
 
+Or from berrybase:
+[microSD card](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/speicherkarten/sandisk-ultra-microsdhc-a1-98mb/s-class-10-speicherkarte-43-adapter-32gb),
+[network cable](https://www.berrybase.de/netzwerk/patchkabel-netzwerkkabel/cat-patchkabel/bestellartikel/cat-6-netzwerkkabel-f/utp-flach-wei-223),
+[power adapter](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/stromversorgung/netzteile-fuer-die-steckdose/offizielles-raspberry-pi-usb-c-netzteil-5-1v/3-0a-eu-schwarz),
+[case](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/raspberry-swag/offizielles-geh-228-use-f-252-r-raspberry-pi-4-schwarz/grau) and
+[Raspberry Pi 4B](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/boards/raspberry-pi-4-computer-modell-b-2gb-ram)
+
 **Sound card, mic, etc.:** [Thomann](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 185 EUR)
 
 
