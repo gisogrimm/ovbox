@@ -256,6 +256,7 @@ if( isset($_GET['setdevprop']) ){
         $prop['peer2peer'] = isset($_GET['peer2peer']);
         $prop['rawmode'] = isset($_GET['rawmode']);
         $prop['donotsend'] = isset($_GET['donotsend']);
+        $prop['selfmonitor'] = isset($_GET['selfmonitor']);
         $prop['message'] = '';
         set_getprop($prop,'jittersend');
         set_getprop($prop,'jitterreceive');

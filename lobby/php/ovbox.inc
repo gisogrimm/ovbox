@@ -13,6 +13,7 @@ function defaults( $type )
     'access'=>0,
     'label'=>'',
     'owner'=>'',
+    'selfmonitor'=>true,
     'egogain'=>0,
     'host'=>'',
     'inputport'=>'system:capture_1',
@@ -593,6 +594,8 @@ function get_tascar_cfg( $device, $devhash )
             $dz = -0.3;
             $dx = 0.2;
             $gain = $devprop['egogain'];
+            if( !$devprop['selfmonitor'] )
+              $source->setAttribute("mute","true");
           }else{
             $source->setAttribute("name",$devprop['label'].'_'.$chair);
           }
@@ -829,7 +832,7 @@ function html_device_selector( $user, $currentdevice )
     $b = $div->appendChild($doc->createElement('b'));
     $b->appendChild($doc->createTextNode('Device error:'));
     $div->appendChild($doc->createElement('br'));
-    $div->appendChild($doc->createTextNode(htmlspecialchars($dprop['message'])));
+    $div->appendChild($doc->createTextNode($dprop['message']));
   }
   $div = $root->appendChild($doc->createElement('div'));
   $select = $div->appendChild($doc->createElement('select'));
@@ -1226,8 +1229,8 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $inp->setAttribute('type','number');
       $inp->setAttribute('step','0.1');
       $inp->setAttribute('name','rvbgain');
-      $inp->setAttribute('min','-20');
-      $inp->setAttribute('max','0');
+      $inp->setAttribute('min','-30');
+      $inp->setAttribute('max','20');
       $inp->setAttribute('value',$rprop['rvbgain']);
       $inp->setAttribute('style','width: 50px;');
       $form->appendChild($doc->createTextNode(' Damping: '));
@@ -1777,6 +1780,17 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('max','10');
   $el->setAttribute('step','0.1');
   $el->setAttribute('value',$devprop['egogain']);
+  $lab = $form->appendChild($doc->createElement('label'));
+  $lab->setAttribute('class','switch');
+  $el = $lab->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','selfmonitor');
+  $el->setAttribute('name','selfmonitor');
+  $el->setAttribute('type','checkbox');
+  if( $devprop['selfmonitor'] )
+    $el->setAttribute('checked','');
+  $el = $lab->appendChild($doc->createElement('span'));
+  $el->setAttribute('class','slider round');
+  $el->appendChild($doc->createTextNode(''));
   $form->appendChild($doc->createElement('br'));
   // reverb:
   $el = $form->appendChild($doc->createElement('input'));
@@ -1932,7 +1946,7 @@ function get_dev_stage_settings( $device )
     $inports[] = array('sourceport'=>$dprop['inputport2'],'gain'=>1);
   $k = -(count($inports)-1)*0.5;
   foreach($inports as &$channel){
-    $channel['position'] = array('x'=>0,'y'=>$k*$dprop['srcdist'],'z'=>0);
+    $channel['position'] = array('x'=>0,'y'=>-$k*$dprop['srcdist'],'z'=>0);
     $k = $k+1;
   }
   $d['channels'] = $inports;
@@ -1952,13 +1966,13 @@ function get_room_session( $device, $devhash )
   $devprop = get_properties($device,'device');
   $rendersettings = get_dev_stage_settings( $device );
   // relevant settings:
-  $rendersettings['egogain'] = $devprop['egogain'];
+  $rendersettings['egogain'] = pow(10.0,0.05*$devprop['egogain']);
   $rendersettings['jitter'] = array('send'=>$devprop['jittersend'],'receive'=>$devprop['jitterreceive']);
-  $rendersettings['outputports']=array($devprop['outputport1'],$devprop['outputport2']);
+  $rendersettings['outputport1']=$devprop['outputport1'];
+  $rendersettings['outputport2']=$devprop['outputport2'];
   $rendersettings['xport'] = $devprop['xport'];
   $rendersettings['peer2peer'] = $devprop['peer2peer'];
   $rendersettings['renderreverb'] = $devprop['reverb'];
-  $rendersettings['rvbgain'] = $devprop['rvbgain'];
   $rendersettings['mastergain'] = pow(10.0,0.05*$devprop['mastergain']);
   $rendersettings['rectype'] = $devprop['rectype'];
   $rendersettings['secrec'] = $devprop['secrec'];
@@ -1982,7 +1996,7 @@ function get_room_session( $device, $devhash )
       $room['host'] = $roomurl[0];
       $room['port'] = $roomurl[1];
       $room['pin'] = $roomprop['pin'];
-      $room['reverb']= array('absorption'=>$roomprop['rvbabs'],'damping'=>$roomprop['rvbdamp'],'gain'=>($roomprop['rvbgain']+$devprop['rvbgain']));
+      $room['reverb']= array('absorption'=>$roomprop['rvbabs'],'damping'=>$roomprop['rvbdamp'],'gain'=>pow(10.0,0.05*($roomprop['rvbgain']+$devprop['rvbgain'])));
       // get all sending devives:
       $rdevs = get_devices_in_room( $devprop['room'] );
       foreach( $rdevs as $rdev ){
