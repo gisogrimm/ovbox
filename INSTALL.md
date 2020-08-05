@@ -61,6 +61,7 @@ overlay file system can be deactivated with:
 
 ````
 sudo raspi-config nonint disable_overlayfs
+sudo shutdown -r now
 ````
 
 After applying changes it can be reactivated with:
