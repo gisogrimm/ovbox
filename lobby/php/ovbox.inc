@@ -3,6 +3,11 @@
 function defaults( $type )
 {
   $defaults = array();
+  $defaults['sortkey'] = array(
+    'user'=>'id',
+    'room'=>'id',
+    'device'=>'id',
+  );
   $defaults['style'] = array(
     'credits'=>'',
     'css'=>'ovbox.css',
@@ -58,16 +63,68 @@ function defaults( $type )
     'rvbdamp'=>0.7,
     'rvbgain'=>-8,
     'size'=>'25 13 7.5',
+    'editable'=>false,
   );
   $defaults['user'] = array(
     'group'=>'',
     'seesall'=>true,
     'maingroup'=>'',
+    'access'=>0,
   );
   $defaults['group'] = array( 'style'=>'default' );
   if( array_key_exists( $type, $defaults ) )
     return $defaults[$type];
   return array();
+}
+
+function secondsToTime($inputSeconds) {
+
+    $secondsInAMinute = 60;
+    $secondsInAnHour  = 60 * $secondsInAMinute;
+    $secondsInADay    = 24 * $secondsInAnHour;
+
+    // extract days
+    $days = floor($inputSeconds / $secondsInADay);
+
+    // extract hours
+    $hourSeconds = $inputSeconds % $secondsInADay;
+    $hours = floor($hourSeconds / $secondsInAnHour);
+
+    // extract minutes
+    $minuteSeconds = $hourSeconds % $secondsInAnHour;
+    $minutes = floor($minuteSeconds / $secondsInAMinute);
+
+    // extract the remaining seconds
+    $remainingSeconds = $minuteSeconds % $secondsInAMinute;
+    $seconds = ceil($remainingSeconds);
+
+    // return the final array
+    $obj = array(
+        'd' => (int) $days,
+        'h' => (int) $hours,
+        'm' => (int) $minutes,
+        's' => (int) $seconds,
+    );
+    return $obj;
+}
+
+function numage2str( $nage )
+{
+  $d = secondsToTime(  $nage );
+  $age = '';
+  if( $nage > 3600*24*365*40 )
+    return 'never';
+  if( $nage >= 3600*24 )
+    $age = $age . $d['d'] . 'd';
+  if( ($nage >= 3600) && ($nage < 7*3600*24) )
+    $age = $age . $d['h'] . 'h';
+  if( ($nage >= 60) && ($nage < 3600*24) )
+    $age = $age . $d['m'] . '\'';
+  if( ($nage >= 0) && ($nage < 3600) )
+    $age = $age . $d['s'] . '"';
+  if( $nage < 0 )
+    $age = $nage . 's';
+  return $age;
 }
 
 function postproc_prop( &$prop, $type )
@@ -298,8 +355,8 @@ function list_db($type)
     $prop = get_properties($device,$type);
     $devs[$device] = $prop;
   }
-  uasort( $devs, "agesort" );
-  //ksort( $devs );
+  //uasort( $devs, "agesort" );
+  ksort( $devs );
   return $devs;
 }
 
@@ -1152,14 +1209,16 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
         $a->appendChild($doc->createTextNode('enter'));
       }
     }
-    if( $user == $rprop['owner'] ){
+    if( ($user == $rprop['owner'])||($rprop['editable'] && $inroom) ){
       // my room, provide settings box:
       $ctl->appendChild($doc->createTextNode(' '));
-      if( !empty($roomdev) ){
-        $a = $doc->createElement('a');
-        $ctl->appendChild($a);
-        $a->setAttribute('href','?clearroom='.urlencode($room));
-        $a->appendChild($doc->createTextNode('kick all'));
+      if( $user == $rprop['owner'] ){
+        if( !empty($roomdev) ){
+          $a = $doc->createElement('a');
+          $ctl->appendChild($a);
+          $a->setAttribute('href','?clearroom='.urlencode($room));
+          $a->appendChild($doc->createTextNode('kick all'));
+        }
       }
       $tog = $doc->createElement('input');
       $ctl->appendChild($tog);
@@ -1185,15 +1244,17 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $inp->setAttribute('value',$room);
       $form->appendChild($doc->createTextNode($room));
       $form->appendChild($doc->createElement('br'));
-      $form->appendChild($doc->createTextNode('Name: '));
-      $inp = $doc->createElement('input');
-      $form->appendChild($inp);
-      $inp->setAttribute('type','text');
-      $inp->setAttribute('name','label');
-      $inp->setAttribute('pattern','[a-zA-Z0-9]*');
-      $inp->setAttribute('value',$rprop['label']);
-      //<input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'">
-      $form->appendChild($doc->createElement('br'));
+      if( $user == $rprop['owner'] ){
+        $form->appendChild($doc->createTextNode('Name: '));
+        $inp = $doc->createElement('input');
+        $form->appendChild($inp);
+        $inp->setAttribute('type','text');
+        $inp->setAttribute('name','label');
+        $inp->setAttribute('pattern','[a-zA-Z0-9]*');
+        $inp->setAttribute('value',$rprop['label']);
+        //<input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'">
+        $form->appendChild($doc->createElement('br'));
+      }
       $form->appendChild($doc->createTextNode('Size L x W x H [m]: '));
       $inp = $doc->createElement('input');
       $form->appendChild($inp);
@@ -1255,34 +1316,49 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $inp->setAttribute('style','width: 50px;');
       $form->appendChild($doc->createElement('br'));
       // group:
-      $inp = $form->appendChild($doc->createElement('label'));
-      $inp->appendChild($doc->createTextNode('Group: '));
-      $inp = $form->appendChild($doc->createElement('select'));
-      $inp->setAttribute('name','group');
-      $opt = $inp->appendChild($doc->createElement('option'));
-      $opt->setAttribute('value','');
-      $opt->appendChild($doc->createTextNode(' - public - '));
-      $usgroups = list_groups($user);
-      foreach($usgroups as $grp){
+      if( $user == $rprop['owner'] ){
+        $inp = $form->appendChild($doc->createElement('label'));
+        $inp->appendChild($doc->createTextNode('Group: '));
+        $inp = $form->appendChild($doc->createElement('select'));
+        $inp->setAttribute('name','group');
         $opt = $inp->appendChild($doc->createElement('option'));
-        $opt->setAttribute('value',$grp);
-        $opt->appendChild($doc->createTextNode($grp));
-        if( $rprop['group'] == $grp )
-          $opt->setAttribute('selected','');
+        $opt->setAttribute('value','');
+        $opt->appendChild($doc->createTextNode(' - public - '));
+        $usgroups = list_groups($user);
+        foreach($usgroups as $grp){
+          $opt = $inp->appendChild($doc->createElement('option'));
+          $opt->setAttribute('value',$grp);
+          $opt->appendChild($doc->createTextNode($grp));
+          if( $rprop['group'] == $grp )
+            $opt->setAttribute('selected','');
+        }
+        // private room:
+        $inp = $doc->createElement('input');
+        $form->appendChild($inp);
+        $inp->setAttribute('type','checkbox');
+        $inp->setAttribute('id','private');
+        $inp->setAttribute('name','private');
+        if( $rprop['private'] )
+          $inp->setAttribute('checked','');
+        $inp = $doc->createElement('label');
+        $form->appendChild($inp);
+        $inp->setAttribute('for','private');
+        $inp->appendChild($doc->createTextNode('Private room - visible only to me (overrides group)'));
+        $form->appendChild($doc->createElement('br'));
+        // editable by everyone:
+        $inp = $doc->createElement('input');
+        $form->appendChild($inp);
+        $inp->setAttribute('type','checkbox');
+        $inp->setAttribute('id','editable');
+        $inp->setAttribute('name','editable');
+        if( $rprop['editable'] )
+          $inp->setAttribute('checked','');
+        $inp = $doc->createElement('label');
+        $form->appendChild($inp);
+        $inp->setAttribute('for','editable');
+        $inp->appendChild($doc->createTextNode('Editable by everyone who can see the room'));
+        $form->appendChild($doc->createElement('br'));
       }
-      // private room:
-      $inp = $doc->createElement('input');
-      $form->appendChild($inp);
-      $inp->setAttribute('type','checkbox');
-      $inp->setAttribute('id','private');
-      $inp->setAttribute('name','private');
-      if( $rprop['private'] )
-        $inp->setAttribute('checked','');
-      $inp = $doc->createElement('label');
-      $form->appendChild($inp);
-      $inp->setAttribute('for','private');
-      $inp->appendChild($doc->createTextNode('Private room - visible only to me (overrides group)'));
-      $form->appendChild($doc->createElement('br'));
       // save button:
       $inp = $doc->createElement('button');
       $form->appendChild($inp);
@@ -1294,7 +1370,12 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
 
 function html_admin_db($type)
 {
+  $sortprop = get_properties('list','sortkey');
   $devs = list_db($type);
+  if( $sortprop[$type]=='id' )
+    ksort($devs);
+  else
+    uasort( $devs, "agesort" );
   $doc = new DOMDocument('1.0');
   $root = $doc->appendChild($doc->createElement('div'));
   $root->appendChild($doc->createElement('a'))->setAttribute('name',$type.'s');
@@ -1305,20 +1386,18 @@ function html_admin_db($type)
   $s->appendChild($doc->createTextNode('('.count($devs).')'));
   $tab = $root->appendChild($doc->createElement('table'));
   $tr = $tab->appendChild($doc->createElement('tr'));
-  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode($type));
-  $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('age'));
+  $a = $tr->appendChild($doc->createElement('th'))->appendChild($doc->createElement('a'));
+  $a->setAttribute('href','?sortby=id&category='.$type);
+  $a->appendChild($doc->createTextNode($type));
+  $a = $tr->appendChild($doc->createElement('th'))->appendChild($doc->createElement('a'));
+  $a->setAttribute('href','?sortby=age&category='.$type);
+  $a->appendChild($doc->createTextNode('age'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('owner'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('label'));
   foreach( $devs as $dev=>$dprop ){
     $tr = $tab->appendChild($doc->createElement('tr'));
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dev));
-    $age = $dprop['age'].'s';
-    if( $dprop['age'] > 599 )
-      $age = sprintf('%1.1fm',$dprop['age']/60);
-    if( $dprop['age'] > 6*3600 )
-      $age = sprintf('%1.1fh',$dprop['age']/3600);
-    if( $dprop['age'] > 3*24*3600 )
-      $age = sprintf('%1.1fd',$dprop['age']/(3600*24));
+    $age = numage2str($dprop['age']);
 
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($age));
     // user:
@@ -1380,6 +1459,8 @@ function html_admin_users()
   $th = $tr->appendChild($doc->createElement('th'));
   $th->appendChild($doc->createTextNode('user'));
   $th = $tr->appendChild($doc->createElement('th'));
+  $th->appendChild($doc->createTextNode('age'));
+  $th = $tr->appendChild($doc->createElement('th'));
   $th->appendChild($doc->createTextNode('settings'));
   $tab->appendChild($doc->createTextNode("\n"));
   foreach($users as $us){
@@ -1387,6 +1468,8 @@ function html_admin_users()
     $tr = $tab->appendChild($doc->createElement('tr'));
     $td = $tr->appendChild($doc->createElement('td'));
     $td->appendChild($doc->createTextNode($us));
+    $td = $tr->appendChild($doc->createElement('td'));
+    $td->appendChild($doc->createTextNode(numage2str($uprop['age'])));
     $td = $tr->appendChild($doc->createElement('td'));
     $form = $td->appendChild($doc->createElement('form'));
     $inp = $form->appendChild($doc->createElement('input'));

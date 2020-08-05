@@ -139,6 +139,13 @@ if( $user == 'admin' ){
         header( "Location: /#users" );
         die();
     }
+    if( isset($_GET['sortby']) ){
+        $key = $_GET['sortby'];
+        $cat = $_GET['category'];
+        $prop = get_properties( 'list', 'sortkey' );
+        $prop[$cat] = $key;
+        set_properties('list','sortkey', $prop );
+    }
     if( isset($_GET['setdeviceowner']) ){
         modify_device_prop( $_GET['setdeviceowner'], 'owner', $_GET['owner'] );
         header( "Location: /#devices" );
@@ -287,6 +294,11 @@ if( isset($_GET['setroom']) ){
     $room = $_GET['setroom'];
     $rprop = get_room_prop($room);
     if( $user == $rprop['owner']){
+        $rprop['editable'] = isset($_GET['editable']);
+        $rprop['private'] = isset($_GET['private']);
+        set_getprop( $rprop, 'group' );
+    }
+    if( ($user == $rprop['owner']) || ($rprop['editable'])){
         if( isset($_GET['label']))
             $rprop['label'] = $_GET['label'];
         set_getprop( $rprop, 'size' );
@@ -295,8 +307,6 @@ if( isset($_GET['setroom']) ){
         set_getprop( $rprop, 'rvbgain' );
         set_getprop( $rprop, 'rvbdamp' );
         set_getprop( $rprop, 'rvbabs' );
-        $rprop['private'] = isset($_GET['private']);
-        set_getprop( $rprop, 'group' );
         set_properties( $room, 'room', $rprop );
     }
     header( "Location: /" );
@@ -346,7 +356,10 @@ if ( empty( $device ) ) {
         die();
     }
 }
-    
+
+// age
+modify_user_prop( $user, 'access', time() );
+
 print_head( $user, $style );
 
 $devs = list_unclaimed_devices();

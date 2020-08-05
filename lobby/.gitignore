@@ -5,3 +5,4 @@ latex
 *.group
 groups
 lock.txt
+*.sortkey
