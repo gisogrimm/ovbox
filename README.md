@@ -7,7 +7,11 @@ built upon open source software and open or standardized hardware.
 
 ![consortbox](doc/ovbox.jpg)
 
-We are contributing to the [digital stage](https://digital-stage.org/) project. It is our aim to achieve full compatibility of the ovbox with the digital stage system.
+We are contributing to the [digital stage](https://digital-stage.org/)
+project. It is our aim to achieve full compatibility of the ovbox with
+the digital stage system. See also the
+(ov-client)[https://github.com/gisogrimm/ov-client), which is the base
+of the digital stage and ORLANDOviols audio render client.
 
 ## Installation instructions
 
