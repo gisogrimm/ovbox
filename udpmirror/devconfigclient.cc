@@ -38,8 +38,8 @@ std::vector<snddevname_t> listdev()
       snddevname_t dname;
       dname.dev = name;
       dname.desc = desc;
-      if( dname.desc.find("\n") )
-	dname.desc.erase(dname.desc.find("\n"));
+      if(dname.desc.find("\n"))
+        dname.desc.erase(dname.desc.find("\n"));
       retv.push_back(dname);
     }
     if(name && strcmp("null", name))
@@ -143,11 +143,11 @@ jacksettings_t get_device_init(std::string url, const std::string& device)
 {
   std::vector<snddevname_t> alsadevs(listdev());
   std::string jsdevs("{");
-  for( auto d : alsadevs )
+  for(auto d : alsadevs)
     jsdevs += "\"" + d.dev + "\":\"" + d.desc + "\",";
-  if( jsdevs.size() )
-    jsdevs.erase(jsdevs.end()-1);
-  jsdevs +="}";
+  if(jsdevs.size())
+    jsdevs.erase(jsdevs.end() - 1);
+  jsdevs += "}";
   std::cout << jsdevs << std::endl;
   CURLcode res;
   std::string retv;
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     FILE* h_pipe(NULL);
     FILE* h_pipe_jack(NULL);
     jacksettings_t jacks(get_device_init(lobby, device));
-    if( (jacks.device.size() > 0) && (jacks.device != "manual") ) {
+    if((jacks.device.size() > 0) && (jacks.device != "manual")) {
       char cmd[1024];
       sprintf(cmd,
               "JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d %s "

@@ -14,8 +14,8 @@ ep_desc_t::ep_desc_t()
   num_lost = 0;
   num_received = 0;
   mode = B_PEER2PEER;
-  //peer2peer = true;
-  //downmixonly = false;
+  // peer2peer = true;
+  // downmixonly = false;
   version = "";
 }
 
@@ -108,7 +108,7 @@ void endpoint_list_t::checkstatus()
 uint32_t endpoint_list_t::get_num_clients()
 {
   uint32_t c(0);
-  for( auto ep : endpoints )
+  for(auto ep : endpoints)
     c += (ep.timeout > 0);
   return c;
 }
