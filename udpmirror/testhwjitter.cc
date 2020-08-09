@@ -28,17 +28,15 @@ int main()
   set_thread_prio(30);
   std::chrono::high_resolution_clock::time_point t1;
   get_pingtime(t1);
-  while(true) {
-    double tmean(0);
-    double tmax(0);
-    for(uint32_t k = 0; k < 1000; ++k) {
-      std::this_thread::sleep_for(std::chrono::microseconds(2000));
-      double t(get_pingtime(t1));
-      tmean += t;
-      tmax = std::max(t, tmax);
-    }
-    std::cout << "mean = " << 0.001 * tmean << "ms, peak = " << tmax - 2.0
-              << "ms\n";
+  double tmean(0);
+  double tmax(0);
+  for(uint32_t k = 0; k < 100000; ++k) {
+    std::this_thread::sleep_for(std::chrono::microseconds(2000));
+    double t(get_pingtime(t1));
+    tmean += t;
+    tmax = std::max(t, tmax);
   }
+  std::cout << "mean = " << 0.00001 * tmean << "ms, peak = " << tmax - 2.0
+            << "ms\n";
   return 0;
 }
