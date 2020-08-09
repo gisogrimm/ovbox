@@ -1,15 +1,22 @@
 #!/bin/bash
-killall roomservice
-sleep 2
-killall roomservice
-sleep 2
+# Usage: ./startservice.sh <numclients> <startport>
+NUMCLIENTS=$1
+STARTPORT=$2
+test -z "${NUMCLIENTS}" && NUMCLIENTS=1
+test -z "${STARTPORT}" && STARTPORT=4366
+echo "starting ${NUMCLIENTS} services starting at port ${STARTPORT}"
 killall roomservice
 sleep 1
-for p in 4367 {4933..4936} {5933..5940}; do
-    ./roomservice -l http://box.orlandoviols.com  -p $p -n Frankfurt &
-    sleep 1
-done
-for p in {5950..5959}; do
-    ./roomservice -l http://box.orlandoviols.com  -p $p -n HfKBremen${p} &
-    sleep 1
+killall roomservice
+sleep 1
+killall roomservice
+sleep 1
+hst=$(hostname)
+k=1
+
+while test $k -le ${NUMCLIENTS}; do
+		let p=$k+${STARTPORT}
+		./roomservice -l http://box.orlandoviols.com  -p $p -n ${hst}${k} &
+		sleep 1
+		let k=$k+1
 done
