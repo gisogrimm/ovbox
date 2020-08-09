@@ -1051,7 +1051,7 @@ function get_group_users( $group )
 function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop, $usergroups )
 {
   $rprop = get_room_prop( $room );
-  if( ($rprop['age'] < 3600) &&
+  if( ($rprop['age'] < 660) &&
   ((!$rprop['private']) || ($rprop['owner']==$user)) &&
   ($userprop['seesall'] || ($rprop['owner']==$user) || in_array($rprop['group'],$usergroups)) &&
   (empty($rprop['group']) || (in_array($rprop['group'],$usergroups)))
