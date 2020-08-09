@@ -14,7 +14,7 @@ FULLVERSION=$(VERSION).$(COMMIT_SINCE_MASTER)-$(COMMITHASH)$(GITMODIFIED)
 
 CXXFLAGS += -DOVBOXVERSION="\"$(FULLVERSION)\""
 
-all: $(BINFILES) jackwaitforport
+all: $(BINFILES) jackwaitforport testhwjitter
 
 common.o: common.cc common.h
 udpsocket.o: udpsocket.cc udpsocket.h common.h
@@ -35,4 +35,7 @@ devconfigclient: LDLIBS+=-lasound
 
 clean:
 	rm -f *~ $(BINFILES) *.o
+
+clangformat:
+	clang-format-9 -i $(wildcard *.cc) $(wildcard *.h)
 
