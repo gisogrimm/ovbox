@@ -33,6 +33,7 @@ function defaults( $type )
     'secrec'=>0,
     'position'=>array('x'=>0,'y'=>0,'z'=>0),
     'orientation'=>array('z'=>0,'y'=>0,'x'=>0),
+    'srcshiftxyz'=>'0 0 0',
     'rawmode'=>false,
     'reverb'=>true,
     'rvbgain'=>0,
@@ -135,6 +136,12 @@ function postproc_prop( &$prop, $type )
     if( empty($prop['label']) && (!empty($prop['owner'])))
       $prop['label'] = $prop['owner'];
     $prop['label'] = preg_replace('/[^a-zA-Z0-9-_]*/','',$prop['label']);
+    $dim = explode(" ",$prop['srcshiftxyz']);
+    if( count($dim)==3)
+      $prop['srcshift'] = array('x'=>$dim[0],'y'=>$dim[1],'z'=>$dim[2]);
+    else{
+      $prop['srcshift'] = array('x'=>0,'y'=>0,'z'=>0);
+    }
   }
   if( $type == 'room' ){
     if( empty($prop['label']) && (!empty($prop['name'])))
@@ -662,7 +669,8 @@ function get_tascar_cfg( $device, $devhash )
             $inport = '';
             if ( $dev == $device )
               $inport = $devprop['inputport'];
-            $snd = xml_add_sound( $source, $doc, array('x'=>$dx, 'y'=>$dy, 'z'=>$dz, 'connect'=>$inport, 'gain'=>$gain) );
+            $srcshift = $devprop['srcshift'];
+            $snd = xml_add_sound( $source, $doc, array('x'=>$dx+$srcshift['x'], 'y'=>$dy+$srcshift['y'], 'z'=>$dz+$srcshift['z'], 'connect'=>$inport, 'gain'=>$gain) );
             if ( $dev == $device ){
               $plugs = $snd->appendChild($doc->createElement('plugins'));
               $sndf = $plugs->appendChild($doc->createElement('sndfile'));
@@ -1250,7 +1258,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
         $form->appendChild($inp);
         $inp->setAttribute('type','text');
         $inp->setAttribute('name','label');
-        $inp->setAttribute('pattern','[a-zA-Z0-9]*');
+        $inp->setAttribute('pattern','[a-zA-Z0-9-_]*');
         $inp->setAttribute('value',$rprop['label']);
         //<input type="text" name="label" pattern="[a-zA-Z0-9]*" value="'.$dprop['name'].'">
         $form->appendChild($doc->createElement('br'));
@@ -1427,7 +1435,7 @@ function html_admin_db($type)
     $inp = $form->appendChild($doc->createElement('input'));
     $inp->setAttribute('type','text');
     $inp->setAttribute('name','label');
-    $inp->setAttribute('pattern','[a-zA-Z0-9]*');
+    $inp->setAttribute('pattern','[a-zA-Z0-9-_]*');
     $inp->setAttribute('value',$dprop['label']);
     $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));
     // delete
@@ -1694,7 +1702,7 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('id','label');
   $el->setAttribute('name','label');
   $el->setAttribute('type','text');
-  $el->setAttribute('pattern','[a-zA-Z0-9]*');
+  $el->setAttribute('pattern','[a-zA-Z0-9-_]*');
   $el->setAttribute('value',$devprop['label']);
   $form->appendChild($doc->createElement('br'));
   $form->appendChild($doc->createElement('hr'));
@@ -1821,6 +1829,16 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('min','0');
   $el->setAttribute('step','0.01');
   $el->setAttribute('value',$devprop['srcdist']);
+  $div->appendChild($doc->createElement('br'));
+  // source shift:
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','srcshiftxyz');
+  $el->appendChild($doc->createTextNode('shift of sound source positions relative to origin (x y z) in meter: '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','srcshiftxyz');
+  $el->setAttribute('name','srcshiftxyz');
+  $el->setAttribute('value',$devprop['srcshiftxyz']);
   $div->appendChild($doc->createElement('br'));
   // playback gain:
   $el = $form->appendChild($doc->createElement('label'));
@@ -2029,7 +2047,7 @@ function get_dev_stage_settings( $device )
     $inports[] = array('sourceport'=>$dprop['inputport2'],'gain'=>1);
   $k = -(count($inports)-1)*0.5;
   foreach($inports as &$channel){
-    $channel['position'] = array('x'=>0,'y'=>-$k*$dprop['srcdist'],'z'=>0);
+    $channel['position'] = array('x'=>($dprop['srcshift']['x']),'y'=>-$k*$dprop['srcdist']+$dprop['srcshift']['y'],'z'=>$dprop['srcshift']['z']);
     $k = $k+1;
   }
   $d['channels'] = $inports;

@@ -145,6 +145,8 @@ if( $user == 'admin' ){
         $prop = get_properties( 'list', 'sortkey' );
         $prop[$cat] = $key;
         set_properties('list','sortkey', $prop );
+        header( "Location: /#" . $cat . "s" );
+        die();
     }
     if( isset($_GET['setdeviceowner']) ){
         modify_device_prop( $_GET['setdeviceowner'], 'owner', $_GET['owner'] );
@@ -273,6 +275,7 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'inputport');
         set_getprop($prop,'inputport2');
         set_getprop($prop,'srcdist');
+        set_getprop($prop,'srcshiftxyz');
         set_getprop($prop,'outputport1');
         set_getprop($prop,'outputport2');
         set_getprop($prop,'xport');
