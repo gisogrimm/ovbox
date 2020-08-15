@@ -43,16 +43,20 @@ wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
 . installovbox.sh
 ````
 
-Please mind the space between the dot and `installovbox.sh`.  Your
-input is required sometimes. Type "yes" when asked if realtime
-priority should be activated. Enter a password for user `ov` when
-asked for it. All names/room numbers etc can left empty, by pressing
-Enter. Finally, the system will restart.
+Please mind the space between the dot and `installovbox.sh`. This
+script will install all required packages, install and compile the
+virtual acoustic simulation toolbox TASCAR and the ovbox tools. After
+installation it will activated the overlay file system to protected
+the SD card from write errors when powering off the device. Finally,
+the system will restart.
 
 If everything went well and if the sound card is connected,
 approximately 1 minute after powering on the device you should hear an
-announcement via headphones. Now you can claim the device in the web interface - see the [wiki](https://github.com/gisogrimm/ovbox/wiki#configuration-of-your-device) for details.  You may shutdown the
-device by simply unplugging the power.
+announcement via headphones. Now you can claim the device in the web
+interface - see the
+[wiki](https://github.com/gisogrimm/ovbox/wiki#configuration-of-your-device)
+for details.  You may shutdown the device by simply unplugging the
+power.
 
 **Warning**: The installer script activates the overlay file system to
 prevent a damage of the SD card when powering off the system. This
