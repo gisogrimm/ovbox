@@ -4,6 +4,7 @@
 ep_desc_t::ep_desc_t()
 {
   memset(&ep, 0, sizeof(ep));
+  memset(&localep, 0, sizeof(ep));
   timeout = 0;
   announced = false;
   pingt_min = 10000;
@@ -41,6 +42,13 @@ void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
     endpoints[cid].mode = mode;
     endpoints[cid].timeout = TIMEOUT;
     endpoints[cid].version = rver;
+  }
+}
+
+void endpoint_list_t::cid_setlocalip(callerid_t cid, const endpoint_t& localep)
+{
+  if(cid < MAXEP) {
+    endpoints[cid].localep = localep;
   }
 }
 

@@ -21,6 +21,7 @@ class ep_desc_t {
 public:
   ep_desc_t();
   endpoint_t ep;
+  endpoint_t localep;
   uint32_t timeout;
   bool announced;
   epmode_t mode;
@@ -51,6 +52,7 @@ protected:
   void cid_setpingtime(callerid_t cid, double pingtime);
   void cid_register(callerid_t cid, const endpoint_t& ep, epmode_t mode,
                     const std::string& rver);
+  void cid_setlocalip(callerid_t cid, const endpoint_t& ep);
   uint32_t get_num_clients();
   std::vector<ep_desc_t> endpoints;
 

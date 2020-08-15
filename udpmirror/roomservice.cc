@@ -193,6 +193,11 @@ void udpreceiver_t::ping_and_callerlist_service()
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
               socket.send(buffer, n, endpoints[cid].ep);
+              n = packmsg(buffer, BUFSIZE, secret, epl, PORT_SETLOCALIP,
+                          0,
+                          (const char*)(&(endpoints[epl].localep)),
+                          sizeof(endpoints[epl].localep));
+              socket.send(buffer, n, endpoints[cid].ep);
             }
           }
         }
@@ -266,6 +271,12 @@ void udpreceiver_t::srv()
           if(tms > 0)
             cid_setpingtime(rcallerid, tms);
         } break;
+        case PORT_SETLOCALIP:
+          if(un == sizeof(endpoint_t)) {
+            endpoint_t* localep((endpoint_t*)msg);
+            cid_setlocalip(rcallerid, *localep);
+          }
+          break;
         case PORT_REGISTER:
           // in the register packet the sequence is used to transmit
           // peer2peer flag:

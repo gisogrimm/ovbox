@@ -5,12 +5,12 @@ STARTPORT=$2
 test -z "${NUMCLIENTS}" && NUMCLIENTS=1
 test -z "${STARTPORT}" && STARTPORT=4366
 echo "starting ${NUMCLIENTS} services starting at port ${STARTPORT}"
-killall roomservice
-sleep 1
-killall roomservice
-sleep 1
-killall roomservice
-sleep 1
+#killall roomservice
+#sleep 1
+#killall roomservice
+#sleep 1
+#killall roomservice
+#sleep 1
 hst=$(hostname)
 k=1
 

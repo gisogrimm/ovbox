@@ -1,6 +1,7 @@
 #include "udpsocket.h"
 #include "common.h"
 #include <errno.h>
+#include <ifaddrs.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -72,6 +73,15 @@ port_t udpsocket_t::bind(port_t port, bool loopback)
   return ntohs(my_addr.sin_port);
 }
 
+endpoint_t udpsocket_t::getsockep()
+{
+  endpoint_t my_addr;
+  memset(&my_addr, 0, sizeof(endpoint_t));
+  socklen_t addrlen(sizeof(endpoint_t));
+  getsockname(sockfd, (struct sockaddr*)&my_addr, &addrlen);
+  return my_addr;
+}
+
 size_t udpsocket_t::send(const char* buf, size_t len, int portno)
 {
   if(portno == 0)
@@ -123,14 +133,24 @@ void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
 }
 
 void ovbox_udpsocket_t::send_registration(callerid_t cid, epmode_t mode,
-                                          port_t port)
+                                          port_t port,
+                                          const endpoint_t& localep)
 {
   std::string rver(OVBOXVERSION);
-  size_t buflen(HEADERLEN + rver.size() + 1);
-  char buffer[buflen];
-  size_t n(packmsg(buffer, buflen, secret, cid, PORT_REGISTER, mode,
-                   rver.c_str(), rver.size() + 1));
-  send(buffer, n, port);
+  {
+    size_t buflen(HEADERLEN + rver.size() + 1);
+    char buffer[buflen];
+    size_t n(packmsg(buffer, buflen, secret, cid, PORT_REGISTER, mode,
+                     rver.c_str(), rver.size() + 1));
+    send(buffer, n, port);
+  }
+  {
+    size_t buflen(HEADERLEN + sizeof(endpoint_t));
+    char buffer[buflen];
+    size_t n(packmsg(buffer, buflen, secret, cid, PORT_SETLOCALIP, 0,
+                     (const char*)(&localep), sizeof(endpoint_t)));
+    send(buffer, n, port);
+  }
 }
 
 char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
@@ -199,4 +219,23 @@ std::string getmacaddr()
     retv = ctmp;
   }
   return retv;
+}
+
+endpoint_t getipaddr()
+{
+  endpoint_t my_addr;
+  memset(&my_addr, 0, sizeof(endpoint_t));
+  struct ifaddrs* addrs;
+  getifaddrs(&addrs);
+  struct ifaddrs* tmp = addrs;
+  while(tmp) {
+    if(tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET &&
+       (!(tmp->ifa_flags & IFF_LOOPBACK))) {
+      memcpy(&my_addr, tmp->ifa_addr, sizeof(endpoint_t));
+      return my_addr;
+    }
+    tmp = tmp->ifa_next;
+  }
+  freeifaddrs(addrs);
+  return my_addr;
 }

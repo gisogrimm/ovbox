@@ -48,6 +48,7 @@ private:
   std::thread recthread;
   std::thread pingthread;
   epmode_t mode;
+  endpoint_t localep;
 };
 
 ovboxclient_t::ovboxclient_t(const std::string& desthost, port_t destport,
@@ -65,8 +66,14 @@ ovboxclient_t::ovboxclient_t(const std::string& desthost, port_t destport,
     mode |= B_DOWNMIXONLY;
   if(donotsend_)
     mode |= B_DONOTSEND;
-  remote_server.destination(desthost.c_str());
   local_server.destination("localhost");
+  local_server.bind(recport, true);
+  remote_server.destination(desthost.c_str());
+  remote_server.bind(0, false);
+  localep = getipaddr();
+  localep.sin_port = remote_server.getsockep().sin_port;
+  DEBUG(ep2str(localep));
+  DEBUG(ep2str(remote_server.getsockep()));
   sendthread = std::thread(&ovboxclient_t::sendsrv, this);
   recthread = std::thread(&ovboxclient_t::recsrv, this);
   pingthread = std::thread(&ovboxclient_t::pingservice, this);
@@ -133,12 +140,14 @@ void ovboxclient_t::pingservice()
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
     // send registration to server:
-    remote_server.send_registration(callerid, mode, toport);
+    remote_server.send_registration(callerid, mode, toport, localep);
     // send ping to other peers:
+    size_t ocid(0);
     for(auto ep : endpoints) {
-      if(ep.timeout) {
+      if(ep.timeout && (ocid != callerid)) {
         remote_server.send_ping(callerid, ep.ep);
       }
+      ++ocid;
     }
   }
 }
@@ -195,10 +204,22 @@ void ovboxclient_t::sendsrv()
                 cid_setpingtime(rcallerid, tms);
             }
             break;
+					case PORT_SETLOCALIP:
+            if(un == sizeof(endpoint_t)) {
+              // seq is peer2peer flag:
+              cid_setlocalip(rcallerid, *((endpoint_t*)msg));
+						}
+						break;
           case PORT_LISTCID:
-            if((un == sizeof(endpoint_t)) && (rcallerid != callerid)) {
+            if(un == sizeof(endpoint_t)) {
               // seq is peer2peer flag:
               cid_register(rcallerid, *((endpoint_t*)msg), seq, "");
+              for(auto ep : endpoints) {
+                if(ep.timeout) {
+                  DEBUG(ep2str(ep.ep));
+                  DEBUG(ep2str(ep.localep));
+                }
+              }
             }
             break;
           }
@@ -216,7 +237,6 @@ void ovboxclient_t::sendsrv()
 void ovboxclient_t::recsrv()
 {
   try {
-    local_server.bind(recport, true);
     set_thread_prio(prio);
     char buffer[BUFSIZE];
     char msg[BUFSIZE];
@@ -230,14 +250,18 @@ void ovboxclient_t::recsrv()
           packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
       bool sendtoserver(!(mode & B_PEER2PEER));
       if(mode & B_PEER2PEER) {
-        for(auto ep : endpoints)
+        size_t ocid(0);
+        for(auto ep : endpoints) {
           if(ep.timeout) {
-            if((ep.mode & B_PEER2PEER) && (!(ep.mode & B_DONOTSEND))) {
+            if((ocid != callerid) && (ep.mode & B_PEER2PEER) &&
+               (!(ep.mode & B_DONOTSEND))) {
               remote_server.send(msg, un, ep.ep);
             } else {
               sendtoserver = true;
             }
           }
+          ++ocid;
+        }
       }
       if(sendtoserver) {
         remote_server.send(msg, un, toport);
