@@ -20,6 +20,7 @@ class udpsocket_t {
 public:
   udpsocket_t();
   ~udpsocket_t();
+  void set_timeout_usec(int usec);
   port_t bind(port_t port, bool loopback = false);
   void destination(const char* host);
   size_t send(const char* buf, size_t len, int portno);
@@ -38,11 +39,12 @@ private:
 class ovbox_udpsocket_t : public udpsocket_t {
 public:
   ovbox_udpsocket_t(secret_t secret);
-  void send_ping(callerid_t cid, const endpoint_t& ep);
-  void send_registration(callerid_t cid, epmode_t, port_t port,
+  void send_ping(stage_device_id_t cid, const endpoint_t& ep);
+  void send_registration(stage_device_id_t cid, epmode_t, port_t port,
                          const endpoint_t& localep);
-  char* recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len, callerid_t& cid,
-                     port_t& destport, sequence_t& seq, endpoint_t& addr);
+  char* recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
+                     stage_device_id_t& cid, port_t& destport, sequence_t& seq,
+                     endpoint_t& addr);
   void set_secret(secret_t s) { secret = s; };
 
 protected:

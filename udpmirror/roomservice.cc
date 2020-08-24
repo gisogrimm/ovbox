@@ -15,10 +15,11 @@ CURL* curl;
 class latreport_t {
 public:
   latreport_t() : src(0), dest(0), tmean(0), jitter(0){};
-  latreport_t(callerid_t src_, callerid_t dest_, double tmean_, double jitter_)
+  latreport_t(stage_device_id_t src_, stage_device_id_t dest_, double tmean_,
+              double jitter_)
       : src(src_), dest(dest_), tmean(tmean_), jitter(jitter_){};
-  callerid_t src;
-  callerid_t dest;
+  stage_device_id_t src;
+  stage_device_id_t dest;
   double tmean;
   double jitter;
 };
@@ -34,10 +35,10 @@ public:
   ~udpreceiver_t();
   int portno;
   void srv();
-  void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
-  void announce_connection_lost(callerid_t cid);
-  void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
-                        uint32_t received, uint32_t lost);
+  void announce_new_connection(stage_device_id_t cid, const ep_desc_t& ep);
+  void announce_connection_lost(stage_device_id_t cid);
+  void announce_latency(stage_device_id_t cid, double lmin, double lmean,
+                        double lmax, uint32_t received, uint32_t lost);
   void set_lobbyurl(const std::string& url) { lobbyurl = url; };
   void set_roomname(const std::string& name) { roomname = name; };
 
@@ -87,7 +88,8 @@ void udpreceiver_t::quitwatch()
   socket.close();
 }
 
-void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
+void udpreceiver_t::announce_new_connection(stage_device_id_t cid,
+                                            const ep_desc_t& ep)
 {
   log(portno,
       "new connection for " + std::to_string(cid) + " from " + ep2str(ep.ep) +
@@ -96,14 +98,14 @@ void udpreceiver_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
           ((ep.mode & B_DONOTSEND) ? " donotsend" : "") + " v" + ep.version);
 }
 
-void udpreceiver_t::announce_connection_lost(callerid_t cid)
+void udpreceiver_t::announce_connection_lost(stage_device_id_t cid)
 {
   log(portno, "connection for " + std::to_string(cid) + " lost.");
 }
 
-void udpreceiver_t::announce_latency(callerid_t cid, double lmin, double lmean,
-                                     double lmax, uint32_t received,
-                                     uint32_t lost)
+void udpreceiver_t::announce_latency(stage_device_id_t cid, double lmin,
+                                     double lmean, double lmax,
+                                     uint32_t received, uint32_t lost)
 {
   if(lmean > 0) {
     {
@@ -174,7 +176,7 @@ void udpreceiver_t::ping_and_callerlist_service()
   while(runsession) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
     // send ping message to all connected endpoints:
-    for(callerid_t cid = 0; cid != MAXEP; ++cid) {
+    for(stage_device_id_t cid = 0; cid != MAXEP; ++cid) {
       if(endpoints[cid].timeout) {
         // endpoint is connected
         socket.send_ping(cid, endpoints[cid].ep);
@@ -183,9 +185,9 @@ void udpreceiver_t::ping_and_callerlist_service()
     if(!participantannouncementcnt) {
       // announcement of connected participants to all clients:
       participantannouncementcnt = PARTICIPANTANNOUNCEPERIOD;
-      for(callerid_t cid = 0; cid != MAXEP; ++cid) {
+      for(stage_device_id_t cid = 0; cid != MAXEP; ++cid) {
         if(endpoints[cid].timeout) {
-          for(callerid_t epl = 0; epl != MAXEP; ++epl) {
+          for(stage_device_id_t epl = 0; epl != MAXEP; ++epl) {
             if(endpoints[epl].timeout) {
               // endpoint is alive, send info of epl to cid:
               size_t n = packmsg(buffer, BUFSIZE, secret, epl, PORT_LISTCID,
@@ -193,8 +195,7 @@ void udpreceiver_t::ping_and_callerlist_service()
                                  (const char*)(&(endpoints[epl].ep)),
                                  sizeof(endpoints[epl].ep));
               socket.send(buffer, n, endpoints[cid].ep);
-              n = packmsg(buffer, BUFSIZE, secret, epl, PORT_SETLOCALIP,
-                          0,
+              n = packmsg(buffer, BUFSIZE, secret, epl, PORT_SETLOCALIP, 0,
                           (const char*)(&(endpoints[epl].localep)),
                           sizeof(endpoints[epl].localep));
               socket.send(buffer, n, endpoints[cid].ep);
@@ -213,7 +214,7 @@ void udpreceiver_t::srv()
   char buffer[BUFSIZE];
   log(portno, "Multiplex service started (version " OVBOXVERSION ")");
   endpoint_t sender_endpoint;
-  callerid_t rcallerid;
+  stage_device_id_t rcallerid;
   port_t destport;
   while(runsession) {
     size_t n(BUFSIZE);
@@ -224,7 +225,7 @@ void udpreceiver_t::srv()
     if(msg) {
       // retransmit data:
       if(destport > MAXSPECIALPORT) {
-        for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+        for(stage_device_id_t ep = 0; ep != MAXEP; ++ep) {
           if((ep != rcallerid) && (endpoints[ep].timeout > 0) &&
              (!(endpoints[ep].mode & B_DONOTSEND)) &&
              ((!(endpoints[ep].mode & B_PEER2PEER)) ||
@@ -238,9 +239,9 @@ void udpreceiver_t::srv()
         // this is a control message:
         switch(destport) {
         case PORT_SEQREP:
-          if(un == sizeof(sequence_t) + sizeof(callerid_t)) {
-            callerid_t sender_cid(*(sequence_t*)msg);
-            sequence_t seq(*(sequence_t*)(&(msg[sizeof(callerid_t)])));
+          if(un == sizeof(sequence_t) + sizeof(stage_device_id_t)) {
+            stage_device_id_t sender_cid(*(sequence_t*)msg);
+            sequence_t seq(*(sequence_t*)(&(msg[sizeof(stage_device_id_t)])));
             char ctmp[1024];
             sprintf(ctmp, "sequence error %d sender %d %d", rcallerid,
                     sender_cid, seq);

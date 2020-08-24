@@ -740,6 +740,13 @@ int  RSJresource::as<int> (const int& def) {
     return (atoi (strip_outer_quotes(data).c_str() ) );
 }
 
+// unsigned integer
+template <> inline 
+unsigned int  RSJresource::as<unsigned int> (const unsigned int& def) {
+    if (!exists()) return (def);
+    return (atoll (strip_outer_quotes(data).c_str() ) );
+}
+
 // double
 template <> inline 
 double  RSJresource::as<double> (const double& def) {

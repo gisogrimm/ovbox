@@ -31,6 +31,14 @@ udpsocket_t::~udpsocket_t()
   close();
 }
 
+void udpsocket_t::set_timeout_usec(int usec)
+{
+  struct timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = usec;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+}
+
 void udpsocket_t::close()
 {
   if(isopen)
@@ -120,7 +128,7 @@ std::string ep2str(const endpoint_t& ep)
 
 ovbox_udpsocket_t::ovbox_udpsocket_t(secret_t secret) : secret(secret) {}
 
-void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
+void ovbox_udpsocket_t::send_ping(stage_device_id_t cid, const endpoint_t& ep)
 {
   if(cid >= MAXEP)
     return;
@@ -132,7 +140,7 @@ void ovbox_udpsocket_t::send_ping(callerid_t cid, const endpoint_t& ep)
   send(buffer, n, ep);
 }
 
-void ovbox_udpsocket_t::send_registration(callerid_t cid, epmode_t mode,
+void ovbox_udpsocket_t::send_registration(stage_device_id_t cid, epmode_t mode,
                                           port_t port,
                                           const endpoint_t& localep)
 {
@@ -154,7 +162,7 @@ void ovbox_udpsocket_t::send_registration(callerid_t cid, epmode_t mode,
 }
 
 char* ovbox_udpsocket_t::recv_sec_msg(char* inputbuf, size_t& ilen, size_t& len,
-                                      callerid_t& cid, port_t& destport,
+                                      stage_device_id_t& cid, port_t& destport,
                                       sequence_t& seq, endpoint_t& addr)
 {
   ilen = recvfrom(inputbuf, ilen, addr);

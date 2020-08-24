@@ -44,15 +44,16 @@ public:
   void add_endpoint(const endpoint_t& ep);
 
 protected:
-  virtual void announce_new_connection(callerid_t cid, const ep_desc_t& ep){};
-  virtual void announce_connection_lost(callerid_t cid){};
-  virtual void announce_latency(callerid_t cid, double lmin, double lmean,
-                                double lmax, uint32_t received,
+  virtual void announce_new_connection(stage_device_id_t cid,
+                                       const ep_desc_t& ep){};
+  virtual void announce_connection_lost(stage_device_id_t cid){};
+  virtual void announce_latency(stage_device_id_t cid, double lmin,
+                                double lmean, double lmax, uint32_t received,
                                 uint32_t lost){};
-  void cid_setpingtime(callerid_t cid, double pingtime);
-  void cid_register(callerid_t cid, const endpoint_t& ep, epmode_t mode,
+  void cid_setpingtime(stage_device_id_t cid, double pingtime);
+  void cid_register(stage_device_id_t cid, const endpoint_t& ep, epmode_t mode,
                     const std::string& rver);
-  void cid_setlocalip(callerid_t cid, const endpoint_t& ep);
+  void cid_setlocalip(stage_device_id_t cid, const endpoint_t& ep);
   uint32_t get_num_clients();
   std::vector<ep_desc_t> endpoints;
 

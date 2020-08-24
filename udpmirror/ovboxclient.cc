@@ -11,21 +11,21 @@ class ovboxclient_t : public endpoint_list_t {
 public:
   ovboxclient_t(const std::string& desthost, port_t destport, port_t recport,
                 port_t portoffset, int prio, secret_t secret,
-                callerid_t callerid, bool peer2peer, bool donotsend,
+                stage_device_id_t callerid, bool peer2peer, bool donotsend,
                 bool downmixonly);
   ~ovboxclient_t();
   void run();
-  void announce_new_connection(callerid_t cid, const ep_desc_t& ep);
-  void announce_connection_lost(callerid_t cid);
-  void announce_latency(callerid_t cid, double lmin, double lmean, double lmax,
-                        uint32_t received, uint32_t lost);
-  void add_destination(port_t dest);
+  void announce_new_connection(stage_device_id_t cid, const ep_desc_t& ep);
+  void announce_connection_lost(stage_device_id_t cid);
+  void announce_latency(stage_device_id_t cid, double lmin, double lmean,
+                        double lmax, uint32_t received, uint32_t lost);
+  void add_extraport(port_t dest);
 
 private:
   void sendsrv();
   void recsrv();
   void pingservice();
-  void handle_endpoint_list_update(callerid_t cid, const endpoint_t& ep);
+  void handle_endpoint_list_update(stage_device_id_t cid, const endpoint_t& ep);
   // real time priority:
   const int prio;
   // PIN code to connect to server:
@@ -42,7 +42,7 @@ private:
   // setup:
   port_t portoffset;
   // client/caller identification (aka 'chair' in the lobby system):
-  callerid_t callerid;
+  stage_device_id_t callerid;
   bool runsession;
   std::thread sendthread;
   std::thread recthread;
@@ -53,7 +53,7 @@ private:
 
 ovboxclient_t::ovboxclient_t(const std::string& desthost, port_t destport,
                              port_t recport, port_t portoffset, int prio,
-                             secret_t secret, callerid_t callerid,
+                             secret_t secret, stage_device_id_t callerid,
                              bool peer2peer_, bool donotsend_,
                              bool downmixonly_)
     : prio(prio), secret(secret), remote_server(secret), toport(destport),
@@ -66,14 +66,13 @@ ovboxclient_t::ovboxclient_t(const std::string& desthost, port_t destport,
     mode |= B_DOWNMIXONLY;
   if(donotsend_)
     mode |= B_DONOTSEND;
+  local_server.set_timeout_usec(100000);
   local_server.destination("localhost");
   local_server.bind(recport, true);
   remote_server.destination(desthost.c_str());
   remote_server.bind(0, false);
   localep = getipaddr();
   localep.sin_port = remote_server.getsockep().sin_port;
-  DEBUG(ep2str(localep));
-  DEBUG(ep2str(remote_server.getsockep()));
   sendthread = std::thread(&ovboxclient_t::sendsrv, this);
   recthread = std::thread(&ovboxclient_t::recsrv, this);
   pingthread = std::thread(&ovboxclient_t::pingservice, this);
@@ -84,12 +83,13 @@ ovboxclient_t::~ovboxclient_t()
   runsession = false;
 }
 
-void ovboxclient_t::add_destination(port_t dest)
+void ovboxclient_t::add_extraport(port_t dest)
 {
   xdest.push_back(dest);
 }
 
-void ovboxclient_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
+void ovboxclient_t::announce_new_connection(stage_device_id_t cid,
+                                            const ep_desc_t& ep)
 {
   log(recport,
       "new connection for " + std::to_string(cid) + " from " + ep2str(ep.ep) +
@@ -98,14 +98,14 @@ void ovboxclient_t::announce_new_connection(callerid_t cid, const ep_desc_t& ep)
           ((ep.mode & B_DONOTSEND) ? " donotsend" : "") + " v" + ep.version);
 }
 
-void ovboxclient_t::announce_connection_lost(callerid_t cid)
+void ovboxclient_t::announce_connection_lost(stage_device_id_t cid)
 {
   log(recport, "connection for " + std::to_string(cid) + " lost.");
 }
 
-void ovboxclient_t::announce_latency(callerid_t cid, double lmin, double lmean,
-                                     double lmax, uint32_t received,
-                                     uint32_t lost)
+void ovboxclient_t::announce_latency(stage_device_id_t cid, double lmin,
+                                     double lmean, double lmax,
+                                     uint32_t received, uint32_t lost)
 {
   char ctmp[1024];
   if(lmean > 0) {
@@ -129,7 +129,7 @@ void ovboxclient_t::announce_latency(callerid_t cid, double lmin, double lmean,
   remote_server.send(buffer, n, toport);
 }
 
-void ovboxclient_t::handle_endpoint_list_update(callerid_t cid,
+void ovboxclient_t::handle_endpoint_list_update(stage_device_id_t cid,
                                                 const endpoint_t& ep)
 {
 }
@@ -159,7 +159,7 @@ void ovboxclient_t::sendsrv()
     set_thread_prio(prio);
     char buffer[BUFSIZE];
     endpoint_t sender_endpoint;
-    callerid_t rcallerid;
+    stage_device_id_t rcallerid;
     port_t destport;
     while(runsession) {
       size_t n(BUFSIZE);
@@ -204,22 +204,15 @@ void ovboxclient_t::sendsrv()
                 cid_setpingtime(rcallerid, tms);
             }
             break;
-					case PORT_SETLOCALIP:
+          case PORT_SETLOCALIP:
             if(un == sizeof(endpoint_t)) {
-              // seq is peer2peer flag:
               cid_setlocalip(rcallerid, *((endpoint_t*)msg));
-						}
-						break;
+            }
+            break;
           case PORT_LISTCID:
             if(un == sizeof(endpoint_t)) {
               // seq is peer2peer flag:
               cid_register(rcallerid, *((endpoint_t*)msg), seq, "");
-              for(auto ep : endpoints) {
-                if(ep.timeout) {
-                  DEBUG(ep2str(ep.ep));
-                  DEBUG(ep2str(ep.localep));
-                }
-              }
             }
             break;
           }
@@ -245,26 +238,28 @@ void ovboxclient_t::recsrv()
     sequence_t seq(0);
     while(runsession) {
       ssize_t n = local_server.recvfrom(buffer, BUFSIZE, sender_endpoint);
-      ++seq;
-      size_t un =
-          packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
-      bool sendtoserver(!(mode & B_PEER2PEER));
-      if(mode & B_PEER2PEER) {
-        size_t ocid(0);
-        for(auto ep : endpoints) {
-          if(ep.timeout) {
-            if((ocid != callerid) && (ep.mode & B_PEER2PEER) &&
-               (!(ep.mode & B_DONOTSEND))) {
-              remote_server.send(msg, un, ep.ep);
-            } else {
-              sendtoserver = true;
+      if(n > 0) {
+        ++seq;
+        size_t un =
+            packmsg(msg, BUFSIZE, secret, callerid, recport, seq, buffer, n);
+        bool sendtoserver(!(mode & B_PEER2PEER));
+        if(mode & B_PEER2PEER) {
+          size_t ocid(0);
+          for(auto ep : endpoints) {
+            if(ep.timeout) {
+              if((ocid != callerid) && (ep.mode & B_PEER2PEER) &&
+                 (!(ep.mode & B_DONOTSEND))) {
+                remote_server.send(msg, un, ep.ep);
+              } else {
+                sendtoserver = true;
+              }
             }
+            ++ocid;
           }
-          ++ocid;
         }
-      }
-      if(sendtoserver) {
-        remote_server.send(msg, un, toport);
+        if(sendtoserver) {
+          remote_server.send(msg, un, toport);
+        }
       }
     }
   }
@@ -289,7 +284,7 @@ int main(int argc, char** argv)
     int portoffset(0);
     int prio(55);
     secret_t secret(1234);
-    callerid_t callerid(0);
+    stage_device_id_t callerid(0);
     bool peer2peer(false);
     bool donotsend(false);
     bool downmixonly(false);
@@ -363,7 +358,7 @@ int main(int argc, char** argv)
     ovboxclient_t rec(desthost, destport, recport, portoffset, prio, secret,
                       callerid, peer2peer, donotsend, downmixonly);
     for(auto xs : xdest) {
-      rec.add_destination(xs);
+      rec.add_extraport(xs);
     }
     rec.run();
   }

@@ -32,7 +32,7 @@ endpoint_list_t::~endpoint_list_t()
   statusthread.join();
 }
 
-void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
+void endpoint_list_t::cid_register(stage_device_id_t cid, const endpoint_t& ep,
                                    epmode_t mode, const std::string& rver)
 {
   if(cid < MAXEP) {
@@ -45,14 +45,15 @@ void endpoint_list_t::cid_register(callerid_t cid, const endpoint_t& ep,
   }
 }
 
-void endpoint_list_t::cid_setlocalip(callerid_t cid, const endpoint_t& localep)
+void endpoint_list_t::cid_setlocalip(stage_device_id_t cid,
+                                     const endpoint_t& localep)
 {
   if(cid < MAXEP) {
     endpoints[cid].localep = localep;
   }
 }
 
-void endpoint_list_t::cid_setpingtime(callerid_t cid, double pingtime)
+void endpoint_list_t::cid_setpingtime(stage_device_id_t cid, double pingtime)
 {
   if(cid < MAXEP) {
     endpoints[cid].timeout = TIMEOUT;
@@ -73,7 +74,7 @@ void endpoint_list_t::checkstatus()
   uint32_t statlogcnt(STATLOGPERIOD);
   while(runthread) {
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
-    for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+    for(stage_device_id_t ep = 0; ep != MAXEP; ++ep) {
       if(endpoints[ep].timeout) {
         // bookkeeping of connected endpoints:
         if(!endpoints[ep].announced) {
@@ -93,7 +94,7 @@ void endpoint_list_t::checkstatus()
       // logging of ping statistics:
       statlogcnt = STATLOGPERIOD;
       std::lock_guard<std::mutex> lk(mstat);
-      for(callerid_t ep = 0; ep != MAXEP; ++ep) {
+      for(stage_device_id_t ep = 0; ep != MAXEP; ++ep) {
         if(endpoints[ep].timeout) {
           announce_latency(ep, endpoints[ep].pingt_min,
                            endpoints[ep].pingt_sum /
