@@ -136,6 +136,12 @@ void loop() {
         Serial.print(roty-mroty);
         Serial.print(',');
         Serial.println(rotz-mrotz);
+        Serial.print('A');
+        Serial.print(ax);
+        Serial.print(',');
+        Serial.print(ay);
+        Serial.print(',');
+        Serial.println(az);
         mrotx = (1.0-mrotcoeff)*mrotx+mrotcoeff*rotx;
         mroty = (1.0-mrotcoeff)*mroty+mrotcoeff*roty;
         mrotz = (1.0-mrotcoeff)*mrotz+mrotcoeff*rotz;
