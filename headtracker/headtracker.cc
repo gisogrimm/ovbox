@@ -172,14 +172,15 @@ int main(int argc, char **argv) {
   devices.push_back("/dev/ttyUSB1");
   devices.push_back("/dev/ttyUSB2");
   std::string path("/scene/master/zyxeuler");
+  std::string accpath("/acc");
   std::string calib0path("/scene/ego/0/ap1/sndfile/loop");
   std::string calib1path("/scene/ego/0/ap0/sndfile/loop");
   //
-  const char *options = "p:r:1:0:a:s:h";
-  struct option long_options[] = {{"port", 1, 0, 'p'},   {"rpath", 1, 0, 'r'},
-                                  {"c1path", 1, 0, '1'}, {"c0path", 1, 0, '0'},
-                                  {"axis", 1, 0, 'a'},   {"scale", 1, 0, 's'},
-                                  {"help", 0, 0, 'h'},   {0, 0, 0, 0}};
+  const char *options = "p:r:1:0:a:s:hc:";
+  struct option long_options[] = {
+      {"port", 1, 0, 'p'},   {"rpath", 1, 0, 'r'},   {"c1path", 1, 0, '1'},
+      {"c0path", 1, 0, '0'}, {"axis", 1, 0, 'a'},    {"scale", 1, 0, 's'},
+      {"help", 0, 0, 'h'},   {"accpath", 1, 0, 'c'}, {0, 0, 0, 0}};
   int opt(0);
   int option_index(0);
   while ((opt = getopt_long(argc, argv, options, long_options,
@@ -196,6 +197,9 @@ int main(int argc, char **argv) {
       break;
     case 'r':
       path = optarg;
+      break;
+    case 'c':
+      accpath = optarg;
       break;
     case 's':
       scale = atof(optarg);
@@ -228,7 +232,18 @@ int main(int argc, char **argv) {
       while (true) {
         std::string l(dev.readline(1024, 10));
         if (l.size()) {
-          if (l[0] == 'G') {
+          switch (l[0]) {
+          case 'A': {
+            l = l.substr(1);
+            std::string::size_type sz;
+            data[0] = std::stod(l, &sz);
+            l = l.substr(sz + 1);
+            data[1] = std::stod(l, &sz);
+            l = l.substr(sz + 1);
+            data[2] = std::stod(l);
+            lo_send(loa, accpath.c_str(), "fff", data[0], data[1], data[2]);
+          } break;
+          case 'G': {
             l = l.substr(1);
             std::string::size_type sz;
             data[0] = std::stod(l, &sz);
@@ -238,15 +253,15 @@ int main(int argc, char **argv) {
             data[2] = std::stod(l);
             lo_send(loa, path.c_str(), "fff", (float)(scale * data[ax]), 0.0f,
                     0.0f);
-          } else {
-            if (l[0] == 'C') {
-              if (l.size() > 1) {
-                if ((l[1] == '1') && calib1path.size())
-                  lo_send(loa, calib1path.c_str(), "i", 1);
-                if ((l[1] == '0') && calib0path.size())
-                  lo_send(loa, calib0path.c_str(), "i", 1);
-              }
+          } break;
+          case 'C': {
+            if (l.size() > 1) {
+              if ((l[1] == '1') && calib1path.size())
+                lo_send(loa, calib1path.c_str(), "i", 1);
+              if ((l[1] == '0') && calib0path.size())
+                lo_send(loa, calib0path.c_str(), "i", 1);
             }
+          } break;
           }
         }
       }
