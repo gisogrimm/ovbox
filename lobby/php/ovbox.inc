@@ -321,6 +321,16 @@ function rm_old_rooms()
   }
 }
 
+function rm_old_unclaimed_devices()
+{
+  $alldevs = list_db('device');
+  foreach( $alldevs as $dev => $rprop ){
+    if( empty($rprop['owner']) && ($rprop['age'] > 24*3600) ){
+      rm_device($dev);
+    }
+  }
+}
+
 function get_device( $user )
 {
   $device = '';
@@ -1123,23 +1133,25 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
       $rdevprop = get_properties($dev, 'device');
       $issender = issender($rdevprop);
       $latdisp = '';
-      if( $deviceprop['peer2peer'] && $rdevprop['peer2peer'] ){
-        $latkey = $chair.'-'.$mychair;
-        if( array_key_exists($latkey,$rprop['lat']) ){
-          // only display values from last 15 minutes:
-          if( time()-$rprop['lat'][$latkey]['access'] < 900 ){
-            $latdisp = sprintf(' %1.1fms ',
-            0.5*$rprop['lat'][$latkey]['lat']+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+      if( $mychair != $chair ){
+        if( $deviceprop['peer2peer'] && $rdevprop['peer2peer'] ){
+          $latkey = $chair.'-'.$mychair;
+          if( array_key_exists($latkey,$rprop['lat']) ){
+            // only display values from last 15 minutes:
+            if( time()-$rprop['lat'][$latkey]['access'] < 900 ){
+              $latdisp = sprintf(' %1.1fms ',
+              0.5*$rprop['lat'][$latkey]['lat']+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+            }
           }
-        }
-      }else{
-        $latkey1 = $chair.'-200';
-        $latkey2 = $mychair.'-200';
-        if( array_key_exists($chair.'-200',$rprop['lat']) && array_key_exists($mychair.'-200',$rprop['lat']) && ($dev != $device)){
-          // only display values from last 15 minutes:
-          if( time()-$rprop['lat'][$latkey1]['access'] < 900 ){
-            $latdisp = sprintf(' %1.1fms ',
-            0.5*($rprop['lat'][$latkey1]['lat']+$rprop['lat'][$latkey2]['lat'])+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+        }else{
+          $latkey1 = $chair.'-200';
+          $latkey2 = $mychair.'-200';
+          if( array_key_exists($chair.'-200',$rprop['lat']) && array_key_exists($mychair.'-200',$rprop['lat']) && ($dev != $device)){
+            // only display values from last 15 minutes:
+            if( time()-$rprop['lat'][$latkey1]['access'] < 900 ){
+              $latdisp = sprintf(' %1.1fms ',
+              0.5*($rprop['lat'][$latkey1]['lat']+$rprop['lat'][$latkey2]['lat'])+$rdevprop['jittersend']+$deviceprop['jitterreceive']+10);
+            }
           }
         }
       }
@@ -2071,7 +2083,12 @@ function get_room_session( $device, $devhash )
   $rendersettings['jitter'] = array('send'=>$devprop['jittersend'],'receive'=>$devprop['jitterreceive']);
   $rendersettings['outputport1']=$devprop['outputport1'];
   $rendersettings['outputport2']=$devprop['outputport2'];
-  $rendersettings['xport'] = $devprop['xport'];
+  $xp = json_decode($devprop['xport']);
+  $nxp = array();
+  foreach($xp as $src=>$dest){
+    $nxp[] = array($src,$dest);
+  }
+  $rendersettings['xport'] = $nxp;
   $rendersettings['peer2peer'] = $devprop['peer2peer'];
   $rendersettings['renderreverb'] = $devprop['reverb'];
   $rendersettings['mastergain'] = pow(10.0,0.05*$devprop['mastergain']);

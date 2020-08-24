@@ -62,6 +62,9 @@ if ($user == 'device') {
         }
     }
     if( isset($_GET['ovclient']) ){
+        $host = '';
+        if( isset($_GET['host']) )
+            $host = $_GET['host'];
         $device = $_GET['ovclient'];
         if( !empty($device) ){
             $devhash = '';
@@ -76,6 +79,7 @@ if ($user == 'device') {
             fclose($putdata);
             $jsdev = json_decode($jsdev,true);
             modify_device_prop( $device, 'alsadevs', $jsdev );
+            modify_device_prop( $device, 'host', $host );
         }
     }
     die();
@@ -126,6 +130,11 @@ if( $user == 'admin' ){
     if( isset($_GET['rmoldrooms'])){
         rm_old_rooms();
         header( "Location: /#rooms" );
+        die();
+    }
+    if( isset($_GET['rmolddevs'])){
+        rm_old_unclaimed_devices();
+        header( "Location: /#devices" );
         die();
     }
     if( isset($_GET['setgrpstyle'])){
@@ -181,6 +190,7 @@ if( $user == 'admin' ){
     print_head( $user );
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
     html_admin_db('device');
+    echo '<form><input type="hidden" name="rmolddevs"/><button>Remove inactive unclaimed devices</button></form>';
     html_admin_db('room');
     echo '<form><input type="hidden" name="rmoldrooms"/><button>Remove inactive rooms</button></form>';
     html_admin_users();
