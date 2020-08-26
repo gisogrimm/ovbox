@@ -31,6 +31,7 @@ function defaults( $type )
     'peer2peer'=>true,
     'donotsend'=>false,
     'secrec'=>0,
+    'xrecport'=>array(),
     'position'=>array('x'=>0,'y'=>0,'z'=>0),
     'orientation'=>array('z'=>0,'y'=>0,'x'=>0),
     'srcshiftxyz'=>'0 0 0',
@@ -2011,6 +2012,17 @@ function html_show_device( $user, $device, $devprop )
   $el->setAttribute('max','100');
   $el->setAttribute('step','1');
   $el->setAttribute('value',$devprop['secrec']);
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('label'));
+  $el->setAttribute('for','xrecport');
+  $el->appendChild($doc->createTextNode('additional UDP ports forwarded to other peers (space separated list): '));
+  $div->appendChild($doc->createElement('br'));
+  $el = $div->appendChild($doc->createElement('input'));
+  $el->setAttribute('id','xrecport');
+  $el->setAttribute('name','xrecport');
+  $el->setAttribute('type','text');
+  $el->setAttribute('pattern','[0-9 ]*');
+  $el->setAttribute('value',implode(" ",$devprop['xrecport']));
   // save:
   $form->appendChild($doc->createElement('button'))->appendChild($doc->createTextNode('Save'));;
   $inp = $form->appendChild($doc->createElement('input'));
@@ -2095,6 +2107,7 @@ function get_room_session( $device, $devhash )
   $rendersettings['rectype'] = $devprop['rectype'];
   $rendersettings['secrec'] = $devprop['secrec'];
   $rendersettings['rawmode'] = $devprop['rawmode'];
+  $rendersettings['xrecport'] = $devprop['xrecport'];
   $rendersettings['stagedevid'] = 0;
   $audio = array();
   $audio['driver'] = 'jack';
@@ -2110,7 +2123,6 @@ function get_room_session( $device, $devhash )
       $rendersettings['stagedevid'] = $devprop['chair'];
       $room['size'] = array('x'=>$roomprop['sx'],'y'=>$roomprop['sy'],'z'=>$roomprop['sz']);
       $roomurl = explode( ":", $devprop['room'] );
-      
       $room['host'] = $roomurl[0];
       $room['port'] = $roomurl[1];
       $room['pin'] = $roomprop['pin'];

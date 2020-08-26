@@ -297,6 +297,8 @@ if( isset($_GET['setdevprop']) ){
         set_getprop($prop,'jackrate');
         set_getprop($prop,'jackperiod');
         set_getprop($prop,'jackbuffers');
+        if( isset($_GET['xrecport']) )
+            $prop['xrecport'] = explode( " ", $_GET['xrecport'] );
         set_properties( $device, 'device', $prop );
     }
     header( "Location: /" );
