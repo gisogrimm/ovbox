@@ -1735,8 +1735,8 @@ function html_show_device( $user, $device, $devprop )
   $div->setAttribute('class','devprop');
   $div->setAttribute('id','sndcardsettings');
   $div->setAttribute('style','display: none;');
-  $div->appendChild($doc->createTextNode('Changes in this section will be applied only after restarting your ov-client.'));
-  $div->appendChild($doc->createElement('br'));
+  //$div->appendChild($doc->createTextNode('Changes in this section will be applied only after restarting your ovbox.'));
+  //$div->appendChild($doc->createElement('br'));
   $div->appendChild($doc->createTextNode('Sound card:'));
   $div->appendChild($doc->createElement('br'));
   // jack device:
