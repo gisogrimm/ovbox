@@ -163,7 +163,7 @@ void app_usage(const std::string &app_name, struct option *opt,
 }
 
 int main(int argc, char **argv) {
-  uint32_t devidx;
+  uint32_t devidx(0);
   unsigned int ax(1);
   double scale(1.0);
   std::string port("9877");
