@@ -4,6 +4,12 @@ The installation instructions are probably incomplete, however, they may
 give a rough idea of the steps involved. Any comments and improvements are
 welcome!
 
+To use the ovbox after successful installation (e.g., for connecting
+with other users), you will need an account on the configuration
+frontend
+[http://box.orlandoviols.com/](http://box.orlandoviols.com/). To get
+an account, please send me an email to `info(at)orlandoviols.com`.
+
 ## Download and install raspbian
 
 Download the Raspberry Pi OS image. The 'Lite' version is sufficient, since the system will be headless:
