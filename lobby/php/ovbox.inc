@@ -18,6 +18,7 @@ function defaults( $type )
     'access'=>0,
     'label'=>'',
     'owner'=>'',
+    'version'=>'',
     'selfmonitor'=>true,
     'egogain'=>0,
     'host'=>'',
@@ -1070,7 +1071,7 @@ function get_group_users( $group )
 function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop, $usergroups )
 {
   $rprop = get_room_prop( $room );
-  if( ($rprop['age'] < 660) &&
+  if( ($rprop['age'] < 340) &&
   ((!$rprop['private']) || ($rprop['owner']==$user)) &&
   ($userprop['seesall'] || ($rprop['owner']==$user) || in_array($rprop['group'],$usergroups)) &&
   (empty($rprop['group']) || (in_array($rprop['group'],$usergroups)))
@@ -1389,7 +1390,7 @@ function html_show_room( $room, $device, $deviceprop, $inroom, $user, $userprop,
   }
 }
 
-function html_admin_db($type)
+function html_admin_db($type, $showfields = array())
 {
   $sortprop = get_properties('list','sortkey');
   $devs = list_db($type);
@@ -1413,14 +1414,17 @@ function html_admin_db($type)
   $a = $tr->appendChild($doc->createElement('th'))->appendChild($doc->createElement('a'));
   $a->setAttribute('href','?sortby=age&category='.$type);
   $a->appendChild($doc->createTextNode('age'));
+  foreach( $showfields as $field )
+    $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode($field));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('owner'));
   $tr->appendChild($doc->createElement('th'))->appendChild($doc->createTextNode('label'));
   foreach( $devs as $dev=>$dprop ){
     $tr = $tab->appendChild($doc->createElement('tr'));
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dev));
     $age = numage2str($dprop['age']);
-
     $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($age));
+    foreach( $showfields as $field )
+      $tr->appendChild($doc->createElement('td'))->appendChild($doc->createTextNode($dprop[$field]));
     // user:
     $td = $tr->appendChild($doc->createElement('td'));
     $inp = $td->appendChild($doc->createElement('select'));

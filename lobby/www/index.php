@@ -82,6 +82,10 @@ if ($user == 'device') {
             modify_device_prop( $device, 'host', $host );
         }
     }
+    if( isset($_GET['setver']) && isset($_GET['ver'])){
+        $device = $_GET['setver'];
+        modify_device_prop($device,'version', $_GET['ver']);
+    }
     die();
 }
 
@@ -189,7 +193,7 @@ if( $user == 'admin' ){
     }
     print_head( $user );
     echo '<input type="button" onclick="location.replace(\'/\');" value="Refresh"/>';
-    html_admin_db('device');
+    html_admin_db('device',array('version'));
     echo '<form><input type="hidden" name="rmolddevs"/><button>Remove inactive unclaimed devices</button></form>';
     html_admin_db('room');
     echo '<form><input type="hidden" name="rmoldrooms"/><button>Remove inactive rooms</button></form>';
