@@ -139,6 +139,23 @@ std::string get_device_info(std::string url, const std::string& device,
   return retv;
 }
 
+void device_init_ver(std::string url, const std::string& device)
+{
+  struct webCURL::MemoryStruct chunk;
+  chunk.memory =
+      (char*)malloc(1); /* will be grown as needed by the realloc above */
+  chunk.size = 0;       /* no data at this point */
+  url += "?setver=" + device + "&ver=ovbox-" + OVBOXVERSION;
+  curl_easy_reset(curl);
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(curl, CURLOPT_USERPWD, "device:device");
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, webCURL::WriteMemoryCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&chunk);
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+  curl_easy_perform(curl);
+  free(chunk.memory);
+}
+
 jacksettings_t get_device_init(std::string url, const std::string& device)
 {
   std::vector<snddevname_t> alsadevs(listdev());
@@ -240,6 +257,7 @@ int main(int argc, char** argv)
     std::string hash;
     FILE* h_pipe(NULL);
     FILE* h_pipe_jack(NULL);
+    device_init_ver(lobby, device);
     jacksettings_t jacks(get_device_init(lobby, device));
     if((jacks.device.size() > 0) && (jacks.device != "manual")) {
       char cmd[1024];
