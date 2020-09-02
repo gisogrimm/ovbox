@@ -13,10 +13,25 @@ body {
 }
 .mixerstrip {
     width: 100%;
+    background-color: #a0a0ff40;
+    margin: 8px;
+    padding: 8px;
+}
+.mixerego {
+    background-color: #ffa0a040;
+}
+.mixerother {
+    background-color: #ffffff40;
+}
+.gaintxtfader {
+    -webkit-appearance: none;
+    width: 9%;
+    height: 25px;
+    border-radius: 5px;
 }
 .fader {
     -webkit-appearance: none;
-    width: 100%;
+    width: 88%;
     height: 35px;
     border-radius: 5px;  
     background: #d3d3d3;
@@ -54,7 +69,7 @@ button {
     font-size: 28px;
 }
 .level {
-    width: 100%;
+    width: 88%;
     height: 35px;
     border-radius: 5px;  
     background: #d3d3d3;
