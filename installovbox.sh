@@ -8,13 +8,17 @@
     # install dependencies:
     sudo -E apt update
     sudo -E apt upgrade --assume-yes
-    sudo -E apt install --assume-yes git zita-njbridge jackd2 liblo-dev nodejs libcurl4-openssl-dev build-essential libxml++2.6-dev libwebkit2gtk-4.0-dev libasound2-dev libboost-all-dev libcairomm-1.0-dev libeigen3-dev libfftw3-dev libfftw3-double3 libfftw3-single3 libgsl-dev libgtkmm-3.0-dev libgtksourceviewmm-3.0-dev libjack-jackd2-dev libltc-dev libmatio-dev libsndfile1-dev imagemagick libsamplerate0-dev
+    sudo -E apt install --no-install-recommends --assume-yes git zita-njbridge jackd2 liblo-dev nodejs libcurl4-openssl-dev build-essential libxml++2.6-dev libwebkit2gtk-4.0-dev libasound2-dev libboost-all-dev libcairomm-1.0-dev libeigen3-dev libfftw3-dev libfftw3-double3 libfftw3-single3 libgsl-dev libgtkmm-3.0-dev libgtksourceviewmm-3.0-dev libjack-jackd2-dev libltc-dev libmatio-dev libsndfile1-dev imagemagick libsamplerate0-dev
 
     # clone and install TASCAR acoustic simulator repository:
     test -e tascar || git clone https://github.com/gisogrimm/tascar.git
     (
 	cd tascar
-	make
+	make -j 4 libtascar
+	make -j 4 apps
+	make -j 4 plugins
+	make -j 4 gui
+
 	sudo make install
     )
 
