@@ -224,7 +224,7 @@ int main(int argc, char** argv)
     curl = curl_easy_init();
     if(!curl)
       throw ErrMsg("Unable to initialize curl");
-    std::string lobby("http://box.orlandoviols.com/");
+    std::string lobby("https://oldbox.orlandoviols.com/");
     std::string device(getmacaddr());
     double gracetime(10);
     const char* options = "d:hl:g:";
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
                              &option_index)) != -1) {
       switch(opt) {
       case 'h':
-        app_usage("mplx_client", long_options, "");
+        app_usage("devconfigclient", long_options, "");
         return 0;
       case 'd':
         device = optarg;

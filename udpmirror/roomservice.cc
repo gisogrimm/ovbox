@@ -315,7 +315,7 @@ int main(int argc, char** argv)
     int portno(0);
     int prio(55);
     std::string roomname;
-    std::string lobby("http://box.orlandoviols.com");
+    std::string lobby("https://oldbox.orlandoviols.com");
     const char* options = "p:qr:hvn:l:";
     struct option long_options[] = {
         {"rtprio", 1, 0, 'r'},   {"quiet", 0, 0, 'q'}, {"port", 1, 0, 'p'},
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
                              &option_index)) != -1) {
       switch(opt) {
       case 'h':
-        app_usage("mplx_server", long_options, "");
+        app_usage("roomservice", long_options, "");
         return 0;
       case 'q':
         verbose = 0;
