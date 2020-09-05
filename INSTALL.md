@@ -85,24 +85,40 @@ sudo shutdown -r now
 
 If you plan to install the 'ovbox' system on a x86 64 bit Ubuntu LTS
 system (other debian based systems may also work), it is not
-recommended to use the installer described above. Instead, first
-install the TASCAR engine following the instructions at
-[http://install.tascar.org/](http://install.tascar.org/). Then, in a
-terminal, type:
+recommended to use the installer described above.
+
+In Ubuntu 20.04:
+
+    wget -qO- https://apt.hoertech.de/openmha-packaging.pub | sudo apt-key add -
+    sudo apt-add-repository 'deb [arch=amd64] http://apt.hoertech.de focal universe'
+
+In Ubuntu 18.04:
+
+    wget -qO- https://apt.hoertech.de/openmha-packaging.pub | sudo apt-key add -
+    sudo apt-add-repository 'deb [arch=amd64] http://apt.hoertech.de bionic universe'
+
+In Ubuntu 16.04:
+
+    wget -qO- https://apt.hoertech.de/openmha-packaging.pub | sudo apt-key add -
+    sudo apt-add-repository 'deb [arch=amd64] http://apt.hoertech.de xenial universe'
+
+In Debian Buster on ARM (Raspberry Pi):
+
+    wget -qO- https://apt.hoertech.de/openmha-packaging.pub | sudo apt-key add -
+    (echo "";echo "deb [arch=armhf] http://apt.hoertech.de bionic universe")|sudo tee -a /etc/apt/sources.list
+
+
+Then install the ov-client and all dependendies with
 
 ````
 sudo apt update
-sudo apt install --assume-yes git zita-njbridge liblo-dev nodejs libcurl4-openssl-dev build-essential
-git clone http://github.com/gisogrimm/ovbox
-make -C ovbox
+sudo apt install --assume-yes ovclient
 ````
 
-On the desktop, to start the system, first start jack (e.g., using
-qjackctl) with your preferred audio device. Then type:
+To start the system, open a terminal and type:
 
 ````
-cd ovbox/cfg
-../udpmirror/devconfigclient
+ov-client
 ````
 
 You may now use the jack ports with your preferred audio
