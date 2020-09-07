@@ -112,7 +112,7 @@ Then install the ov-client and all dependendies with
 
 ````
 sudo apt update
-sudo apt install --assume-yes ovclient
+sudo apt install --assume-yes ov-client
 ````
 
 To start the system, open a terminal and type:
