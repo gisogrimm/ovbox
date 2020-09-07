@@ -17,7 +17,7 @@ of the digital stage and ORLANDOviols audio render client.
 
 For installation instructions see file [INSTALL.md](INSTALL.md).
 
-Once your installation is ready you may wish to get an account at box.orlandoviols.com - in that case please contact us via e-mail.
+Once your installation is ready you may create an account at box.orlandoviols.com.
 
 ## User manual
 
@@ -112,94 +112,6 @@ For a description of our "House of Consort" (a virtual building with
 lots of rooms to play music), see [vision.md](doc/vision.md) (this is
 not a vision anymore). If you would like to get access to our "House
 of Consort", please contact us via email.
-
-
-## Starting the tools
-
-Normally the tools are started automatically after booting the system.
-For debugging for when installed on a desktop PC, you may want to start
-them manually.
-
-On our boxes, TASCAR is not only used for virtual acoustic simulation,
-but also for the whole session management. Essentially, on each client
-these commands are started:
-
-````
-jackd --sync -P 40 -d alsa -d hw:1 -r 48000 -p 96 -n 2
-````
-
-This starts the audio backend. `--sync` is required for delay
-optimization, since jackd2 uses one extra block in multi-threading
-mode. `-P 40` sets realtime priority - this can be adjusted,
-especially on realtime patched kernels, to the system requirements and
-potential rtirq settings. `-d alsa` selects ALSA driver. `-d hw:US2x2`
-is the TASCAM US2x2 audio device. `-r 48000` is the sampling
-rate. Again, for delay optimization it is advisable to use a period
-size which is a multiple of 1 ms, since USB audio protocol transmits
-1ms chunks. To allow this, a sampling rate of 48000 Hz is preferred
-over 44100 Hz. `-p 96` sets the fragment size to 2 ms. `-n 2` sets to
-use two buffers (which is the default anyway).
-
-If you are using jackd2 with dbus enabled, but your system is running
-as a headless system, you should deactivate audio card reservation by
-setting the environment variable `JACK_NO_AUDIO_RESERVATION=1`:
-
-````
-JACK_NO_AUDIO_RESERVATION=1 jackd --sync -P 40 -d alsa -d hw:1 -r 48000 -p 96 -n 2
-````
-
-Alternatively you may compile your own jackd with dbus deactivated.
-
-
-In folder `cfg`, start the session management tool:
-````
-cd cfg
-../udpmirror/devconfigclient
-````
-
-This starts the multiplexer/tunnel client. It will connect with our
-session management service at http://box.orlandoviols.com/ (this can
-be changed with the `-l` flag).
-
-Upon session registration, this will start a TASCAR session, with
-something like these network clients (details will depend on your
-configuration):
-
-````
-../udpmirror/ovboxclient -s 8367365 -d 123.23.12.45 -p 4367 -c 0 -l 4464 -2
-zita-n2j --chan 1 --jname Marthe --buff 15 0.0.0.0 4466
-zita-n2j --chan 1 --jname Frauke --buff 17 0.0.0.0 4468
-zita-n2j --chan 1 --jname Hille --buff 19 0.0.0.0 4470
-zita-n2j --chan 1 --jname Claas --buff 14 0.0.0.0 4472
-````
-
-These are the real audio clients. The `ovboxclient` will distribute
-UDP messages from the server to these clients. The output of these
-clients can then used in jack for mixing (in our case spatialization
-with TASCAR, but any other panning/mixing could be possible). The
-jitter buffer is adjusted manually to the individual network quality -
-this should be replaced by a better interface in the future.
-
-````
-zita-j2n --chan 1 --jname sender --16bit 127.0.0.1 4464
-````
-
-This is the tool which sends the local microphone signal to the local
-UDP port of `mplx_client`, which will forward it to the server (or
-other clients).
-
-In addition, some jack ports need to be connected:
-
-````
-jack_connect Marthe:out_1 render.scene:Marthe.0.0
-jack_connect Frauke:out_1 render.scene:Frauke.0.0
-jack_connect Hille:out_1 render.scene:Hille.0.0
-jack_connect Claas:out_1 render.scene:Claas.0.0
-jack_connect system:capture_1 sender:in_1
-````
-Here, `render.scene` is the TASCAR scene, which could be replaced by
-another mixer or simply by using the hardware outputs directly. The
-last line connects the first hardware input channel with the sender.
 
 ## udp tunnel tools
 
