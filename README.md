@@ -25,7 +25,9 @@ A user manual for the complete system can be found on the [wiki](https://github.
 
 ## Tested hardware components
 
-Here are the shopping lists we use - obviously these can be obtained from any electronics/music store:
+Here are the shopping lists we use - obviously these can be obtained
+from any electronics/music store. These are just recommendation, other
+hardware may also work or perform even better:
 
 **Raspberry Pi etc.:** [Reichelt](https://www.reichelt.de/my/1693204) (approx. 67 EUR)
 
@@ -36,7 +38,7 @@ Or from berrybase:
 [case](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/raspberry-swag/offizielles-geh-228-use-f-252-r-raspberry-pi-4-schwarz/grau) and
 [Raspberry Pi 4B](https://www.berrybase.de/raspberry-pi-co/raspberry-pi/boards/raspberry-pi-4-computer-modell-b-2gb-ram)
 
-**Sound card, mic, etc.:** [Thomann](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 185 EUR)
+**Sound card, mic, etc.:** [Thomann](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 209 EUR)
 
 
 Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
