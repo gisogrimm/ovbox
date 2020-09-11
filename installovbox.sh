@@ -5,22 +5,13 @@
 
     export DEBIAN_FRONTEND=noninteractive
 
+    wget -qO- https://apt.hoertech.de/openmha-packaging.pub | sudo apt-key add -
+(echo "";echo "deb [arch=armhf] http://apt.hoertech.de bionic universe")|sudo tee -a /etc/apt/sources.list
+
     # install dependencies:
     sudo -E apt update
     sudo -E apt upgrade --assume-yes
-    sudo -E apt install --no-install-recommends --assume-yes git zita-njbridge jackd2 liblo-dev nodejs libcurl4-openssl-dev build-essential libxml++2.6-dev libwebkit2gtk-4.0-dev libasound2-dev libboost-all-dev libcairomm-1.0-dev libeigen3-dev libfftw3-dev libfftw3-double3 libfftw3-single3 libgsl-dev libgtkmm-3.0-dev libgtksourceviewmm-3.0-dev libjack-jackd2-dev libltc-dev libmatio-dev libsndfile1-dev imagemagick libsamplerate0-dev
-
-    # clone and install TASCAR acoustic simulator repository:
-    test -e tascar || git clone https://github.com/gisogrimm/tascar.git
-    (
-	cd tascar
-	make -j 4 libtascar
-	make -j 4 apps
-	make -j 4 plugins
-	make -j 4 gui
-
-	sudo make install
-    )
+    sudo -E apt install --no-install-recommends --assume-yes ov-client
 
     # install user to run the scripts - do not provide root priviledges:
     sudo useradd -m -G audio,dialout ov
@@ -43,10 +34,6 @@
     # setup host name
     echo ovbox | sudo tee /etc/hostname
     sudo sed -i "s/127.0.1.1.*raspberry/127.0.1.1\tovbox/g" /etc/hosts
-
-    # clone ovbox repo if not yet available:
-    sudo su -l ov -c "test -e ov-client || git clone http://github.com/gisogrimm/ov-client"
-    sudo su -l ov -c "make -C ov-client"
 
     # activate overlay image to avoid damage of the SD card upon power off:
     sudo raspi-config nonint enable_overlayfs
