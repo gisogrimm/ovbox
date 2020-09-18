@@ -7,10 +7,42 @@ welcome!
 To use the ovbox after successful installation (e.g., for connecting
 with other users), you will need an account on the configuration
 frontend
-[http://box.orlandoviols.com/](http://box.orlandoviols.com/). To get
-an account, please send me an email to `info(at)orlandoviols.com`.
+[https://box.orlandoviols.com/](https://box.orlandoviols.com/).
 
-## Download and install raspbian
+## Option 1: Download pre-configured raspios image
+
+Download the modified installer image from
+[https://box.orlandoviols.com/2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.zip](https://box.orlandoviols.com/2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.zip)
+and unpack it.
+
+The md5sums of the packed and unpacked files are:
+````
+3cfae32b88b5d4753fc5bf46d5dd3ab9  2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.img
+22ee5cc2caa6147f26a38fb7822f1698  2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.zip
+````
+
+Now with the Raspberry Pi imager, choose the image file by clicking
+"CHOOSE OS" and "Use custom". Select the file
+`2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.img`. Select
+the SD card and write to the card.
+
+Before booting your Raspberry Pi, please make sure that
+
+- it is connected to the internet with a cable
+- a class compliant USB sound card is connected
+- headphones are connected to the USB sound card
+- the new SD card is inserted
+- all HDMI cables are disconnected
+
+Now you can power on the Raspberry Pi. After approximately 5 minutes,
+you should hear an announcement in the headphones, and you can proceed
+with the registration of the device
+[wiki](https://github.com/gisogrimm/ovbox/wiki#configuration-of-your-device).
+
+
+## Option 2: Install with installer script
+
+### Download and install raspbian
 
 Download the Raspberry Pi OS image. The 'Lite' version is sufficient, since the system will be headless:
 
@@ -19,7 +51,7 @@ Download the Raspberry Pi OS image. The 'Lite' version is sufficient, since the 
 If you use the 'Raspberry Pi Imager', choose 'Raspberry Pi OS (other)', 
 then  'Raspberry Pi OS Lite (32-bit)'.
 
-### a) headless installation
+#### a) headless installation
 
 To enable ssh access in a headless environment (no screen connected to the Pi), follow these instructions:
 [https://www.raspberrypi.org/documentation/remote-access/ssh/](https://www.raspberrypi.org/documentation/remote-access/ssh/). Essentially you need to create a file `ssh` in the `/boot` partition, e.g. with
@@ -35,13 +67,13 @@ ssh pi@raspberrypi
 ````
 The default password is `raspberry`. This needs to be changed after first boot; to change the password, type `passwd`.
 
-### b) installation via screen
+#### b) installation via screen
 
 Connect a screen (you will need a micro-HDMI cable) and a keyboard. 
 Login as user 'pi'. Please note that the audio device numbering may change
 when connecting an HDMI screen.
 
-## ovbox installer script
+### ovbox installer script
 
 At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take about one hour to run. To use the installer script, type these commands as user pi:
 ````
