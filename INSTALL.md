@@ -4,9 +4,9 @@ The installation instructions are probably incomplete, however, they may
 give a rough idea of the steps involved. Any comments and improvements are
 welcome!
 
-To use the ovbox after successful installation (e.g., for connecting
-with other users), you will need an account on the configuration
-frontend
+To use the ovbox hardware or ov-client desktop application after
+successful installation (e.g., for connecting with other users), you
+will need an account on the configuration frontend
 [https://box.orlandoviols.com/](https://box.orlandoviols.com/).
 
 ## Option 1: Download pre-configured raspios image
@@ -77,8 +77,8 @@ when connecting an HDMI screen.
 
 At this point you may try to use our installer script. If everything goes well, you will have a ready-to-use ovbox. It may take about one hour to run. To use the installer script, type these commands as user pi:
 ````
-wget https://github.com/gisogrimm/ovbox/raw/master/installovbox.sh
-. installovbox.sh
+wget https://github.com/gisogrimm/ov-client/raw/master/installovclient.sh
+. installovclient.sh
 ````
 
 Please mind the space between the dot and `installovbox.sh`. This
@@ -115,9 +115,9 @@ sudo shutdown -r now
 
 ## Installation on an Ubuntu LTS desktop PC
 
-If you plan to install the 'ovbox' system on a x86 64 bit Ubuntu LTS
-system (other debian based systems may also work), it is not
-recommended to use the installer described above.
+If you plan to install the 'ov-client' application system on a x86 64
+bit Ubuntu LTS system (other debian based systems may also work), it
+is not recommended to use the installer described above.
 
 In Ubuntu 20.04:
 
