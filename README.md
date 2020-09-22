@@ -134,25 +134,31 @@ statistics is currently under development.
 
 We run the sound system with 48000 Hz sampling rate and periods of 2
 ms (96 samples). The measured hardware delay (combined input and
-output), as caused by block processing, USB BUS protocol and aliasing
-filters is:
+output), as caused by block processing, USB BUS protocol and
+anti-aliasing filters is:
 
-|                  | period size | delay       | delay   |
-|------------------|-------------|-------------|---------|
-|                  |             |             |         |
-| TASCAM US-2x2    | 96          | 518 samples | 10.8 ms |
-|                  | 48          | 316 samples |  6.7 ms |
-| TASCAM US-100    | 96          | 510 samples | 10.6 ms |
-|                  |             |             |         |
-| ConnectAUDIO 2/4 | 96          | 652 samples | 13.6 ms |
-|                  | 48          | 620 samples | 13.0 ms |
-|                  | 144         | 844 samples | 17.6 ms |
-|                  |             |             |         |
-| Scarlett Solo    | 96          | 429 samples |  8.9 ms |
-|                  | 48          | 233 samples |  4.9 ms |
-| Mackie Onyx 2-2  | 96          | 587 samples | 12.2 ms |
-|                  | 48          | 364 samples |  7.6 ms |
-|                  |             |             |         |
-| Superlux E205U   | 96          | 618 samples | 12.9 ms |
-|                  | 48          | 372 samples |  7.8 ms |
+|                       | period size | delay       | delay   |
+|-----------------------|-------------|-------------|---------|
+|                       |             |             |         |
+| Scarlett Solo 3rd gen | 96          | 429 samples | 8.9 ms  |
+|                       | 48          | 233 samples | 4.9 ms  |
+|                       |             |             |         |
+| TASCAM US-2x2         | 96          | 518 samples | 10.8 ms |
+|                       | 48          | 316 samples | 6.7 ms  |
+|                       |             |             |         |
+| TASCAM US-100         | 96          | 510 samples | 10.6 ms |
+|                       |             |             |         |
+| Mackie Onyx 2-2       | 96          | 587 samples | 12.2 ms |
+|                       | 48          | 364 samples | 7.6 ms  |
+|                       |             |             |         |
+| Presonus Audiobox USB | 96          | 593 samples | 12.4 ms |
+|                       | 48          | 364 samples | 7.6 ms  |
+|                       |             |             |         |
+| Superlux E205U        | 96          | 618 samples | 12.9 ms |
+|                       | 48          | 372 samples | 7.8 ms  |
+|                       |             |             |         |
+| ConnectAUDIO 2/4      | 96          | 652 samples | 13.6 ms |
+|                       | 48          | 620 samples | 13.0 ms |
+|                       | 144         | 844 samples | 17.6 ms |
+|                       |             |             |         |
 
