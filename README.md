@@ -148,6 +148,9 @@ anti-aliasing filters is:
 |                       |             |             |         |
 | TASCAM US-100         | 96          | 510 samples | 10.6 ms |
 |                       |             |             |         |
+| TASCAM US-16x08       | 96          | 623 samples | 13.0 ms |
+|                       | 48          | 327 samples | 6.8 ms  |
+|                       |             |             |         |
 | Mackie Onyx 2-2       | 96          | 587 samples | 12.2 ms |
 |                       | 48          | 364 samples | 7.6 ms  |
 |                       |             |             |         |
