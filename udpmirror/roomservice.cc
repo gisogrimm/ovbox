@@ -145,9 +145,9 @@ void udpreceiver_t::announce_service()
       curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
       res = curl_easy_perform(curl);
       if(res == 0)
-        cnt = 3000;
+        cnt = 6000;
       else
-        cnt = 200;
+        cnt = 500;
     }
     --cnt;
     std::this_thread::sleep_for(std::chrono::milliseconds(PINGPERIODMS));
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
     int portno(0);
     int prio(55);
     std::string roomname;
-    std::string lobby("https://oldbox.orlandoviols.com");
+    std::string lobby("http://oldbox.orlandoviols.com");
     const char* options = "p:qr:hvn:l:";
     struct option long_options[] = {
         {"rtprio", 1, 0, 'r'},   {"quiet", 0, 0, 'q'}, {"port", 1, 0, 'p'},

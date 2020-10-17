@@ -15,9 +15,9 @@ hst=$(hostname)
 k=1
 
 while test $k -le ${NUMCLIENTS}; do
-		let p=$k+${STARTPORT}
-		let p=$p-1
-		./roomservice -l http://oldbox.orlandoviols.com  -p $p -n ${hst}${k} &
-		sleep 1
-		let k=$k+1
+    let p=$k+${STARTPORT}
+    let p=$p-1
+    ./roomservice -l http://oldbox.orlandoviols.com  -p $p -n ${hst}${k} &
+    sleep 1
+    let k=$k+1
 done
