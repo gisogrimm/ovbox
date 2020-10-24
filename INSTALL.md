@@ -21,8 +21,10 @@ The md5sums of the packed and unpacked files are:
 22ee5cc2caa6147f26a38fb7822f1698  2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.zip
 ````
 
-Now with the Raspberry Pi imager, choose the image file by clicking
-"CHOOSE OS" and "Use custom". Select the file
+Now with the Raspberry Pi imager (install from
+[https://www.raspberrypi.org/downloads/](https://www.raspberrypi.org/downloads/)),
+choose the image file by clicking "CHOOSE OS" and "Use custom". Select
+the file
 `2020-08-20-raspios-buster-armhf-lite-ovclientinstaller.img`. Select
 the SD card and write to the card.
 
