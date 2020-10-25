@@ -132,19 +132,25 @@ statistics is currently under development.
 
 ## hardware delay
 
-We run the sound system with 48000 Hz sampling rate and periods of 2
-ms (96 samples). The measured hardware delay (combined input and
-output), as caused by block processing, USB BUS protocol and
-anti-aliasing filters is:
+We typically run the sound system with 48000 Hz sampling rate and
+periods of 2 ms (96 samples). The measured hardware delay (combined
+input and output), as caused by block processing, USB BUS protocol and
+anti-aliasing filters is given below. Please note that the values for
+USB devices may vary slightly between jack starts and sound-card
+reconnections:
 
 |                       | period size | delay       | delay   |
 |-----------------------|-------------|-------------|---------|
 |                       |             |             |         |
 | Scarlett Solo 3rd gen | 96          | 429 samples | 8.9 ms  |
-|                       | 48          | 233 samples | 4.9 ms  |
+|                       | 48          | 238 samples | 5.0 ms  |
+|                       | 24          | 136 samples | 2.8 ms  |
+|                       | 12          | 94 samples  | 2.0 ms  |
 |                       |             |             |         |
 | TASCAM US-2x2         | 96          | 518 samples | 10.8 ms |
 |                       | 48          | 316 samples | 6.7 ms  |
+|                       | 24          | 210 samples | 4.4 ms  |
+|                       | 12          | 165 samples | 3.4 ms  |
 |                       |             |             |         |
 | TASCAM US-100         | 96          | 510 samples | 10.6 ms |
 |                       |             |             |         |
@@ -153,6 +159,7 @@ anti-aliasing filters is:
 |                       |             |             |         |
 | Mackie Onyx 2-2       | 96          | 587 samples | 12.2 ms |
 |                       | 48          | 364 samples | 7.6 ms  |
+|                       | 24          | 262 samples | 5.4 ms  |
 |                       |             |             |         |
 | Presonus Audiobox USB | 96          | 593 samples | 12.4 ms |
 |                       | 48          | 364 samples | 7.6 ms  |

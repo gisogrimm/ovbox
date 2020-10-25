@@ -1,0 +1,24 @@
+#!/bin/bash
+if test "$#" -ne 5; then
+    echo "Usage: ./measure_hw_latency <device> <srate> <periodsize> <inchannel> <outchannel>"
+    echo ""
+    echo "Example:"
+    echo "./measure_hw_latency USB 48000 8 2 2"
+    echo ""
+    echo "Your sound cards:"
+    echo ""
+    cat /proc/asound/cards
+else
+jackd --sync -P 85 -d alsa -d hw:$1 -r $2 -p $3 2>&1 > /dev/null &
+PID1=$!
+sleep 2
+jack_delay -O system:playback_$5 -I system:capture_$4 > tmpdelay 2>/dev/null &
+PID2=$!
+sleep 2
+kill $PID2
+sleep 1
+kill $PID1
+sleep 1
+killall -9 jack_delay jackd 2>/dev/null
+sort -u tmpdelay
+fi
