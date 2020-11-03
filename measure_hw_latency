@@ -3,7 +3,7 @@ if test "$#" -ne 5; then
     echo "Usage: ./measure_hw_latency <device> <srate> <periodsize> <inchannel> <outchannel>"
     echo ""
     echo "Example:"
-    echo "./measure_hw_latency USB 48000 8 2 2"
+    echo "./measure_hw_latency USB 48000 96 2 2"
     echo ""
     echo "Your sound cards:"
     echo ""
