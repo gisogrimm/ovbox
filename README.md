@@ -138,5 +138,5 @@ statistics is currently under development.
 
 ## hardware delay
 
-See [wiki](https://github.com/gisogrimm/ovbox/wiki/Soundcards.md) for
+See [wiki](https://github.com/gisogrimm/ovbox/wiki/Soundcards) for
 a list of tested sound cards an their delays.
