@@ -34,7 +34,7 @@ Now mount rootfs partition with:
 sudo mount /dev/loop28p2 /mnt/
 ````
 
-Create file `/usr/lib/raspi-config/install_ovclient.sh` with this content:
+Create file `/mnt/usr/lib/raspi-config/install_ovclient.sh` with this content:
 
 
 ````
@@ -80,7 +80,7 @@ reboot_pi
 
 Make executable with
 ````
-chmod a+x /usr/lib/raspi-config/install_ovclient.sh
+chmod a+x /mnt/usr/lib/raspi-config/install_ovclient.sh
 ````
 
 # Modify raspi-config scripts
@@ -95,3 +95,14 @@ sed -i 's| init=/usr/lib/raspi-config/init_resize\.sh| init=/usr/lib/raspi-confi
 ````
 
 Unmount loopback device with
+
+````
+sudo umount /mnt
+````
+
+Rename image file and pack:
+
+````
+mv 2020-12-02-raspios-buster-armhf-lite{,-ovclientinstaller}.img
+zip 2020-12-02-raspios-buster-armhf-lite-ovclientinstaller.{zip,img}
+````
