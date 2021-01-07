@@ -41,11 +41,13 @@ Or from berrybase:
 **Sound card, mic, etc.:** [Thomann](https://www.thomann.de/de/wishlist_4u_788b06e69103.html) (approx. 209 EUR)
 
 We can highly recommend the Focusrite Scarlett 3rd gen sound cards,
-e.g., [Scarlett solo
-Studio](https://www.thomann.de/de/focusrite_scarlett_solo_studio_3rd_gen.htm)
-or [Scarlett 2i2
-Studio](https://www.thomann.de/de/focusrite_scarlett_2i2_studio_3rd_gen.htm) -
-these sound cards achieve by far the lowest delays (see below).
+e.g., [Scarlett
+solo](https://www.thomann.de/de/focusrite_scarlett_solo_3rd_gen.htm)
+or [Scarlett
+2i2](https://www.thomann.de/de/focusrite_scarlett_2i2_3rd_gen.htm) -
+these sound cards achieve by far the lowest delays (see below). The
+microphones from the studio pack have a bad shielding design and
+should be used with care.
 
 Raspberry Pi 4B (recommended), Raspberry Pi 3B+, Linux PC with current
 Ubuntu LTS (20.04, 18.04, 16.04)
