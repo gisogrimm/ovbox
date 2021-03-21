@@ -1,9 +1,11 @@
 # modify raspios image to ovbox installation
 
+See also shell script prepareimg.sh in <https://github.com/gisogrimm/ov-client/blob/development/tools/prepareimage.sh>
+
 ## Prepare loopback device
 
 ````
-sudo losetup -f -P 2020-08-20-raspios-buster-armhf-lite.img
+sudo losetup -f -P 2021-01-11-raspios-buster-armhf-lite.img
 sudo losetup -l | grep raspios
 ````
 
@@ -80,7 +82,7 @@ reboot_pi
 
 Make executable with
 ````
-chmod a+x /mnt/usr/lib/raspi-config/install_ovclient.sh
+sudo chmod a+x /mnt/usr/lib/raspi-config/install_ovclient.sh
 ````
 
 # Modify raspi-config scripts

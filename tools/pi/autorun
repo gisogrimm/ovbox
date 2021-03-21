@@ -1,10 +1,11 @@
+#!/bin/sh
 
 # deactivate power saving:
 for cpu in /sys/devices/system/cpu/cpu[0-9]*; do echo -n performance \
 | sudo tee $cpu/cpufreq/scaling_governor; done
 
 ## Stop the ntp service
-sudo service ntp stop
+#sudo service ntp stop
 
 ## Stop the triggerhappy service
 sudo service triggerhappy stop
@@ -30,19 +31,69 @@ killall dbus-launch
 ## Stop all wifi/bluetooth devices
 rfkill block all
 
-## power button:
-#while true; do
-#~/shutdown-press-simple.py
-#sleep 1
-#done
+if test ! -e /boot/ovclient-noupdate; then
+    # if not on overlayfs then update/reinstall:
+    if (cat /proc/mounts | grep -e " / ")|grep -q -e overlay; then
+	echo "overlay fs, not updating"
+    else
+	# remove old installer scripts:
+	rm -f installovclient.sh
+	# get the latest installer script:
+	wget https://github.com/gisogrimm/ov-client/raw/master/installovclient.sh
+	if test -e installovclient.sh; then
+	    # run installer to update to latest version:
+	    . installovclient.sh
+	    # activate overlay image in case the installation script failed, and try the best we can:
+	    sudo raspi-config nonint enable_overlayfs
+	fi
+	# ready, reboot:
+	sudo shutdown -r now
+    fi
+fi
 
-# clone ovbox repo if not yet available:
-sudo su -l ov -c "test -e ovbox || git clone http://github.com/gisogrimm/ovbox"
+# activate WiFi if required:
+if test -e /boot/ovclient-wifi.txt; then
+    # remove DOS line ends:  -e 's/\r//1'
+    # the first line contains the SSID:
+    SSID=$(cat /boot/ovclient-wifi.txt|sed -e '1 ! d' -e 's/\r//1')
+    # the second line the WIFI password:
+    PW=$(cat /boot/ovclient-wifi.txt|sed -e '2 ! d' -e 's/\r//1')
+    COUNTRYCODE=DE
+    test -e /boot/ovclient-country.txt && COUNTRYCODE=$(cat /boot/ovclient-country.txt)
+    echo "connecting to WiFi ${SSID}"
+    if test -n "${SSID}"; then
+	sudo raspi-config nonint do_wifi_country "${COUNTRYCODE}"
+	sleep 2
+	rfkill unblock wifi
+	sleep 10
+	sudo raspi-config nonint do_wifi_ssid_passphrase "${SSID}" "${PW}"
+	sleep 20
+    fi
+fi
 
-# update ovbox repo:
-sudo su -l ov -c "cd ovbox && git pull"
-
-# activate overlay filesystem:
-
-# start tools:
-sudo su -l ov -c "/home/ov/ovbox/start_all.sh"
+# start client:
+while true; do
+    
+    sudo su -l ov -c "ov-client" || sudo touch ~ov/ov-client.firmwareupdate
+    # test for modified configuration:
+    if test -e ~ov/ov-client.cfg; then
+	sudo mv ~ov/ov-client.cfg /boot/
+	sync
+    fi
+    # test for firmware update:
+    if test -e ~ov/ov-client.firmwareupdate; then
+	# firmware update requested: disable overlayfs and restart
+	sudo rm -f ~ov/ov-client.firmwareupdate
+	sudo raspi-config nonint disable_overlayfs
+	sudo shutdown -r now
+    fi
+    # check for development version:
+    if test -e ~ov/ov-client.devversion; then
+	# switch to development version:
+	sudo rm -f ~ov/ov-client.devversion
+	(echo "";echo "deb [arch=armhf] http://aptdev.hoertech.de bionic universe")|sudo tee -a /etc/apt/sources.list
+	sudo apt update --assume-yes
+	sudo apt install --no-install-recommends --assume-yes ov-client
+    fi
+    sleep 7
+done
