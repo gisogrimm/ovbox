@@ -1,4 +1,4 @@
-all: netw_srv.png netw_p2p.png netw_mixed.png
+all: netw_srv.png netw_p2p.png netw_mixed.png netw_mixed_proxy.png
 
 %.png: %.dot
 	fdp $< -Tpng > $@
